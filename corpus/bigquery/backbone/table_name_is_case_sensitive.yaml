@@ -1,0 +1,9 @@
+description: Table names are case-sensitive, so a different-case reference is not found. Expected value from the BigQuery documentation; not yet recorded.
+tags: [backbone, names]
+setup: [CREATE TABLE CaseTable (a INT64)]
+query: SELECT * FROM casetable
+ordered: false
+expected:
+  error: {kind: not_found, message_contains: 'Not found: Table'}
+verified: false
+recorded_at: null

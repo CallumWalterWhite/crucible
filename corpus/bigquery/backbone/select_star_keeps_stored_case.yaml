@@ -1,0 +1,12 @@
+description: SELECT * reports the column name as stored in the table. Expected value from the BigQuery documentation; not yet recorded.
+tags: [backbone, names]
+setup: [CREATE TABLE t (MixedCase INT64), INSERT INTO t VALUES (7)]
+query: SELECT * FROM t
+ordered: false
+expected:
+  columns:
+  - {name: MixedCase, type: INT64}
+  rows:
+  - [7]
+verified: false
+recorded_at: null

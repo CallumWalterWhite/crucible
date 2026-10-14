@@ -80,15 +80,32 @@ Each dialect package has the same modules:
 
 | Module | Owns |
 |---|---|
-| `statements.py` | splitting a request into statements and routing each to translation, a command, or the script interpreter |
-| `transforms.py` | type-aware AST rewrites, runtime error checks (ADR 0011), unsupported-construct checks |
+| `statements.py` | splitting a request into statements and routing each to translation, a command, or the script interpreter; CREATE TABLE and INSERT (with the warehouse's assignment coercion rules) |
+| `translate.py` | the translation pipeline for queries: resolve names, qualify, annotate, fix annotation, transforms, storage casts, projection casts, generate |
+| `transforms/` | type-aware AST rewrites, one module per area (below) |
 | `generator.py` | the dialect's subclass of SQLGlot's DuckDB generator (ADR 0008) |
-| `functions.py` | function shims |
-| `types.py` | type mapping both ways and canonical values (ADR 0014) |
+| `types.py` | type mapping both ways, coercion and supertypes, and canonical values (ADR 0014) |
 | `metadata.py` | identifier case rules and name resolution (ADR 0002), INFORMATION_SCHEMA |
 | `commands.py` / `scripting.py` | Snowflake commands (SHOW, USE, ALTER SESSION, ...) / BigQuery scripting (DECLARE, SET, IF, BEGIN...END, transactions) |
-| `errors.py` | warehouse error messages for each `ErrorKind` |
+| `errors.py` | warehouse error messages for errors Crucible detects itself |
 | `dialect.py` | `DIALECT`, the protocol implementation; found by `crucible.dialects.get_dialect` |
+
+### Transforms
+
+`dialects/<d>/transforms/` is a package with one module per area, so two people never edit the
+same file. For BigQuery: `unnest`, `json`, `regexp`, `dates`, `arrays`, `errors`, `safe`,
+`literals`. Each module exposes `transform(tree, ctx) -> tree`; `transforms/__init__.py` holds the
+only ordered list (`PIPELINE`). Transforms run on the qualified and type-annotated AST, keep `.type`
+on what they build, and raise `CrucibleUnsupportedError` for anything in their area they cannot
+translate exactly. Each transform has unit tests and corpus cases.
+
+### Output types (ADR 0014)
+
+`translate.py` takes each output column's warehouse type from the annotated AST, after
+`fix_annotation` corrects types SQLGlot gets wrong (for example `array || array` typed STRING) and
+normalises type spellings. Set operations use the branches' supertype. Every CAST target becomes its
+storage type (NUMERIC is DECIMAL(38,9)), and every top-level projection is cast to the storage type
+of its warehouse type, which also performs the warehouse's overflow check.
 
 ### `crucible.server`
 

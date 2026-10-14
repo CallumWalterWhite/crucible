@@ -1,0 +1,9 @@
+description: Inserting a FLOAT64 literal into an INT64 column is rejected. Expected value from the BigQuery documentation; not yet recorded.
+tags: [backbone, dml]
+setup: [CREATE TABLE t (a INT64)]
+query: INSERT INTO t (a) VALUES (1.5)
+ordered: false
+expected:
+  error: {kind: invalid_query, message_contains: cannot be inserted into column}
+verified: false
+recorded_at: null

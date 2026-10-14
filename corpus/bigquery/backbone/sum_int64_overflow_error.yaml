@@ -1,0 +1,9 @@
+description: SUM of INT64 values beyond the INT64 range raises an overflow error. Expected value from the BigQuery documentation; not yet recorded.
+tags: [backbone, aggregate, known-divergence]
+setup: [CREATE TABLE t (x INT64), 'INSERT INTO t VALUES (9223372036854775807), (1)']
+query: SELECT SUM(x) AS v FROM t
+ordered: false
+expected:
+  error: {kind: runtime, message_contains: overflow}
+verified: false
+recorded_at: null

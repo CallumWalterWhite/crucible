@@ -1,0 +1,12 @@
+description: A decimal literal is FLOAT64, and COALESCE keeps FLOAT64. Expected value from the BigQuery documentation; not yet recorded.
+tags: [backbone, types]
+query: SELECT 2.5 AS v, COALESCE(NULL, 1.5) AS w
+ordered: false
+expected:
+  columns:
+  - {name: v, type: FLOAT64}
+  - {name: w, type: FLOAT64}
+  rows:
+  - [2.5, 1.5]
+verified: false
+recorded_at: null

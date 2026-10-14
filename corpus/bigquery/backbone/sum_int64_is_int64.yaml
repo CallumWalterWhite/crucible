@@ -1,0 +1,12 @@
+description: SUM over an INT64 column returns INT64. Expected value from the BigQuery documentation; not yet recorded.
+tags: [backbone, aggregate]
+setup: [CREATE TABLE t (x INT64), 'INSERT INTO t VALUES (1), (2), (3)']
+query: SELECT SUM(x) AS v FROM t
+ordered: false
+expected:
+  columns:
+  - {name: v, type: INT64}
+  rows:
+  - [6]
+verified: false
+recorded_at: null
