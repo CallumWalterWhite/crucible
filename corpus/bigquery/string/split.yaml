@@ -1,0 +1,11 @@
+description: SPLIT keeps the empty fields between consecutive delimiters. Expected value from the BigQuery documentation; not yet recorded.
+tags: [probe, string]
+query: SELECT SPLIT('a,b,,c', ',') AS v
+ordered: false
+expected:
+  columns:
+  - {name: v, type: ARRAY<STRING>}
+  rows:
+  - - [a, b, '', c]
+verified: false
+recorded_at: null

@@ -1,0 +1,11 @@
+description: REGEXP_REPLACE supports \1 backreferences in the replacement string. Expected value from the BigQuery documentation; not yet recorded.
+tags: [probe, regexp]
+query: SELECT REGEXP_REPLACE('ab', r'(a)', r'\1\1') AS v
+ordered: false
+expected:
+  columns:
+  - {name: v, type: STRING}
+  rows:
+  - [aab]
+verified: false
+recorded_at: null

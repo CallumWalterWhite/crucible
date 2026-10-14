@@ -1,0 +1,8 @@
+description: The / operator raises an error when the divisor is zero. The message_contains value is the message from BigQuery's runtime error text; not yet recorded. Expected value from the BigQuery documentation; not yet recorded.
+tags: [probe, math, known-divergence]
+query: SELECT 1 / 0 AS v
+ordered: false
+expected:
+  error: {kind: runtime, message_contains: division by zero}
+verified: false
+recorded_at: null

@@ -1,0 +1,11 @@
+description: REGEXP_CONTAINS returns TRUE when the pattern partially matches the value. Expected value from the BigQuery documentation; not yet recorded.
+tags: [probe, regexp]
+query: SELECT REGEXP_CONTAINS('abc', r'^a') AS v
+ordered: false
+expected:
+  columns:
+  - {name: v, type: BOOL}
+  rows:
+  - [true]
+verified: false
+recorded_at: null

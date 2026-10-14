@@ -1,0 +1,11 @@
+description: ROUND rounds negative halves away from zero. Expected value from the BigQuery documentation; not yet recorded.
+tags: [probe, math]
+query: SELECT ROUND(-2.5) AS v
+ordered: false
+expected:
+  columns:
+  - {name: v, type: FLOAT64}
+  rows:
+  - [-3.0]
+verified: false
+recorded_at: null

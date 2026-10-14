@@ -1,0 +1,16 @@
+.local
+.venv
+.git
+.github
+.claude
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.ruff_cache
+.mypy_cache
+dist
+build
+**/*.egg-info
+tests
+corpus
+examples

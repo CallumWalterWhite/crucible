@@ -1,0 +1,8 @@
+description: ARRAY_AGG raises an error when an input is NULL, because arrays cannot contain NULL elements. The error condition is documented at https://cloud.google.com/bigquery/docs/reference/standard-sql/aggregate_functions. The message_contains value is the message from BigQuery's runtime error text; not yet recorded. Expected value from the BigQuery documentation; not yet recorded.
+tags: [probe, aggregate, known-divergence]
+query: SELECT ARRAY_AGG(x) AS v FROM UNNEST([1, NULL]) AS x
+ordered: false
+expected:
+  error: {kind: runtime, message_contains: null element}
+verified: false
+recorded_at: null

@@ -1,0 +1,100 @@
+name: Corpus record
+
+# Records corpus cases against a real warehouse, which spends credits. Manual runs only.
+on:
+  workflow_dispatch:
+    inputs:
+      dialect:
+        description: Warehouse to record against
+        type: choice
+        options: [bigquery, snowflake]
+        required: true
+      path:
+        description: Directory for the recorded YAML. Empty means corpus/<dialect>
+        type: string
+        default: ""
+      max_bytes_billed:
+        description: BigQuery bytes-billed cap per query (ignored for Snowflake)
+        type: string
+        default: "104857600"
+
+permissions:
+  contents: read
+
+jobs:
+  record:
+    if: github.repository == 'OWNER/crucible-emulator'
+    runs-on: ubuntu-24.04
+    environment: corpus-record
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write  # Workload Identity Federation
+    env:
+      DIALECT: ${{ inputs.dialect }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - name: Install dependencies for the dialect
+        run: uv sync --locked --extra "record-$DIALECT"
+
+      # Workload Identity Federation: no long-lived key. The provider and service account are
+      # repository variables, not secrets; the service account only needs BigQuery job and
+      # dataset create/delete rights in the sandbox project.
+      - name: Authenticate to Google Cloud
+        if: inputs.dialect == 'bigquery'
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set the BigQuery project
+        if: inputs.dialect == 'bigquery'
+        env:
+          BIGQUERY_PROJECT: ${{ vars.BIGQUERY_PROJECT }}
+        run: echo "BIGQUERY_PROJECT=$BIGQUERY_PROJECT" >> "$GITHUB_ENV"
+
+      # TODO(phase-5): move Snowflake to key-pair auth; password secrets are a stopgap.
+      - name: Write Snowflake credentials
+        if: inputs.dialect == 'snowflake'
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+          SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+        run: |
+          set -euo pipefail
+          echo "::add-mask::$SNOWFLAKE_PASSWORD"
+          {
+            echo "SNOWFLAKE_ACCOUNT=$SNOWFLAKE_ACCOUNT"
+            echo "SNOWFLAKE_USER=$SNOWFLAKE_USER"
+            echo "SNOWFLAKE_PASSWORD=$SNOWFLAKE_PASSWORD"
+            echo "SNOWFLAKE_WAREHOUSE=$SNOWFLAKE_WAREHOUSE"
+          } >> "$GITHUB_ENV"
+
+      - name: Record corpus cases
+        env:
+          INPUT_PATH: ${{ inputs.path }}
+          MAX_BYTES: ${{ inputs.max_bytes_billed }}
+        run: |
+          set -euo pipefail
+          path="${INPUT_PATH:-corpus/$DIALECT}"
+          echo "CORPUS_PATH=$path" >> "$GITHUB_ENV"
+          uv run --no-sync crucible corpus record \
+            --dialect "$DIALECT" \
+            --path "$path" \
+            --max-bytes-billed "$MAX_BYTES" \
+            --i-understand-this-spends-credits
+
+      - name: Open pull request with recorded cases
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          branch: corpus-record/${{ inputs.dialect }}
+          base: main
+          add-paths: ${{ env.CORPUS_PATH }}
+          commit-message: "corpus: record ${{ inputs.dialect }} cases"
+          title: "corpus: record ${{ inputs.dialect }} cases"
+          body: |
+            Recorded by workflow run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}.

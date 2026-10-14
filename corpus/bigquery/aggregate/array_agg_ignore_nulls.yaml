@@ -1,0 +1,11 @@
+description: ARRAY_AGG IGNORE NULLS drops NULL inputs before aggregating. Expected value from the BigQuery documentation; not yet recorded.
+tags: [probe, aggregate]
+query: SELECT ARRAY_AGG(x IGNORE NULLS ORDER BY x) AS v FROM UNNEST([2, NULL, 1]) AS x
+ordered: false
+expected:
+  columns:
+  - {name: v, type: ARRAY<INT64>}
+  rows:
+  - - [1, 2]
+verified: false
+recorded_at: null

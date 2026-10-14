@@ -1,0 +1,11 @@
+description: REGEXP_EXTRACT_ALL returns every match of the RE2 pattern as an array of strings. Expected value from the BigQuery documentation; not yet recorded.
+tags: [probe, regexp]
+query: SELECT REGEXP_EXTRACT_ALL('a1b22', r'[0-9]+') AS v
+ordered: false
+expected:
+  columns:
+  - {name: v, type: ARRAY<STRING>}
+  rows:
+  - - ['1', '22']
+verified: false
+recorded_at: null

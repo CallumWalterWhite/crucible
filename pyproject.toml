@@ -1,0 +1,101 @@
+[project]
+name = "crucible-emulator"
+version = "0.0.0"
+description = "Local BigQuery and Snowflake API emulator backed by DuckDB, for development and CI."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+requires-python = ">=3.11"
+authors = [{ name = "The Crucible Authors" }]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Database",
+    "Topic :: Software Development :: Testing",
+]
+dependencies = [
+    # Exact pins: translation output and DuckDB semantics change between releases (ADR 0008).
+    "sqlglot==30.22.0",
+    "duckdb==1.5.6",
+    "pyyaml>=6.0.2",
+    # DuckDB needs it to return TIMESTAMP WITH TIME ZONE values to Python.
+    "pytz>=2025.2",
+]
+
+[project.optional-dependencies]
+server = ["starlette>=1.8,<2", "uvicorn>=0.54"]
+# Only for `crucible corpus record`, which runs cases against the real warehouse.
+record-bigquery = ["google-cloud-bigquery>=3.27"]
+record-snowflake = ["snowflake-connector-python>=3.12"]
+
+[project.scripts]
+crucible = "crucible.cli:main"
+
+[project.urls]
+Repository = "https://github.com/OWNER/crucible-emulator"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1",
+    "ruff>=0.17",
+    "pyright>=1.1.414",
+    "import-linter>=2.15",
+    "pre-commit>=4.7",
+    "types-pyyaml>=6.0.12",
+    "types-pytz>=2025.2",
+    "httpx2>=2.13",  # starlette.testclient transport
+]
+
+[build-system]
+requires = ["hatchling>=1.32"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/crucible"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF", "S", "BLE", "PT"]
+ignore = [
+    "S101",  # assert is fine in tests and internal invariants
+    "S608",  # generating SQL is the product; identifiers go through engine.catalog.quote()
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "BLE"]
+
+[tool.pyright]
+include = ["src"]
+strict = ["src"]
+pythonVersion = "3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests/unit", "tests/corpus"]
+addopts = "-ra --strict-markers"
+markers = [
+    "clients: official-client tests against a running container (CRUCIBLE_URL)",
+    "dbt: dbt end-to-end tests against a running container (CRUCIBLE_URL)",
+]
+
+[tool.importlinter]
+root_package = "crucible"
+# engine names the Dialect protocol only for type checking; runtime imports must follow the layers.
+exclude_type_checking_imports = true
+
+[[tool.importlinter.contracts]]
+name = "engine <- dialects <- server <- cli"
+type = "layers"
+layers = ["crucible.cli", "crucible.server | crucible.corpus", "crucible.dialects", "crucible.engine"]
+
+[[tool.importlinter.contracts]]
+name = "dialects are independent of each other"
+type = "independence"
+modules = ["crucible.dialects.bigquery", "crucible.dialects.snowflake"]

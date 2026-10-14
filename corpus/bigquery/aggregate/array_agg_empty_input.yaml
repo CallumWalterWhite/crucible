@@ -1,0 +1,11 @@
+description: ARRAY_AGG over zero rows returns NULL, not an empty array. Expected value from the BigQuery documentation; not yet recorded.
+tags: [probe, aggregate]
+query: SELECT ARRAY_AGG(x) AS v FROM UNNEST(CAST([] AS ARRAY<INT64>)) AS x
+ordered: false
+expected:
+  columns:
+  - {name: v, type: ARRAY<INT64>}
+  rows:
+  - [null]
+verified: false
+recorded_at: null
