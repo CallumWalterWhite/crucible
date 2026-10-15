@@ -205,12 +205,12 @@ def test_health(engine):
     assert h["storage"] == "memory"
 
 
-def test_json_results_are_decoded(engine):
+def test_json_results_stay_text(engine):
+    # JSON stays text so a JSON null ('null') is distinct from SQL NULL (None).
     [r] = run(
-        engine,
-        """select '{"a": [1, null]}'::json as j, ['"x"'::json] as l, {'k': '2'::json} as s""",
+        engine, """select '{"a": [1, null]}'::json as j, 'null'::json as n, null::json as s"""
     )
-    assert r.rows == [({"a": [1, None]}, ["x"], {"k": 2})]
+    assert r.rows == [('{"a": [1, null]}', "null", None)]
 
 
 def test_unsupported_error_from_generated_sql(engine):

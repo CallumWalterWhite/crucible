@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import uuid
 from collections.abc import Callable, Iterable
@@ -112,7 +113,7 @@ class BigQueryRecorder:
             cells = cast(tuple[object, ...], row.values())
             values.append(
                 [
-                    self._dialect.canonical_value(cell, kind)
+                    self._dialect.canonical_value(_json_as_text(cell, kind), kind)
                     for cell, kind in zip(cells, types, strict=True)
                 ]
             )
@@ -134,6 +135,15 @@ def clean_message(message: str, project: str, dataset: str) -> str:
         # Whole names only: a project id is letters, digits and hyphens; a dataset adds underscores.
         primary = re.sub(rf"(?<![\w-]){re.escape(name)}(?![\w-])", placeholder, primary)
     return primary
+
+
+def _json_as_text(value: object, warehouse_type: str) -> object:
+    """The client parses JSON values; Crucible keeps JSON as text (a JSON null is 'null', not
+    NULL). Re-serialising here gives canonical_value the same input from both sides. Nested JSON
+    inside ARRAY/STRUCT is not recorded by any case yet and is left as the client returns it."""
+    if warehouse_type == "JSON" and value is not None:
+        return json.dumps(value)
+    return value
 
 
 def _api_message(exc: GoogleAPICallError) -> str:

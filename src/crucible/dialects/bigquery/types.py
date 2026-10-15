@@ -8,6 +8,7 @@ TIMESTAMP, BigQuery TIMESTAMP is TIMESTAMPTZ, ...), so one set of rules covers b
 from __future__ import annotations
 
 import base64
+import json
 import math
 from datetime import UTC, date, datetime, time
 from decimal import Decimal
@@ -272,5 +273,6 @@ def _canonical(value: Any, data_type: exp.DataType) -> Any:
     if kind == T.TIMESTAMPTZ and isinstance(value, datetime):
         return value.astimezone(UTC).replace(tzinfo=None).isoformat() + "Z"
     if kind == T.JSON:
-        return value  # the engine already decoded JSON text into Python values
+        # JSON arrives as text, so a JSON null ('null') stays distinct from SQL NULL (None).
+        return json.loads(value) if isinstance(value, str) else value
     raise CrucibleUnsupportedError(f"canonical value for {type_name(data_type)}: {value!r}")

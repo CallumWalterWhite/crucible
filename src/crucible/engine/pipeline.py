@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 import duckdb
-from sqlglot import exp
 
 from crucible.engine.catalog import Catalog
 from crucible.engine.errors import CrucibleError, ErrorKind, from_duckdb
@@ -97,10 +95,6 @@ class ExecContext:
             # DuckDB reports DML as one 'Count' row and DDL as no rows.
             return Result("", rowcount=rows[0][0] if rows else None)
         columns = [Column(d[0], parse_type(str(d[1]))) for d in description]
-        if any(_has_json(c.type) for c in columns):
-            rows = [
-                tuple(_decode(v, c.type) for v, c in zip(row, columns, strict=True)) for row in rows
-            ]
         return Result("", columns=columns, rows=rows)
 
     # --- explicit transactions (ADR 0003) ---------------------------------------------------
@@ -135,31 +129,3 @@ class Pipeline:
         with self.engine.cursor(session) as cursor:
             ctx = ExecContext(self.engine, self.dialect, session, cursor, params)
             return [ctx.execute(s) for s in statements]
-
-
-def _has_json(data_type: exp.DataType) -> bool:
-    return data_type.this == exp.DataType.Type.JSON or any(
-        _has_json(t) for t in data_type.find_all(exp.DataType) if t is not data_type
-    )
-
-
-def _decode(value: Any, data_type: exp.DataType) -> Any:
-    """DuckDB returns JSON as text; results carry the parsed value, as warehouse clients do."""
-    if value is None:
-        return None
-    kind = data_type.this
-    if kind == exp.DataType.Type.JSON:
-        return json.loads(value)
-    if kind == exp.DataType.Type.ARRAY:
-        [inner] = data_type.expressions
-        assert isinstance(inner, exp.DataType)
-        return [_decode(v, inner) for v in value]
-    if kind == exp.DataType.Type.STRUCT:
-        out = dict(value)
-        for field in data_type.expressions:
-            if isinstance(field, exp.ColumnDef) and isinstance(
-                field.args.get("kind"), exp.DataType
-            ):
-                out[field.name] = _decode(out.get(field.name), field.args["kind"])
-        return out
-    return value
