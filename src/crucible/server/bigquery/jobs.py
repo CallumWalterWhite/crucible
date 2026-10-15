@@ -32,11 +32,25 @@ from crucible.engine.catalog import qualified
 from crucible.server.bigquery import encoding, errors, load
 
 _LOG = logging.getLogger(__name__)
-DEFAULT_LOCATION = "US"  # BigQuery's default; recorded job ids read "<project>:US.<job>" (02)
+DEFAULT_LOCATION = (
+    "US"  # BigQuery's default; recorded job ids read "<project>:US.<job>" (jobs_get_ctas)
+)
 # Anonymous result tables live in a dataset whose name starts with "_" and tables named
-# "anon...", as BigQuery's do (03_jobs_insert_select.json, after redaction).
+# "anon...", as BigQuery's do (jobs_insert_select.json, after redaction).
 ANONYMOUS_DATASET = "_crucible_anonymous"
 PAGE_TOKEN_PREFIX = "crucible-page-"  # noqa: S105 - a page token, not a credential
+
+
+def new_page_token(offset: int) -> str:
+    """An opaque token for the row at `offset`, unique per page as BigQuery's are."""
+    return f"{PAGE_TOKEN_PREFIX}{offset}-{uuid.uuid4().hex[:12]}"
+
+
+def token_offset(token: str) -> int:
+    """The offset a new_page_token names; ValueError for anything else."""
+    return int(token.removeprefix(PAGE_TOKEN_PREFIX).split("-", 1)[0])
+
+
 # Query configuration keys that change nothing in an emulator: they are echoed, not applied.
 _IGNORED_QUERY_KEYS = frozenset(
     {
@@ -315,16 +329,16 @@ def page_bounds(
 ) -> tuple[int, int, str | None]:
     """Where one page starts and ends among `total` rows, and the next page token if rows remain.
 
-    Shared by getQueryResults (05-10) and tabledata.list (REST reference, tabledata/list). A page
+    Shared by getQueryResults (get_query_results*) and tabledata.list (tabledata_list*). A page
     token names the offset of the next row (opaque to clients); it takes precedence over
     startIndex, which a client sends again on every page (api-core==2.42.0:
     google/api_core/page_iterator.py:397-419). maxResults=0 returns no rows and a token when rows
-    remain (10_get_query_results_wait.json); startIndex pages carry a token only if rows remain
-    (09).
+    remain (get_query_results_wait.json); startIndex pages carry a token only if rows remain
+    (get_query_results_start_index).
     """
     if page_token is not None:
         try:
-            start = int(page_token.removeprefix(PAGE_TOKEN_PREFIX))
+            start = token_offset(page_token)
         except ValueError as exc:
             raise CrucibleError(ErrorKind.INVALID_QUERY, "Invalid page token") from exc
     else:
@@ -335,7 +349,7 @@ def page_bounds(
         raise CrucibleError(ErrorKind.INVALID_QUERY, "Invalid maxResults: must not be negative")
     start = min(start, total)
     end = total if max_results is None else min(total, start + max_results)
-    token = f"{PAGE_TOKEN_PREFIX}{end}" if end < total else None
+    token = new_page_token(end) if end < total else None
     return start, end, token
 
 

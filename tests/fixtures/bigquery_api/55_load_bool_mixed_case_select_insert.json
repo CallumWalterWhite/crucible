@@ -16,7 +16,8 @@
           "defaultDataset": {
             "projectId": "<project>",
             "datasetId": "<dataset>"
-          }
+          },
+          "useQueryCache": false
         }
       }
     }
@@ -45,6 +46,7 @@
           "projectId": "<project>"
         },
         "priority": "INTERACTIVE",
+        "useQueryCache": false,
         "maximumBytesBilled": "104857600",
         "useLegacySql": false
       },
@@ -67,18 +69,18 @@
             "id": "0",
             "startMs": "<time>",
             "endMs": "<time>",
-            "waitRatioAvg": 0.6666666666666666,
-            "waitMsAvg": "2",
-            "waitRatioMax": 0.6666666666666666,
-            "waitMsMax": "2",
-            "readRatioAvg": 0.3333333333333333,
-            "readMsAvg": "1",
-            "readRatioMax": 0.3333333333333333,
-            "readMsMax": "1",
-            "computeRatioAvg": 1,
-            "computeMsAvg": "3",
-            "computeRatioMax": 1,
-            "computeMsMax": "3",
+            "waitRatioAvg": 1,
+            "waitMsAvg": "27",
+            "waitRatioMax": 1,
+            "waitMsMax": "27",
+            "readRatioAvg": 0.07407407407407407,
+            "readMsAvg": "2",
+            "readRatioMax": 0.07407407407407407,
+            "readMsMax": "2",
+            "computeRatioAvg": 0.07407407407407407,
+            "computeMsAvg": "2",
+            "computeRatioMax": 0.07407407407407407,
+            "computeMsMax": "2",
             "writeRatioAvg": 0,
             "writeMsAvg": "0",
             "writeRatioMax": 0,

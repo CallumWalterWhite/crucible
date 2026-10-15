@@ -1,9 +1,8 @@
-description: TO_JSON_STRING of TIME with fraction '.123'. Crucible raises unsupported until recorded (expected
-  value is a guess).
+description: TO_JSON_STRING of TIME with fraction '.123'. Crucible raises unsupported
+  until recorded (expected value is a guess).
 tags:
 - phase4
 - json
-- known-divergence
 query: SELECT TO_JSON_STRING(STRUCT(TIME '05:06:07.123' AS t)) AS v
 ordered: false
 expected:
@@ -12,5 +11,5 @@ expected:
     type: STRING
   rows:
   - - '{"t":"05:06:07.123"}'
-verified: false
-recorded_at: null
+verified: true
+recorded_at: '2026-10-15T15:08:17Z'

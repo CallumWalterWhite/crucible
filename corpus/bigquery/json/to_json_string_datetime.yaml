@@ -3,7 +3,6 @@ description: TO_JSON_STRING of DATETIME. DuckDB writes a space separator; Crucib
 tags:
 - phase4
 - json
-- known-divergence
 query: SELECT TO_JSON_STRING(STRUCT(DATETIME '2024-03-04 05:06:07.5' AS dt)) AS v
 ordered: false
 expected:

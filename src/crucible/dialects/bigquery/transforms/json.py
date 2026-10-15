@@ -42,11 +42,10 @@ def transform(tree: exp.Expr, ctx: TransformContext) -> exp.Expr:
     return tree
 
 
-# TO_JSON_STRING / TO_JSON leaves whose DuckDB rendering is BigQuery's: numbers and booleans as
+# TO_JSON_STRING / TO_JSON leaves whose DuckDB rendering is BigQuery's: integers and booleans as
 # JSON literals, strings escaped, DATE as "YYYY-MM-DD", JSON as is (corpus json/to_json_string*).
 _SAME_JSON = {
     exp.DType.BIGINT,
-    exp.DType.DOUBLE,
     exp.DType.BOOLEAN,
     exp.DType.TEXT,
     exp.DType.VARCHAR,
@@ -54,27 +53,40 @@ _SAME_JSON = {
     exp.DType.DATE,
     exp.DType.NULL,
 }
+# Leaves re-encoded by _encode, each as recorded (corpus cases json/to_json_string_*).
+_REWRITTEN = {
+    exp.DType.DOUBLE,
+    exp.DType.DECIMAL,
+    exp.DType.BLOB,
+    exp.DType.BINARY,
+    exp.DType.VARBINARY,
+    exp.DType.TIMESTAMP,
+    exp.DType.TIMESTAMPTZ,
+    exp.DType.TIME,
+}
+_MAX_EXACT_DOUBLE = 2**53
 
 
 def _encodable(node: exp.JSONFormat) -> None:
-    """Rewrite the operand so DuckDB's JSON is BigQuery's, or raise for types whose encoding is
-    not confirmed (DuckDB writes NUMERIC with trailing zeros, BYTES raw, DATETIME with a space).
-    TIMESTAMP is "YYYY-MM-DDTHH:MM:SSZ" (BigQuery JSON encodings; corpus case
-    json/to_json_string_timestamp); a fractional second is unsupported until recorded.
-    Unrecorded values raise at run time: a NaN or infinite FLOAT64 anywhere in the value, and a
-    NULL operand (DuckDB answers SQL NULL; BigQuery's answer is not recorded)."""
+    """Rewrite the operand so that DuckDB's JSON is BigQuery's. Encodings, all recorded:
+    - TIMESTAMP "2024-03-04T05:06:07Z", DATETIME "2024-03-04T05:06:07", TIME "05:06:07"; a
+      fraction is 3 digits when it is whole milliseconds (.500, .123) and 6 otherwise (.000001);
+    - NUMERIC: a whole number is a JSON number (2), anything else a string without trailing
+      zeros ("1.5"); a whole number beyond 2^53 is unrecorded and raises;
+    - BYTES base64; FLOAT64 NaN and infinities as the strings "NaN", "Infinity", "-Infinity";
+    - TO_JSON_STRING(NULL) is 'null' (TO_JSON(NULL) is unrecorded and raises).
+    Other types (INTERVAL, ...) raise unsupported."""
     value = node.this
     if not isinstance(value, exp.Expr) or value.type is None:
         raise CrucibleUnsupportedError("TO_JSON_STRING of a value of unknown type")
     encoded = _encode(value.copy(), value.type) if _needs_rewrite(value.type) else value.copy()
+    if node.args.get("to_json"):
+        null: exp.Expr = _unsupported("TO_JSON of NULL")
+    else:
+        null = exp.Cast(this=exp.Literal.string("null"), to=exp.DataType.build("JSON"))
     value.replace(
         exp.Case(
-            ifs=[
-                exp.If(
-                    this=exp.Is(this=value.copy(), expression=exp.Null()),
-                    true=_unsupported("TO_JSON_STRING of NULL"),
-                )
-            ],
+            ifs=[exp.If(this=exp.Is(this=value.copy(), expression=exp.Null()), true=null)],
             default=encoded,
         )
     )
@@ -86,57 +98,124 @@ def _unsupported(construct: str) -> exp.Expr:
     )
 
 
+def _call(name: str, *args: exp.Expr | str) -> exp.Expr:
+    return exp.Anonymous(
+        this=name,
+        expressions=[exp.Literal.string(a) if isinstance(a, str) else a for a in args],
+    )
+
+
+def _cast(value: exp.Expr, duckdb_type: str) -> exp.Expr:
+    return exp.Cast(this=value, to=exp.DataType.build(duckdb_type, dialect="duckdb"))
+
+
+def _json_text(text: str) -> exp.Expr:
+    return _cast(exp.Literal.string(text), "JSON")
+
+
 def _needs_rewrite(data_type: exp.DataType) -> bool:
-    """Whether a TIMESTAMP (re-encoded) or FLOAT64 (checked for NaN/Inf) is inside."""
+    """Whether a leaf that _encode rewrites is inside; raises for a leaf with no encoding."""
     kind = data_type.this
     if kind in (exp.DType.ARRAY, exp.DType.STRUCT):
         inner = [
             f.args["kind"] if isinstance(f, exp.ColumnDef) else f for f in data_type.expressions
         ]
         return any(_needs_rewrite(t) for t in inner if isinstance(t, exp.DataType))
-    if kind in (exp.DType.TIMESTAMPTZ, exp.DType.DOUBLE):
+    if kind in _REWRITTEN:
         return True
     if kind not in _SAME_JSON:
         raise CrucibleUnsupportedError(f"TO_JSON_STRING of a {data_type.sql('bigquery')} value")
     return False
 
 
-def _encode(value: exp.Expr, data_type: exp.DataType) -> exp.Expr:
-    """`value` with every TIMESTAMP inside it replaced by BigQuery's JSON text for it, and every
-    FLOAT64 checked for NaN and infinities."""
-    kind = data_type.this
-    if kind == exp.DType.DOUBLE:
-        special = exp.Or(
-            this=exp.Anonymous(this="isnan", expressions=[value.copy()]),
-            expression=exp.Anonymous(this="isinf", expressions=[value.copy()]),
-        )
-        return exp.Case(
-            ifs=[exp.If(this=special, true=_unsupported("TO_JSON_STRING of NaN or Infinity"))],
-            default=value,
-        )
-    if kind == exp.DType.TIMESTAMPTZ:
-        # Typed explicitly: a field of a NULL struct literal reaches DuckDB untyped.
-        value = exp.Cast(this=value, to=exp.DataType.build("TIMESTAMPTZ", dialect="duckdb"))
-        whole = exp.EQ(
-            this=exp.Anonymous(
-                this="date_trunc", expressions=[exp.Literal.string("second"), value.copy()]
+def _fraction(six_digits: exp.Expr) -> exp.Expr:
+    """'' for whole seconds, '.ddd' for whole milliseconds, else '.dddddd' (recorded)."""
+    return exp.Case(
+        ifs=[
+            exp.If(
+                this=exp.EQ(this=six_digits.copy(), expression=exp.Literal.string("000000")),
+                true=exp.Literal.string(""),
             ),
-            expression=value.copy(),
+            exp.If(
+                this=_call("suffix", six_digits.copy(), "000"),
+                true=_call("concat", ".", _call("left", six_digits.copy(), exp.Literal.number(3))),
+            ),
+        ],
+        default=_call("concat", ".", six_digits.copy()),
+    )
+
+
+def _datetime_text(naive: exp.Expr, suffix: str) -> exp.Expr:
+    return _call(
+        "concat",
+        _call("strftime", naive.copy(), "%Y-%m-%dT%H:%M:%S"),
+        _fraction(_call("strftime", naive.copy(), "%f")),
+        suffix,
+    )
+
+
+def _leaf(value: exp.Expr, kind: exp.DType) -> exp.Expr:
+    """BigQuery's JSON for one non-NULL leaf: VARCHAR (a JSON string) or JSON (embedded)."""
+    if kind == exp.DType.TIMESTAMPTZ:
+        return _datetime_text(_cast(_cast(value, "TIMESTAMPTZ"), "TIMESTAMP"), "Z")
+    if kind == exp.DType.TIMESTAMP:
+        return _datetime_text(_cast(value, "TIMESTAMP"), "")
+    if kind == exp.DType.TIME:
+        # DuckDB writes a TIME as HH:MM:SS[.f...] with trailing zeros trimmed.
+        text = _cast(_cast(value, "TIME"), "VARCHAR")
+        six = _call(
+            "rpad", _call("substr", text.copy(), exp.Literal.number(10)), exp.Literal.number(6), "0"
         )
-        formatted = exp.Anonymous(
-            this="strftime",
-            expressions=[
-                exp.Cast(this=value.copy(), to=exp.DataType.build("TIMESTAMP")),
-                exp.Literal.string("%Y-%m-%dT%H:%M:%SZ"),
-            ],
+        return _call("concat", _call("left", text, exp.Literal.number(8)), _fraction(six))
+    if kind in (exp.DType.BLOB, exp.DType.BINARY, exp.DType.VARBINARY):
+        return _call("base64", value)
+    if kind == exp.DType.DECIMAL:
+        trimmed = _call("rtrim", _call("rtrim", _cast(value.copy(), "VARCHAR"), "0"), ".")
+        whole = exp.Not(this=_call("contains", trimmed.copy(), "."))
+        exact = exp.Between(
+            this=value.copy(),
+            low=exp.Literal.number(-_MAX_EXACT_DOUBLE),
+            high=exp.Literal.number(_MAX_EXACT_DOUBLE),
         )
-        fractional = _unsupported("TO_JSON_STRING of a TIMESTAMP with fractional seconds")
         return exp.Case(
             ifs=[
-                exp.If(this=exp.Is(this=value.copy(), expression=exp.Null()), true=exp.Null()),
-                exp.If(this=whole, true=formatted),
+                exp.If(
+                    this=exp.And(this=whole.copy(), expression=exact),
+                    true=_cast(trimmed.copy(), "JSON"),
+                ),
+                exp.If(this=whole, true=_unsupported("TO_JSON_STRING of a NUMERIC beyond 2^53")),
             ],
-            default=fractional,
+            default=_call("to_json", trimmed),
+        )
+    if kind == exp.DType.DOUBLE:
+        return exp.Case(
+            ifs=[
+                exp.If(this=_call("isnan", value.copy()), true=_json_text('"NaN"')),
+                exp.If(
+                    this=exp.EQ(
+                        this=value.copy(), expression=_cast(exp.Literal.string("inf"), "DOUBLE")
+                    ),
+                    true=_json_text('"Infinity"'),
+                ),
+                exp.If(
+                    this=exp.EQ(
+                        this=value.copy(), expression=_cast(exp.Literal.string("-inf"), "DOUBLE")
+                    ),
+                    true=_json_text('"-Infinity"'),
+                ),
+            ],
+            default=_call("to_json", value),
+        )
+    raise AssertionError(kind)
+
+
+def _encode(value: exp.Expr, data_type: exp.DataType) -> exp.Expr:
+    """`value` with every leaf in _REWRITTEN replaced by BigQuery's JSON for it."""
+    kind = data_type.this
+    if kind in _REWRITTEN:
+        return exp.Case(
+            ifs=[exp.If(this=exp.Is(this=value.copy(), expression=exp.Null()), true=exp.Null())],
+            default=_leaf(value, kind),
         )
     if kind == exp.DType.ARRAY:
         [element] = data_type.expressions

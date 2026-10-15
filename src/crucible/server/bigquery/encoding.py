@@ -2,14 +2,14 @@
 
 Every rule here is taken from recorded responses (`tests/fixtures/bigquery_api/`), cited by fixture:
 - schema: legacy type names (INTEGER, FLOAT, BOOLEAN, RECORD), `mode` NULLABLE/REPEATED, nested
-  `fields` (05_get_query_results.json);
+  `fields` (get_query_results.json);
 - values are strings; NULL is null; an ARRAY is a list of {"v": ...}; a STRUCT is {"f": [...]};
-  a NULL array is [] (05, row 2);
+  a NULL array is [] (get_query_results, row 2);
 - FLOAT64 and TIMESTAMP (float seconds) use Java's Double.toString: "1.5", "NaN",
-  "1.704164645123456E9", "0.0" (05); with formatOptions.useInt64Timestamp, TIMESTAMP is integer
-  microseconds "1704164645123456" (06);
+  "1.704164645123456E9", "0.0" (get_query_results); with formatOptions.useInt64Timestamp,
+  TIMESTAMP is integer microseconds "1704164645123456" (get_query_results_int64_timestamp);
 - DATETIME "2024-01-02T03:04:05.123456", TIME "04:05:06.500000" / "00:00:00", DATE "0001-01-01",
-  NUMERIC "-0.000000001", BYTES base64, JSON compact text (05).
+  NUMERIC "-0.000000001", BYTES base64, JSON compact text (get_query_results).
 """
 
 from __future__ import annotations
@@ -47,7 +47,7 @@ _LEGACY_NAMES = {
 # --- schema ------------------------------------------------------------------------------------
 def schema_field(name: str, data_type: exp.DataType, *, with_mode: bool = True) -> dict[str, Any]:
     """One REST schema field. `with_mode=False` omits NULLABLE (tables.get and job statistics
-    leave it out: 02_jobs_get_ctas.json; query results include it: 05)."""
+    leave it out: jobs_get_ctas.json; query results include it: 05)."""
     mode = "NULLABLE"
     if data_type.this == T.ARRAY:
         mode = "REPEATED"
@@ -129,15 +129,34 @@ def _timestamp_micros(value: datetime) -> int:
     return (delta.days * 86_400 + delta.seconds) * 1_000_000 + delta.microseconds
 
 
-def encode_value(value: Any, data_type: exp.DataType, *, int64_timestamp: bool = False) -> Any:
+def _tabledata_seconds(micros: int) -> str:
+    """tabledata.list writes float-seconds TIMESTAMPs unlike getQueryResults: "0.0" and
+    "1704164645.123456" are recorded (tabledata_list.json). Other shapes (whole seconds, a
+    fraction with trailing zeros, before 1970) are unrecorded and raise. The clients ask for
+    int64 timestamps instead
+    (google-cloud-bigquery==3.46.1: google/cloud/bigquery/client.py:4264)."""
+    seconds, fraction = divmod(micros, 1_000_000)
+    if micros == 0:
+        return "0.0"
+    if micros > 0 and fraction % 10 != 0:
+        return f"{seconds}.{fraction:06d}"
+    raise CrucibleUnsupportedError("tabledata.list float TIMESTAMP of this shape (use int64)")
+
+
+def encode_value(
+    value: Any, data_type: exp.DataType, *, int64_timestamp: bool = False, tabledata: bool = False
+) -> Any:
     """One cell's `v`: a string, null, a list of {"v": ...}, or {"f": [...]}."""
     kind = data_type.this
     if kind == T.ARRAY:
         [element] = data_type.expressions
         assert isinstance(element, exp.DataType)
         if value is None:
-            return []  # a NULL array is written as [] (05_get_query_results.json, row 2)
-        return [{"v": encode_value(v, element, int64_timestamp=int64_timestamp)} for v in value]
+            return []  # a NULL array is written as [] (get_query_results.json, row 2)
+        return [
+            {"v": encode_value(v, element, int64_timestamp=int64_timestamp, tabledata=tabledata)}
+            for v in value
+        ]
     if value is None:
         return None
     if kind == T.STRUCT:
@@ -146,7 +165,10 @@ def encode_value(value: Any, data_type: exp.DataType, *, int64_timestamp: bool =
             "f": [
                 {
                     "v": encode_value(
-                        value.get(c.name), c.args["kind"], int64_timestamp=int64_timestamp
+                        value.get(c.name),
+                        c.args["kind"],
+                        int64_timestamp=int64_timestamp,
+                        tabledata=tabledata,
                     )
                 }
                 for c in fields
@@ -174,9 +196,11 @@ def encode_value(value: Any, data_type: exp.DataType, *, int64_timestamp: bool =
         return value.isoformat()
     if name == "TIMESTAMP" and isinstance(value, datetime):
         micros = _timestamp_micros(value)
-        return str(micros) if int64_timestamp else java_double(micros / 1_000_000)
+        if int64_timestamp:
+            return str(micros)
+        return _tabledata_seconds(micros) if tabledata else java_double(micros / 1_000_000)
     if name == "JSON":
-        # Compact text; a JSON null is the text "null", not a SQL NULL (05, row 3).
+        # Compact text; a JSON null is the text "null", not a SQL NULL (get_query_results, row 3).
         parsed = json.loads(value) if isinstance(value, str) else value
         return json.dumps(parsed, separators=(",", ":"), ensure_ascii=False)
     # INTERVAL: DuckDB hands Python a timedelta that has folded months into 30-day days.
@@ -184,12 +208,16 @@ def encode_value(value: Any, data_type: exp.DataType, *, int64_timestamp: bool =
 
 
 def encode_rows(
-    rows: list[tuple[Any, ...]], column_types: list[exp.DataType], *, int64_timestamp: bool = False
+    rows: list[tuple[Any, ...]],
+    column_types: list[exp.DataType],
+    *,
+    int64_timestamp: bool = False,
+    tabledata: bool = False,
 ) -> list[dict[str, Any]]:
     return [
         {
             "f": [
-                {"v": encode_value(v, t, int64_timestamp=int64_timestamp)}
+                {"v": encode_value(v, t, int64_timestamp=int64_timestamp, tabledata=tabledata)}
                 for v, t in zip(row, column_types, strict=True)
             ]
         }

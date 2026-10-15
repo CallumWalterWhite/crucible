@@ -69,7 +69,6 @@
       "creationTime": "<time>",
       "startTime": "<time>",
       "endTime": "<time>",
-      "completionRatio": 1,
       "load": {
         "inputFiles": "1",
         "inputFileBytes": "73",
@@ -77,14 +76,6 @@
         "outputBytes": "59",
         "badRecords": "0",
         "timeline": [
-          {
-            "elapsedMs": "<duration>",
-            "totalSlotMs": "<duration>",
-            "pendingUnits": "1",
-            "completedUnits": "0",
-            "activeUnits": "1",
-            "estimatedRunnableUnits": "0"
-          },
           {
             "elapsedMs": "<duration>",
             "totalSlotMs": "<duration>",

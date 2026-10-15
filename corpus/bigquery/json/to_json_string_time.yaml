@@ -3,7 +3,6 @@ description: TO_JSON_STRING of TIME. Crucible raises unsupported until recorded 
 tags:
 - phase4
 - json
-- known-divergence
 query: SELECT TO_JSON_STRING(STRUCT(TIME '05:06:07.25' AS t)) AS v
 ordered: false
 expected:

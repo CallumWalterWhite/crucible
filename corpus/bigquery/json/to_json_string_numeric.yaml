@@ -3,7 +3,6 @@ description: TO_JSON_STRING of NUMERIC. DuckDB writes the scale's trailing zeros
 tags:
 - phase4
 - json
-- known-divergence
 query: SELECT TO_JSON_STRING(STRUCT(NUMERIC '1.50' AS n)) AS v
 ordered: false
 expected:

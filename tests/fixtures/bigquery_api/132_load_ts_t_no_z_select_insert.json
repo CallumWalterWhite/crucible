@@ -16,7 +16,8 @@
           "defaultDataset": {
             "projectId": "<project>",
             "datasetId": "<dataset>"
-          }
+          },
+          "useQueryCache": false
         }
       }
     }
@@ -45,6 +46,7 @@
           "projectId": "<project>"
         },
         "priority": "INTERACTIVE",
+        "useQueryCache": false,
         "maximumBytesBilled": "104857600",
         "useLegacySql": false
       },
@@ -67,18 +69,18 @@
             "id": "0",
             "startMs": "<time>",
             "endMs": "<time>",
-            "waitRatioAvg": 0.3333333333333333,
-            "waitMsAvg": "1",
-            "waitRatioMax": 0.3333333333333333,
-            "waitMsMax": "1",
-            "readRatioAvg": 0.3333333333333333,
-            "readMsAvg": "1",
-            "readRatioMax": 0.3333333333333333,
-            "readMsMax": "1",
+            "waitRatioAvg": 1,
+            "waitMsAvg": "4",
+            "waitRatioMax": 1,
+            "waitMsMax": "4",
+            "readRatioAvg": 1,
+            "readMsAvg": "4",
+            "readRatioMax": 1,
+            "readMsMax": "4",
             "computeRatioAvg": 1,
-            "computeMsAvg": "3",
+            "computeMsAvg": "4",
             "computeRatioMax": 1,
-            "computeMsMax": "3",
+            "computeMsMax": "4",
             "writeRatioAvg": 0,
             "writeMsAvg": "0",
             "writeRatioMax": 0,
@@ -118,13 +120,6 @@
         ],
         "estimatedBytesProcessed": "52",
         "timeline": [
-          {
-            "elapsedMs": "<duration>",
-            "totalSlotMs": "<duration>",
-            "pendingUnits": "1",
-            "completedUnits": "0",
-            "activeUnits": "0"
-          },
           {
             "elapsedMs": "<duration>",
             "totalSlotMs": "<duration>",

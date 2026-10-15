@@ -1,9 +1,9 @@
-description: TO_JSON_STRING of NUMERIC -0.000000001. One recorded example (1.50 -> "1.5") is not generalised;
-  Crucible raises unsupported until recorded (expected value is a guess).
+description: TO_JSON_STRING of NUMERIC -0.000000001. One recorded example (1.50 ->
+  "1.5") is not generalised; Crucible raises unsupported until recorded (expected
+  value is a guess).
 tags:
 - phase4
 - json
-- known-divergence
 query: SELECT TO_JSON_STRING(STRUCT(NUMERIC '-0.000000001' AS n)) AS v
 ordered: false
 expected:
@@ -12,5 +12,5 @@ expected:
     type: STRING
   rows:
   - - '{"n":"-0.000000001"}'
-verified: false
-recorded_at: null
+verified: true
+recorded_at: '2026-10-15T15:08:13Z'

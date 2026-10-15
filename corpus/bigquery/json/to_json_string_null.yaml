@@ -4,7 +4,6 @@ description: TO_JSON_STRING of a NULL operand. DuckDB answers SQL NULL; Crucible
 tags:
 - phase4
 - json
-- known-divergence
 query: SELECT TO_JSON_STRING(CAST(NULL AS INT64)) AS v
 ordered: false
 expected:

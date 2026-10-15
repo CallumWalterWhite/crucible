@@ -10,7 +10,8 @@
       "defaultDataset": {
         "projectId": "<project>",
         "datasetId": "<dataset>"
-      }
+      },
+      "useQueryCache": false
     }
   },
   "status": 200,
@@ -53,12 +54,13 @@
     ],
     "totalBytesProcessed": "0",
     "jobComplete": true,
-    "cacheHit": true,
+    "cacheHit": false,
     "queryId": "<query-id>",
     "jobCreationReason": {
       "code": "REQUESTED"
     },
     "totalBytesBilled": "0",
+    "totalSlotMs": "<duration>",
     "location": "<location>",
     "creationTime": "<time>",
     "startTime": "<time>",

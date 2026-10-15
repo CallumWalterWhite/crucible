@@ -4,7 +4,6 @@ description: TO_JSON_STRING of a TIMESTAMP with fractional seconds. Whole second
 tags:
 - phase4
 - json
-- known-divergence
 query: SELECT TO_JSON_STRING(STRUCT(TIMESTAMP '2024-03-04 05:06:07.5+00' AS t)) AS
   v
 ordered: false

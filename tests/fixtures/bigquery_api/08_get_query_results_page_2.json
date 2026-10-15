@@ -186,6 +186,6 @@
     ],
     "totalBytesProcessed": "0",
     "jobComplete": true,
-    "cacheHit": true
+    "cacheHit": false
   }
 }

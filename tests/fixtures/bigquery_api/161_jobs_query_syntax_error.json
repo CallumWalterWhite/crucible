@@ -10,7 +10,8 @@
       "defaultDataset": {
         "projectId": "<project>",
         "datasetId": "<dataset>"
-      }
+      },
+      "useQueryCache": false
     }
   },
   "status": 400,

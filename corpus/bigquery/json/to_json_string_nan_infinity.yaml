@@ -4,7 +4,6 @@ description: TO_JSON_STRING of NaN and infinite FLOAT64 values. DuckDB writes a 
 tags:
 - phase4
 - json
-- known-divergence
 query: SELECT TO_JSON_STRING([CAST('nan' AS FLOAT64), CAST('inf' AS FLOAT64), CAST('-inf'
   AS FLOAT64)]) AS v
 ordered: false

@@ -3,7 +3,6 @@ description: TO_JSON_STRING of BYTES. DuckDB writes the raw bytes; Crucible rais
 tags:
 - phase4
 - json
-- known-divergence
 query: SELECT TO_JSON_STRING(STRUCT(b'ab' AS b)) AS v
 ordered: false
 expected:

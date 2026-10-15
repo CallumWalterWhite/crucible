@@ -36,16 +36,17 @@ from crucible.server.bigquery.errors import error_response, http_error, job_erro
 from crucible.server.bigquery.jobs import (
     ANONYMOUS_DATASET,
     DEFAULT_LOCATION,
-    PAGE_TOKEN_PREFIX,
     Job,
     JobStore,
     Runner,
     fields_of,
     new_job_id,
+    new_page_token,
     now_ms,
     obj,
     page,
     page_bounds,
+    token_offset,
 )
 
 DEFAULT_PORT = 9050
@@ -177,7 +178,8 @@ class BigQueryServer:
 
     # --- jobs ---------------------------------------------------------------------------------
     def job_resource(self, job: Job, base: str) -> dict[str, Any]:
-        """jobs.insert / jobs.get / upload response (02, 04, 20, 23, 83)."""
+        """jobs.insert / jobs.get / upload response (fixtures jobs_get_ctas, jobs_get_select,
+        jobs_get_dml, load_baseline_jobs_get, jobs_insert_runtime_error)."""
         configuration: dict[str, Any] = {
             k: (dict(v) if isinstance(v, dict) else v)  # pyright: ignore[reportUnknownArgumentType]
             for k, v in job.configuration.items()
@@ -230,7 +232,7 @@ class BigQueryServer:
 
     def _query_statistics(self, job: Job) -> dict[str, Any]:
         if job.statement_type is None:
-            return {}  # failed before its statement type was known (29)
+            return {}  # failed before its statement type was known (load_bad_value_select_insert)
         stats: dict[str, Any] = {
             "totalBytesProcessed": "0",
             "totalBytesBilled": "0",
@@ -312,7 +314,8 @@ class BigQueryServer:
         start_index: int | None,
         int64_timestamp: bool,
     ) -> dict[str, Any]:
-        """The result fields shared by jobs.query (11) and getQueryResults (05-10)."""
+        """The result fields shared by jobs.query (jobs_query) and getQueryResults
+        (get_query_results*)."""
         response: dict[str, Any] = {}
         if job.columns is None:
             # Not a SELECT: no totalRows, so the client returns an empty result
@@ -404,7 +407,8 @@ class BigQueryServer:
             return http_error(exc, query_parameter=True)
         schema = {"schema": rows.pop("schema")} if "schema" in rows else {}
         # JOB_CREATION_OPTIONAL: no jobReference while the whole result fits in this response
-        # (12); a paged result needs a job, which the client reads back by its reference
+        # (jobs_query_job_creation_optional); a paged result needs a job, which the client reads
+        # back by its reference
         # (google-cloud-bigquery==3.45.2: google/cloud/bigquery/_job_helpers.py:591).
         with_job = body.get("jobCreationMode") != "JOB_CREATION_OPTIONAL" or "pageToken" in rows
         reference: dict[str, Any] = {"jobReference": self._reference(job)} if with_job else {}
@@ -445,7 +449,8 @@ class BigQueryServer:
     def _dataset_resource(
         self, project: str, dataset: str, props: dict[str, Any], base: str, *, full: bool
     ) -> dict[str, Any]:
-        """datasets.insert / datasets.get (00, 16); the datasets.list entry when not full (17)."""
+        """datasets.insert / datasets.get (datasets_insert, datasets_get); the datasets.list
+        entry when not full (datasets_list)."""
         resource: dict[str, Any] = {
             "kind": "bigquery#dataset",
             "id": f"{project}:{dataset}",
@@ -551,7 +556,8 @@ class BigQueryServer:
     def _table_resource(
         self, info: TableInfo, rows: int | None, base: str, location: str
     ) -> dict[str, Any]:
-        """tables.get / tables.patch / tables.insert (13, 82). Storage sizes and object times
+        """tables.get / tables.patch / tables.insert (tables_get, tables_patch_add_column).
+        Storage sizes and object times
         are not emulated."""
         project, dataset, table = info.catalog, info.schema, info.name
         resource: dict[str, Any] = {
@@ -657,7 +663,8 @@ class BigQueryServer:
             return http_error(exc)
 
     def _anonymous_table(self, project: str, table: str, base: str) -> Response:
-        """A SELECT job's result table, from the job store (14: modes are NULLABLE here)."""
+        """A SELECT job's result table, from the job store (tables_get_anonymous: modes are
+        NULLABLE here)."""
         job = self.store.anonymous(project, table)
         if job is None or job.columns is None:
             return http_error(
@@ -688,7 +695,7 @@ class BigQueryServer:
         project, dataset = request.path_params["project"], request.path_params["dataset"]
         max_results = _int_param(request, "maxResults")
         token = request.query_params.get("pageToken") or "0"
-        offset = int(token.removeprefix(PAGE_TOKEN_PREFIX))
+        offset = token_offset(token)
 
         def listing(ctx: ExecContext) -> list[TableInfo]:
             metadata.check_dataset(ctx, project, dataset)
@@ -701,7 +708,7 @@ class BigQueryServer:
         end = len(infos) if max_results is None else min(len(infos), offset + max_results)
         body: dict[str, Any] = {"kind": "bigquery#tableList", "etag": _etag()}
         if end < len(infos):
-            body["nextPageToken"] = f"{PAGE_TOKEN_PREFIX}{end}"
+            body["nextPageToken"] = new_page_token(end)
         tables = [
             {
                 "kind": "bigquery#table",
@@ -712,7 +719,7 @@ class BigQueryServer:
                     "tableId": info.name,
                 },
                 "type": "VIEW" if info.kind == "view" else "TABLE",
-                **ddl.rest_partitioning(info.properties),
+                **ddl.rest_partitioning(info.properties, definition=False),
             }
             for info in infos[offset:end]
         ]
@@ -804,7 +811,7 @@ class BigQueryServer:
             )
         except CrucibleError as exc:
             return http_error(exc)
-        return JSONResponse({})  # an empty dataset lists as {} (18)
+        return JSONResponse({})  # an empty dataset lists as {} (routines_list)
 
     async def routines_get(self, request: Request) -> Response:
         p = request.path_params
@@ -934,7 +941,9 @@ def _table_data(
         body["pageToken"] = token
     if rows:
         # google-cloud-bigquery==3.46.1: google/cloud/bigquery/table.py:1953 (items key "rows")
-        body["rows"] = encoding.encode_rows(rows, column_types, int64_timestamp=int64)
+        body["rows"] = encoding.encode_rows(
+            rows, column_types, int64_timestamp=int64, tabledata=True
+        )
     return body
 
 

@@ -11,6 +11,7 @@
         "projectId": "<project>",
         "datasetId": "<dataset>"
       },
+      "useQueryCache": false,
       "jobCreationMode": "JOB_CREATION_OPTIONAL"
     }
   },
@@ -49,7 +50,7 @@
     ],
     "totalBytesProcessed": "0",
     "jobComplete": true,
-    "cacheHit": true,
+    "cacheHit": false,
     "queryId": "<query-id>",
     "totalBytesBilled": "0",
     "totalSlotMs": "<duration>",

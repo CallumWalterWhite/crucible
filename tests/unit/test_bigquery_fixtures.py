@@ -101,10 +101,6 @@ VALUE_FREE_KEYS = {"totalBytesProcessed", "totalBytesBilled", "inputFileBytes"}
 _JOBS_RUN_IN_REQUEST = (
     "jobs finish inside the request that creates them (ADR 0004): DONE, not RUNNING"
 )
-_UNRECORDED_BOOL = (
-    "BigQuery accepts this BOOL spelling but the loaded value is unrecorded, so Crucible raises "
-    "unsupported (the recorder's newer load cases will settle it)"
-)
 # (fixture name glob, path regex, reason)
 DIFFERENCES: list[tuple[str, str, str]] = [
     ("jobs_insert_*", r"^body\.status", _JOBS_RUN_IN_REQUEST),
@@ -115,7 +111,6 @@ DIFFERENCES: list[tuple[str, str, str]] = [
     ),
     ("load_*_upload", r"^body\.status", _JOBS_RUN_IN_REQUEST),
     ("load_*_upload", r"^body\.statistics\.(endTime|load)", _JOBS_RUN_IN_REQUEST),
-    ("load_bool_*_jobs_get", r"^body\.status\.(errorResult|errors)", _UNRECORDED_BOOL),
     (
         "tables_get",
         r"^body\.(creationTime|expirationTime|lastModifiedTime)$",
@@ -129,6 +124,16 @@ DIFFERENCES: list[tuple[str, str, str]] = [
     (
         "tables_list",
         r"^body\.tables\[0\]\.(creationTime|expirationTime)$",
+        "object times are not tracked",
+    ),
+    (
+        "tables_list_partitioned",
+        r"^body\.tables\[\d+\]\.(creationTime|expirationTime)$",
+        "object times are not tracked",
+    ),
+    (
+        "tables_get_partitioned_*",
+        r"^body\.(creationTime|expirationTime|lastModifiedTime)$",
         "object times are not tracked",
     ),
     (
@@ -146,6 +151,11 @@ DIFFERENCES: list[tuple[str, str, str]] = [
         r"^body\.error\.(message|errors\[0\]\.message)$",
         "syntax error wording comes from SQLGlot's parser",
     ),
+    (
+        "tabledata_list_[ps]*",
+        r"^body\.rows",
+        "a page of a stored table follows BigQuery's storage order, which it does not define",
+    ),
     ("load_*_initiate", r"^headers\.Content-Type$", "content type of an empty body"),
     ("tables_delete", r"^headers\.Content-Type$", "content type of an empty body"),
 ]
@@ -153,12 +163,10 @@ DIFFERENCES: list[tuple[str, str, str]] = [
 
 # Calls the recorder makes that the committed fixtures predate (Phase 4, Step A). The replay
 # makes them, so Crucible must answer; they are compared once the user records them.
-NOT_RECORDED_YET = [
-    "tabledata_list*",
-    "jobs_insert_partitioned_*",
-    "tables_get_partitioned_*",
-    "tables_list_partitioned",
-]
+NOT_RECORDED_YET: list[str] = []
+
+
+STORAGE_ORDER_PAGES = {"tabledata_list", "tabledata_list_int64_timestamp"}
 
 
 class AppSession:
@@ -212,7 +220,9 @@ def _name(path: Path) -> str:
 
 
 def _recorded() -> dict[str, Any]:
-    return {_name(p): json.loads(p.read_text()) for p in sorted(FIXTURES.glob("*.json"))}
+    # By call number: past 99, "100_..." sorts before "11_..." as text.
+    paths = sorted(FIXTURES.glob("*.json"), key=lambda p: int(p.name.split("_", 1)[0]))
+    return {_name(p): json.loads(p.read_text()) for p in paths}
 
 
 def _normalize_expected(value: Any) -> Any:
@@ -278,6 +288,18 @@ def diff(expected: Any, actual: Any, path: str = "") -> list[tuple[str, str]]:
 
 def _compare(name: str, expected: dict[str, Any], actual: dict[str, Any]) -> list[tuple[str, str]]:
     want = _normalize_expected(expected)
+    if name.startswith("tabledata_list"):
+        # tabledata.list rows carry no schema: drop the all-types table's `iv` cell by position.
+        names = [f["name"] for f in _recorded()["tables_get"]["body"]["schema"]["fields"]]
+        if "iv" in names:
+            index = names.index("iv")
+            for row in want["body"].get("rows", []):
+                row["f"] = [c for i, c in enumerate(row["f"]) if i != index]
+    if name in STORAGE_ORDER_PAGES:
+        # A stored table's tabledata.list order is BigQuery's storage order, which it does not
+        # define: compare the whole listing as a multiset.
+        for side in (want, actual):
+            side["body"]["rows"] = sorted(side["body"].get("rows", []), key=json.dumps)
     found = diff(want["status"], actual["status"], "status")
     found += diff(want["body"], actual["body"], "body")
     # Headers: names are case-insensitive; only Location, Range and Content-Type are recorded.

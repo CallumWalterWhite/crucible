@@ -1,14 +1,15 @@
 """CrucibleError -> BigQuery error bodies, as recorded (`tests/fixtures/bigquery_api/`).
 
 - HTTP error body: {"error": {code, message, errors: [{message, domain, reason, ...}], status}}
-  (87_tables_get_not_found.json; google-api-core==2.42.0: google/api_core/exceptions.py:551-552).
+  (tables_get_not_found.json; google-api-core==2.42.0: google/api_core/exceptions.py:551-552).
 - A query error from jobs.query or getQueryResults is HTTP 400, reason invalidQuery, with
-  location "q" / locationType "parameter" (85_get_query_results_runtime_error.json,
-  86_jobs_query_syntax_error.json).
+  location "q" / locationType "parameter" (get_query_results_runtime_error.json,
+  jobs_query_syntax_error.json).
 - A failed job is HTTP 200 with status.errorResult and status.errors: invalidQuery with location
-  "query" (83_jobs_insert_runtime_error.json); notFound without a location, and the message names
-  the location (29_load_empty_fields_select_insert.json).
-- Duplicates are HTTP 409, reason duplicate, status ALREADY_EXISTS (88, 89).
+  "query" (jobs_insert_runtime_error.json); notFound without a location, and the message names
+  the location (load_bad_value_select_insert.json).
+- Duplicates are HTTP 409, reason duplicate, status ALREADY_EXISTS (jobs_insert_conflict,
+  datasets_insert_conflict).
 """
 
 from __future__ import annotations
@@ -75,7 +76,8 @@ def job_error(exc: CrucibleError, location: str) -> dict[str, Any]:
 
 
 def job_error_response(error: dict[str, Any], kind: ErrorKind) -> JSONResponse:
-    """getQueryResults on a failed job: the job's error as an HTTP error (85)."""
+    """getQueryResults on a failed job: the job's error as an HTTP error
+    (get_query_results_runtime_error)."""
     status, reason, status_text = _HTTP[kind]
     detail = {"location": "q", "locationType": "parameter"} if reason == "invalidQuery" else {}
     return error_response(status, reason, error["message"], status_text, **detail)

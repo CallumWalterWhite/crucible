@@ -1,10 +1,10 @@
-description: TO_JSON_STRING of TIMESTAMP with fraction '.123'. Crucible raises unsupported until recorded
-  (expected value is a guess).
+description: TO_JSON_STRING of TIMESTAMP with fraction '.123'. Crucible raises unsupported
+  until recorded (expected value is a guess).
 tags:
 - phase4
 - json
-- known-divergence
-query: SELECT TO_JSON_STRING(STRUCT(TIMESTAMP '2024-03-04 05:06:07.123+00' AS t)) AS v
+query: SELECT TO_JSON_STRING(STRUCT(TIMESTAMP '2024-03-04 05:06:07.123+00' AS t))
+  AS v
 ordered: false
 expected:
   columns:
@@ -12,5 +12,5 @@ expected:
     type: STRING
   rows:
   - - '{"t":"2024-03-04T05:06:07.123Z"}'
-verified: false
-recorded_at: null
+verified: true
+recorded_at: '2026-10-15T15:08:27Z'
