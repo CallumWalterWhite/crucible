@@ -1,0 +1,12 @@
+description: ALTER TABLE SET OPTIONS leaves the table queryable with its data. Expected value from the BigQuery documentation; not yet recorded.
+tags: [slice2, statements]
+setup: [CREATE TABLE t (a INT64), INSERT INTO t VALUES (1), ALTER TABLE t SET OPTIONS (description = 'x')]
+query: SELECT a FROM t
+ordered: false
+expected:
+  columns:
+  - {name: a, type: INT64}
+  rows:
+  - [1]
+verified: false
+recorded_at: null

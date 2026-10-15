@@ -3,7 +3,6 @@ description: CAST rounds a negative FLOAT64 to INT64, with halves rounded away f
 tags:
 - probe
 - cast
-- known-divergence
 query: SELECT CAST(-2.5 AS INT64) AS v
 ordered: false
 expected:

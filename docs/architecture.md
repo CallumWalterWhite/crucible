@@ -93,8 +93,9 @@ Each dialect package has the same modules:
 ### Transforms
 
 `dialects/<d>/transforms/` is a package with one module per area, so two people never edit the
-same file. For BigQuery: `unnest`, `json`, `regexp`, `dates`, `arrays`, `errors`, `safe`,
-`literals`. Each module exposes `transform(tree, ctx) -> tree`; `transforms/__init__.py` holds the
+same file. For BigQuery: `unnest`, `json`, `regexp`, `strings`, `dates`, `arrays`, `errors`,
+`safe`, `literals`; `common.py` holds the helpers that raise runtime and unsupported errors from
+generated SQL. Each module exposes `transform(tree, ctx) -> tree`; `transforms/__init__.py` holds the
 only ordered list (`PIPELINE`). Transforms run on the qualified and type-annotated AST, keep `.type`
 on what they build, and raise `CrucibleUnsupportedError` for anything in their area they cannot
 translate exactly. Each transform has unit tests and corpus cases.

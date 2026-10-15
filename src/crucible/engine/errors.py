@@ -7,8 +7,10 @@ from enum import StrEnum
 
 import duckdb
 
-# Prefix for errors raised from generated SQL via DuckDB's error() function (ADR 0011).
+# Prefixes for errors raised from generated SQL via DuckDB's error() function (ADR 0011): the
+# warehouse's own runtime error, or a value Crucible cannot handle exactly (ADR 0009).
 RUNTIME_ERROR_PREFIX = "CRUCIBLE:RUNTIME:"
+UNSUPPORTED_ERROR_PREFIX = "CRUCIBLE:UNSUPPORTED:"
 
 
 class ErrorKind(StrEnum):
@@ -52,11 +54,14 @@ class CrucibleUnsupportedError(CrucibleError):
         self.construct = construct
 
 
+def _after(text: str, prefix: str) -> str | None:
+    index = text.find(prefix)
+    return None if index < 0 else text[index + len(prefix) :]
+
+
 def runtime_error_message(exc: duckdb.Error) -> str | None:
-    """The message of an error raised by generated SQL through error(), else None."""
-    text = str(exc)
-    index = text.find(RUNTIME_ERROR_PREFIX)
-    return None if index < 0 else text[index + len(RUNTIME_ERROR_PREFIX) :]
+    """The message of a runtime error raised by generated SQL through error(), else None."""
+    return _after(str(exc), RUNTIME_ERROR_PREFIX)
 
 
 def from_duckdb(exc: duckdb.Error) -> CrucibleError:
@@ -64,6 +69,9 @@ def from_duckdb(exc: duckdb.Error) -> CrucibleError:
     message = runtime_error_message(exc)
     if message is not None:
         return CrucibleError(ErrorKind.RUNTIME, message)
+    construct = _after(str(exc), UNSUPPORTED_ERROR_PREFIX)
+    if construct is not None:
+        return CrucibleUnsupportedError(construct)
     text = str(exc)
     if isinstance(exc, duckdb.TransactionException) and "Conflict" in text:
         return CrucibleError(ErrorKind.CONFLICT, text)

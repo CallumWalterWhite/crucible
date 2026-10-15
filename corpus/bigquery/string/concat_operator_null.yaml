@@ -3,7 +3,6 @@ description: The || operator rejects a literal NULL operand at analysis time. Me
 tags:
 - probe
 - string
-- known-divergence
 query: SELECT 'a' || NULL AS v
 ordered: false
 expected:

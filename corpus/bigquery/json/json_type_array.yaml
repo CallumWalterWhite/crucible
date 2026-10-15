@@ -2,7 +2,6 @@ description: JSON_TYPE returns the JSON type name 'array' for a JSON array.
 tags:
 - probe
 - json
-- known-divergence
 query: SELECT JSON_TYPE(PARSE_JSON('[1]')) AS v
 ordered: false
 expected:

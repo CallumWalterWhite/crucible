@@ -2,7 +2,6 @@ description: JSON_TYPE returns 'number' for a JSON number.
 tags:
 - probe
 - json
-- known-divergence
 query: SELECT JSON_TYPE(PARSE_JSON('1.5')) AS v
 ordered: false
 expected:

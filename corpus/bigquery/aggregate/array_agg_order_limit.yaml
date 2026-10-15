@@ -3,7 +3,6 @@ description: ARRAY_AGG accepts ORDER BY and LIMIT inside the call, and its resul
 tags:
 - probe
 - aggregate
-- known-divergence
 query: SELECT ARRAY_AGG(x ORDER BY x DESC LIMIT 1)[OFFSET(0)] AS v FROM UNNEST([2,
   3, 1]) AS x
 ordered: false

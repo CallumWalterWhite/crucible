@@ -1,0 +1,15 @@
+description: CAST of a FLOAT64 value outside the INT64 range raises an overflow error.
+  Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- cast
+- unconfirmed
+- known-divergence
+query: SELECT CAST(1e20 AS INT64) AS v
+ordered: false
+expected:
+  error:
+    kind: runtime
+    message_contains: overflow
+verified: false
+recorded_at: null

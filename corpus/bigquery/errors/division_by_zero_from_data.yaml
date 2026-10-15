@@ -1,0 +1,9 @@
+description: The / operator raises an error when a row's divisor is zero. See https://cloud.google.com/bigquery/docs/reference/standard-sql/mathematical_functions. Expected value from the BigQuery documentation; not yet recorded.
+tags: [slice2, errors]
+setup: ['CREATE TABLE t (a INT64, b INT64)', 'INSERT INTO t VALUES (1, 0), (6, 3)']
+query: SELECT a / b AS q FROM t
+ordered: false
+expected:
+  error: {kind: runtime, message_contains: division by zero}
+verified: false
+recorded_at: null

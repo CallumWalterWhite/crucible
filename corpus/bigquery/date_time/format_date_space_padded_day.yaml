@@ -2,7 +2,6 @@ description: FORMAT_DATE with %e renders the day of month space-padded to two ch
 tags:
 - probe
 - date_time
-- known-divergence
 query: SELECT FORMAT_DATE('%b %e %Y', DATE '2024-03-05') AS v
 ordered: false
 expected:

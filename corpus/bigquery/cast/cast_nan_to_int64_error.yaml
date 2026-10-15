@@ -1,0 +1,15 @@
+description: CAST of NaN to INT64 raises a runtime error. Expected value from the
+  BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- cast
+- unconfirmed
+- known-divergence
+query: SELECT CAST(CAST('nan' AS FLOAT64) AS INT64) AS v
+ordered: false
+expected:
+  error:
+    kind: runtime
+    message_contains: NaN
+verified: false
+recorded_at: null

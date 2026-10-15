@@ -22,6 +22,7 @@ from crucible.dialects.bigquery.transforms import (
     literals,
     regexp,
     safe,
+    strings,
     unnest,
 )
 from crucible.engine import Session
@@ -41,6 +42,7 @@ PIPELINE: tuple[tuple[str, Transform], ...] = (
     ("unnest", unnest.transform),
     ("json", json.transform),
     ("regexp", regexp.transform),
+    ("strings", strings.transform),
     ("dates", dates.transform),
     ("arrays", arrays.transform),
     ("errors", errors.transform),

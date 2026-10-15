@@ -1,0 +1,14 @@
+description: CAST of a FLOAT64 column to INT64 rounds halfway values away from zero. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions. Expected value from the BigQuery documentation; not yet recorded.
+tags: [slice2, cast]
+setup: [CREATE TABLE t (x FLOAT64), 'INSERT INTO t VALUES (-2.5), (2.5), (0.5)']
+query: SELECT CAST(x AS INT64) AS v FROM t
+ordered: false
+expected:
+  columns:
+  - {name: v, type: INT64}
+  rows:
+  - [-3]
+  - [3]
+  - [1]
+verified: false
+recorded_at: null

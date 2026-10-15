@@ -1,0 +1,16 @@
+description: ARRAY_AGG with ORDER BY DESC and LIMIT keeps the first n ordered values. See https://cloud.google.com/bigquery/docs/reference/standard-sql/aggregate_functions. Expected value from the BigQuery documentation; not yet recorded.
+tags: [slice2, aggregate]
+setup: ['CREATE TABLE t (k STRING, x INT64, y INT64)', 'INSERT INTO t VALUES (''k1'', 1, 10), (''k1'', 2, 20), (''k1'', 3, 30), (''k2'', 4, 5)']
+query: SELECT k, ARRAY_AGG(x ORDER BY y DESC LIMIT 2) AS v FROM t GROUP BY k
+ordered: false
+expected:
+  columns:
+  - {name: k, type: STRING}
+  - {name: v, type: ARRAY<INT64>}
+  rows:
+  - - k1
+    - [3, 2]
+  - - k2
+    - [4]
+verified: false
+recorded_at: null

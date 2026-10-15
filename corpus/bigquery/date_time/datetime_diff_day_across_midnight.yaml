@@ -1,0 +1,17 @@
+description: DATETIME_DIFF truncates a 12-hour difference to 0 days. See https://cloud.google.com/bigquery/docs/reference/standard-sql/datetime_functions.
+  Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- date_time
+- known-divergence
+query: SELECT DATETIME_DIFF(DATETIME '2024-01-02 00:00:00', DATETIME '2024-01-01 12:00:00',
+  DAY) AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: INT64
+  rows:
+  - - 0
+verified: false
+recorded_at: null

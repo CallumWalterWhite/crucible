@@ -3,7 +3,6 @@ description: TIMESTAMP_DIFF with DAY truncates the elapsed time, so 12 hours is 
 tags:
 - probe
 - date_time
-- known-divergence
 query: SELECT TIMESTAMP_DIFF(TIMESTAMP '2024-01-02 00:00:00+00', TIMESTAMP '2024-01-01
   12:00:00+00', DAY) AS v
 ordered: false

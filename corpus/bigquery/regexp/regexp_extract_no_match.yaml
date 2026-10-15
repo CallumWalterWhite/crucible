@@ -2,7 +2,6 @@ description: REGEXP_EXTRACT returns NULL when the pattern does not match.
 tags:
 - probe
 - regexp
-- known-divergence
 query: SELECT REGEXP_EXTRACT('abc', r'[0-9]') AS v
 ordered: false
 expected:

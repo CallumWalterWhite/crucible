@@ -3,7 +3,6 @@ description: SAFE.PARSE_JSON returns NULL instead of an error when the input is 
 tags:
 - probe
 - json
-- known-divergence
 query: SELECT SAFE.PARSE_JSON('{bad') AS v
 ordered: false
 expected:

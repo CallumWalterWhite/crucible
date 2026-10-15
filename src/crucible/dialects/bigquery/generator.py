@@ -15,7 +15,34 @@ from crucible.engine import CrucibleUnsupportedError
 
 class BigQueryToDuckDB(DuckDB):
     class Generator(DuckDB.Generator):
-        pass
+        def arrayagg_sql(self, expression: exp.ArrayAgg) -> str:
+            """ARRAY_AGG([DISTINCT] x [IGNORE NULLS] [ORDER BY ...] [LIMIT n]).
+
+            SQLGlot 30.22 copies `ORDER BY ... LIMIT` into the FILTER it emits for IGNORE NULLS,
+            producing invalid SQL, and rejects LIMIT. DuckDB has no LIMIT inside an aggregate, so
+            `LIMIT n` becomes list_slice(..., 1, n) over the ordered aggregate.
+            TODO(upstream): SQLGlot PR draft in .local/upstream/ (link here once opened).
+            """
+            node = expression.this
+            limit = None
+            if isinstance(node, exp.Limit):
+                limit, node = node.expression, node.this
+            order: list[exp.Expr] = []
+            if isinstance(node, exp.Order):
+                order, node = list(node.expressions), node.this
+            distinct = isinstance(node, exp.Distinct)
+            value = node.expressions[0] if isinstance(node, exp.Distinct) else node
+            if limit is not None and isinstance(expression.parent, exp.Window):
+                raise UnsupportedError("ARRAY_AGG with LIMIT as a window function")
+            inner = ("DISTINCT " if distinct else "") + self.sql(value)
+            if order:
+                inner += " ORDER BY " + ", ".join(self.sql(o) for o in order)
+            sql = f"ARRAY_AGG({inner})"
+            if expression.args.get("nulls_excluded"):
+                sql += f" FILTER(WHERE {self.sql(value)} IS NOT NULL)"
+            if limit is not None:
+                sql = f"LIST_SLICE({sql}, 1, {self.sql(limit)})"
+            return sql
 
 
 _DIALECT = BigQueryToDuckDB()

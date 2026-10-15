@@ -1,0 +1,12 @@
+description: ARRAY_AGG DISTINCT IGNORE NULLS ORDER BY returns the distinct non-NULL values in order. See https://cloud.google.com/bigquery/docs/reference/standard-sql/aggregate_functions. Expected value from the BigQuery documentation; not yet recorded.
+tags: [slice2, aggregate]
+setup: [CREATE TABLE t (x INT64), 'INSERT INTO t VALUES (2), (NULL), (1), (2)']
+query: SELECT ARRAY_AGG(DISTINCT x IGNORE NULLS ORDER BY x) AS v FROM t
+ordered: false
+expected:
+  columns:
+  - {name: v, type: ARRAY<INT64>}
+  rows:
+  - - [1, 2]
+verified: false
+recorded_at: null

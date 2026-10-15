@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING
 
 from sqlglot import exp
 
+from crucible.dialects.bigquery.transforms.common import rewrite_bottom_up
+
 if TYPE_CHECKING:
     from crucible.dialects.bigquery.transforms import TransformContext
 
@@ -69,4 +71,4 @@ def transform(tree: exp.Expr, ctx: TransformContext) -> exp.Expr:
         cast.type = target.copy()
         return cast
 
-    return tree.transform(rewrite, copy=False)
+    return rewrite_bottom_up(tree, rewrite)

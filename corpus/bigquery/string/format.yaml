@@ -2,7 +2,6 @@ description: FORMAT substitutes arguments into a printf-style template.
 tags:
 - probe
 - string
-- known-divergence
 query: SELECT FORMAT('%d-%s', 5, 'x') AS v
 ordered: false
 expected:

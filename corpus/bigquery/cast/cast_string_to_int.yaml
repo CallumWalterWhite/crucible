@@ -4,7 +4,6 @@ description: CAST raises an error when a STRING with a fractional part is conver
 tags:
 - probe
 - cast
-- known-divergence
 query: SELECT CAST('1.5' AS INT64) AS v
 ordered: false
 expected:

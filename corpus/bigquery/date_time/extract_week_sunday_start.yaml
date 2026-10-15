@@ -1,0 +1,17 @@
+description: EXTRACT WEEK counts Sunday-start weeks, and the first Sunday of the year
+  starts week 1. See https://cloud.google.com/bigquery/docs/reference/standard-sql/timestamp_functions.
+  Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- date_time
+- known-divergence
+query: SELECT EXTRACT(WEEK FROM DATE '2024-01-07') AS w
+ordered: false
+expected:
+  columns:
+  - name: w
+    type: INT64
+  rows:
+  - - 1
+verified: false
+recorded_at: null

@@ -6,6 +6,7 @@ ADR 0010 (schema-aware translation) and ADR 0014 (output types come from the Big
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import cast
 
@@ -17,6 +18,7 @@ from sqlglot.schema import MappingSchema
 
 from crucible.dialects.bigquery import errors, metadata, transforms, types
 from crucible.dialects.bigquery.generator import generate
+from crucible.dialects.bigquery.transforms.common import check, raise_runtime
 from crucible.engine import ExecContext, TableInfo
 
 _NAME = "crucible_name"  # meta key: the output name as BigQuery reports it
@@ -97,12 +99,17 @@ def _qualify_error(exc: OptimizeError) -> Exception:
     return errors.invalid(text)
 
 
-def translate_query(
-    query: exp.Expr,
-    ctx: ExecContext,
-    target_types: list[exp.DataType] | None = None,
-) -> Translation:
-    """Translate a query. `target_types` (INSERT columns) replace the annotated output types."""
+@dataclass(frozen=True)
+class Prepared:
+    """A query after qualify, annotation and transforms: BigQuery semantics, DuckDB-ready AST."""
+
+    query: exp.Expr
+    names: list[str]
+    types: list[exp.DataType]
+
+
+def prepare(query: exp.Expr, ctx: ExecContext) -> Prepared:
+    """Everything except the projection casts and generation (ADR 0010)."""
     first = outer_selects(query)[0]
     _tag_names(first)
     infos = metadata.qualify_names(query, ctx)
@@ -117,18 +124,40 @@ def translate_query(
     selects = outer_selects(query)
     stored = {c.name.lower(): c.name for info in infos for c in info.columns}
     names = _output_names(selects[0], stored)
-    out_types = target_types or _output_types(selects)
+    out_types = _output_types(selects)
 
     query = transforms.apply(query, transforms.TransformContext(ctx.session))
     _storage_casts(query)
-    for select in outer_selects(query):
-        if len(select.expressions) != len(names):
+    return Prepared(query, names, out_types)
+
+
+def translate_query(
+    query: exp.Expr,
+    ctx: ExecContext,
+    target_types: list[exp.DataType] | None = None,
+) -> Translation:
+    """Translate a query. `target_types` (INSERT columns) replace the annotated output types."""
+    prepared = prepare(query, ctx)
+    out_types = target_types or prepared.types
+    for select in outer_selects(prepared.query):
+        if len(select.expressions) != len(prepared.names):
             raise errors.invalid("Queries in a set operation have mismatched column counts")
-        _cast_projections(select, names, out_types)
-    return Translation(generate(query), names, out_types)
+        _cast_projections(select, prepared.names, out_types)
+    return Translation(generate(prepared.query), prepared.names, out_types)
+
+
+def write_value(value: exp.Expr, warehouse_type: exp.DataType, field: str) -> exp.Expr:
+    """A value as BigQuery writes it into a column of `warehouse_type` (finalised arrays, cast)."""
+    out = exp.Cast(
+        this=finalize_value(value, warehouse_type, field, iter(range(1_000_000))),
+        to=types.storage_type(warehouse_type),
+    )
+    out.meta["crucible_storage"] = True
+    return out
 
 
 _UNKNOWN = exp.DataType.build("UNKNOWN")
+_NULL = exp.DataType(this=exp.DType.NULL)
 
 
 def _value(projection: exp.Expr) -> exp.Expr:
@@ -138,10 +167,18 @@ def _value(projection: exp.Expr) -> exp.Expr:
 def _output_types(selects: list[exp.Select]) -> list[exp.DataType]:
     """Each output column's BigQuery type; for a set operation, the branches' supertype."""
     result: list[exp.DataType] = []
+
+    def type_of(projection: exp.Expr) -> exp.DataType:
+        value = _value(projection)
+        # A literal NULL takes the other branches' type (SQLGlot types a bare NULL INT64).
+        if isinstance(value, exp.Null):
+            return _NULL
+        return value.type or _UNKNOWN
+
     for index, projection in enumerate(selects[0].expressions):
-        column_type = _value(projection).type or _UNKNOWN
+        column_type = type_of(projection)
         for select in selects[1:]:
-            other = _value(select.expressions[index]).type or _UNKNOWN
+            other = type_of(select.expressions[index])
             if _UNKNOWN.this in (column_type.this, other.this):
                 column_type = _UNKNOWN
                 break
@@ -163,6 +200,16 @@ def fix_annotation(tree: exp.Expr) -> None:
     for node in tree.walk():
         if node.type is not None:
             node.type = types.normalize(node.type)
+    # UNNEST ... WITH OFFSET o: the offset is INT64; SQLGlot types it like the element.
+    offsets = {
+        (unnest.args["alias"].name, unnest.args["offset"].name)
+        for unnest in tree.find_all(exp.Unnest)
+        if isinstance(unnest.args.get("offset"), exp.Identifier)
+        and isinstance(unnest.args.get("alias"), exp.TableAlias)
+    }
+    for column in tree.find_all(exp.Column):
+        if (column.table, column.name) in offsets:
+            column.type = exp.DataType.build("BIGINT")
     # `a || b` on arrays is ARRAY_CONCAT and returns the array type; SQLGlot types it STRING.
     # Innermost first, so a chain `a || b || c` sees its left operand already re-typed.
     for node in reversed(list(tree.find_all(exp.DPipe))):
@@ -187,11 +234,77 @@ def _cast_projections(select: exp.Select, names: list[str], out_types: list[exp.
 
     The CAST makes DuckDB's result type the storage type exactly, and is BigQuery's overflow check
     (HUGEINT -> BIGINT raises). Projections annotation could not type keep DuckDB's own type.
+    Arrays are finalised first (`finalize_value`).
     """
     projections: list[exp.Expr] = []
     for projection, name, out_type in zip(select.expressions, names, out_types, strict=True):
         value = projection.this if isinstance(projection, exp.Alias) else projection
         if out_type.this != exp.DataType.Type.UNKNOWN:
+            value = finalize_value(value, out_type, name, iter(range(1_000_000)))
             value = exp.Cast(this=value, to=types.storage_type(out_type))
+            value.meta["crucible_storage"] = True
         projections.append(exp.alias_(value, name, quoted=True))
     select.set("expressions", projections)
+
+
+def _has_array(data_type: exp.DataType) -> bool:
+    return any(t.this == exp.DType.ARRAY for t in data_type.find_all(exp.DataType))
+
+
+def finalize_value(
+    value: exp.Expr, data_type: exp.DataType, field: str, names: Iterator[int]
+) -> exp.Expr:
+    """BigQuery's rules for arrays in a written result (query results, CTAS, INSERT):
+
+    - an array with a NULL element raises "Array cannot have a null element; error in writing
+      field <field>" (recorded);
+    - a NULL array is written as an empty array (recorded: ARRAY_AGG over no rows is []).
+
+    Inside the query arrays keep NULLs and may be NULL; only the written value changes. Applied
+    recursively through STRUCT fields and array elements.
+    """
+    if not _has_array(data_type):
+        return value
+    if data_type.this == exp.DType.STRUCT:
+        fields: list[exp.Expr] = []
+        for column in data_type.expressions:
+            assert isinstance(column, exp.ColumnDef)
+            kind = column.args["kind"]
+            assert isinstance(kind, exp.DataType)
+            member = exp.Anonymous(
+                this="struct_extract", expressions=[value.copy(), exp.Literal.string(column.name)]
+            )
+            fields.append(
+                exp.PropertyEQ(
+                    this=exp.to_identifier(column.name),
+                    expression=finalize_value(member, kind, field, names),
+                )
+            )
+        packed = exp.Anonymous(this="struct_pack", expressions=fields)
+        return check(exp.Is(this=value.copy(), expression=exp.Null()), exp.Null(), packed)
+
+    [element_type] = data_type.expressions
+    assert isinstance(element_type, exp.DataType)
+    var = f"crucible_e{next(names)}"
+    element = exp.column(var)
+
+    def each(body: exp.Expr) -> exp.Expr:
+        lam = exp.Lambda(this=body, expressions=[exp.to_identifier(var)])
+        return exp.Anonymous(this="list_transform", expressions=[value.copy(), lam])
+
+    has_null = exp.Anonymous(
+        this="list_bool_or", expressions=[each(exp.Is(this=element.copy(), expression=exp.Null()))]
+    )
+    body = (
+        each(finalize_value(element, element_type, field, names))
+        if _has_array(element_type)
+        else value.copy()
+    )
+    message = f"Array cannot have a null element; error in writing field {field}"
+    return exp.Case(
+        ifs=[
+            exp.If(this=exp.Is(this=value.copy(), expression=exp.Null()), true=exp.Array()),
+            exp.If(this=has_null, true=raise_runtime(message)),
+        ],
+        default=body,
+    )

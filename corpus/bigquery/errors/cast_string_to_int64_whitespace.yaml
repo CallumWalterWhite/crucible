@@ -1,0 +1,17 @@
+description: CAST of a STRING with surrounding spaces to INT64 gives the integer value.
+  Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- errors
+- unconfirmed
+- known-divergence
+query: SELECT CAST(' 7 ' AS INT64) AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: INT64
+  rows:
+  - - 7
+verified: false
+recorded_at: null

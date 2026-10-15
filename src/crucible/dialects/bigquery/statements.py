@@ -9,7 +9,7 @@ from sqlglot import exp
 from sqlglot.errors import ParseError
 from sqlglot.optimizer.annotate_types import annotate_types
 
-from crucible.dialects.bigquery import errors, metadata, types
+from crucible.dialects.bigquery import ddl, dml, errors, metadata, types
 from crucible.dialects.bigquery.translate import (
     fix_annotation,
     outer_selects,
@@ -25,7 +25,6 @@ from crucible.engine import (
     Location,
     Plan,
     Result,
-    SqlPlan,
 )
 from crucible.engine.catalog import qualified
 
@@ -57,9 +56,15 @@ def plan(statement: object, ctx: ExecContext) -> Plan:
     assert isinstance(statement, Statement)
     tree = statement.tree.copy()
     if isinstance(tree, exp.Query):
-        return SqlPlan(translate_query(tree, ctx).sql, "SELECT", params=ctx.params)
-    if isinstance(tree, exp.Create) and tree.kind == "TABLE":
-        return _create_table(tree, ctx)
+        return run_sql(translate_query(tree, ctx).sql, "SELECT", ctx)
+    if isinstance(tree, exp.Create):
+        return ddl.plan_create(tree, ctx)
+    if isinstance(tree, exp.Alter):
+        return ddl.plan_alter(tree, ctx)
+    if isinstance(tree, exp.Drop):
+        return ddl.plan_drop(tree, ctx)
+    if isinstance(tree, exp.Merge):
+        return dml.plan_merge(tree, ctx)
     if isinstance(tree, exp.Insert):
         return _insert(tree, ctx)
     if isinstance(tree, exp.Command):
@@ -67,55 +72,19 @@ def plan(statement: object, ctx: ExecContext) -> Plan:
     raise CrucibleUnsupportedError(f"{type(tree).__name__.upper()} statement")
 
 
-def _create_table(tree: exp.Create, ctx: ExecContext) -> Plan:
-    target = tree.this
-    table = target.this if isinstance(target, exp.Schema) else target
-    assert isinstance(table, exp.Table)
-    if tree.args.get("properties"):
-        # PARTITION BY / CLUSTER BY / OPTIONS / TEMP come with dbt's statements (slice 2).
-        raise CrucibleUnsupportedError(
-            f"CREATE TABLE options: {tree.args['properties'].sql('bigquery')}"
-        )
-    name = metadata.name_of(table, ctx)
-    metadata.check_new_table(ctx, name)
-    full = qualified(name.project, name.dataset, name.table)
-    head = "CREATE OR REPLACE TABLE" if tree.args.get("replace") else "CREATE TABLE"
-    if tree.args.get("exists"):
-        head += " IF NOT EXISTS"
-
-    query = tree.expression
-    if isinstance(query, exp.Query):
-        sql = f"{head} {full} AS {translate_query(query, ctx).sql}"
-        statement_type = "CREATE_TABLE_AS_SELECT"
-    elif isinstance(target, exp.Schema):
-        sql = f"{head} {full} ({', '.join(_column_def(c) for c in target.expressions)})"
-        statement_type = "CREATE_TABLE"
-    else:
-        raise errors.invalid("CREATE TABLE needs a column list or AS SELECT")
+def run_sql(sql: str, statement_type: str, ctx: ExecContext, *, returns_rows: bool = True) -> Plan:
+    """Run generated SQL, giving DuckDB's own runtime errors BigQuery's wording."""
+    params = ctx.params
 
     def run(c: ExecContext) -> Result:
-        result = c.run_sql(sql, returns_rows=False)
-        c.catalog.set_properties(name.project, name.dataset, name.table, {})
+        try:
+            result = c.run_sql(sql, params, returns_rows=returns_rows)
+        except CrucibleError as exc:
+            raise errors.reword(exc) from exc
         result.statement_type = statement_type
         return result
 
     return CommandPlan(run, statement_type)
-
-
-def _column_def(column: exp.Expr) -> str:
-    if not isinstance(column, exp.ColumnDef) or not isinstance(
-        column.args.get("kind"), exp.DataType
-    ):
-        raise CrucibleUnsupportedError(f"column definition {column.sql('bigquery')}")
-    not_null = False
-    constraints: list[exp.ColumnConstraint] = column.args.get("constraints") or []
-    for constraint in constraints:
-        if isinstance(constraint.args.get("kind"), exp.NotNullColumnConstraint):
-            not_null = True
-        else:
-            raise CrucibleUnsupportedError(f"column constraint {constraint.sql('bigquery')}")
-    storage = types.storage_type(column.args["kind"]).sql("duckdb")
-    return f"{qualified(column.name)} {storage}" + (" NOT NULL" if not_null else "")
 
 
 def _insert(tree: exp.Insert, ctx: ExecContext) -> Plan:
@@ -147,11 +116,8 @@ def _insert(tree: exp.Insert, ctx: ExecContext) -> Plan:
     translation = translate_query(source, ctx, target_types=target_types)
     names = ", ".join(qualified(c.name) for c in columns)
     full = qualified(info.catalog, info.schema, info.name)
-    return SqlPlan(
-        f"INSERT INTO {full} ({names}) {translation.sql}",
-        "INSERT",
-        params=ctx.params,
-        returns_rows=False,
+    return run_sql(
+        f"INSERT INTO {full} ({names}) {translation.sql}", "INSERT", ctx, returns_rows=False
     )
 
 
@@ -182,7 +148,10 @@ def _check_assignable(
         ):
             value = projection.this if isinstance(projection, exp.Alias) else projection
             source_type = value.type
-            if source_type is None or source_type.this == exp.DataType.Type.UNKNOWN:
+            # A literal NULL is assignable to any column (SQLGlot types a bare NULL as INT64).
+            if isinstance(value, exp.Null) or source_type is None:
+                continue
+            if source_type.this == exp.DataType.Type.UNKNOWN:
                 continue
             literal_string = isinstance(value, exp.Literal) and value.is_string
             if not types.coerces(source_type, target, literal_string=literal_string):

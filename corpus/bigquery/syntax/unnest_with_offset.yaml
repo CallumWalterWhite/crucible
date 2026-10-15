@@ -3,7 +3,6 @@ description: UNNEST WITH OFFSET returns a zero-based element position alongside 
 tags:
 - probe
 - syntax
-- known-divergence
 query: SELECT x, o FROM UNNEST(['a', 'b']) AS x WITH OFFSET o ORDER BY o
 ordered: true
 expected:

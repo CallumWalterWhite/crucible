@@ -1,0 +1,15 @@
+description: MERGE with ON FALSE inserts every source row as not matched. See https://cloud.google.com/bigquery/docs/reference/standard-sql/dml-syntax. Expected value from the BigQuery documentation; not yet recorded.
+tags: [slice2, statements]
+setup: ['CREATE TABLE tgt (k INT64, v STRING)', 'CREATE TABLE src (k INT64, v STRING)', 'INSERT INTO tgt VALUES (1, ''old'')', 'INSERT INTO src VALUES (1, ''a''), (2, ''b'')', 'MERGE INTO tgt AS d USING (SELECT * FROM src) AS s ON (FALSE) WHEN NOT MATCHED THEN INSERT (k, v) VALUES (k, v)']
+query: SELECT k, v FROM tgt
+ordered: false
+expected:
+  columns:
+  - {name: k, type: INT64}
+  - {name: v, type: STRING}
+  rows:
+  - [1, old]
+  - [1, a]
+  - [2, b]
+verified: false
+recorded_at: null

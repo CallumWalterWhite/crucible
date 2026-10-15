@@ -1,0 +1,9 @@
+description: MERGE raises a runtime error when a target row matches more than one source row. See https://cloud.google.com/bigquery/docs/reference/standard-sql/dml-syntax. Expected value from the BigQuery documentation; not yet recorded.
+tags: [slice2, statements]
+setup: ['CREATE TABLE tgt (k INT64, v STRING)', 'CREATE TABLE src (k INT64, v STRING)', 'INSERT INTO tgt VALUES (1, ''old'')', 'INSERT INTO src VALUES (1, ''a''), (1, ''b'')']
+query: MERGE INTO tgt AS d USING src AS s ON s.k = d.k WHEN MATCHED THEN UPDATE SET v = s.v
+ordered: false
+expected:
+  error: {kind: runtime, message_contains: must match at most one source row}
+verified: false
+recorded_at: null

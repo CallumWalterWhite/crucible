@@ -1,0 +1,8 @@
+description: CAST of a STRING in exponent notation to INT64 raises a runtime error. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions. Expected value from the BigQuery documentation; not yet recorded.
+tags: [slice2, errors]
+query: SELECT CAST('1e3' AS INT64) AS v
+ordered: false
+expected:
+  error: {kind: runtime, message_contains: Bad int64 value}
+verified: false
+recorded_at: null

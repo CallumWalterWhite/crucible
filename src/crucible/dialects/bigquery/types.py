@@ -119,8 +119,16 @@ def normalize(data_type: exp.DataType) -> exp.DataType:
     return out
 
 
+def _has_unknown(data_type: exp.DataType) -> bool:
+    return any(t.this == T.UNKNOWN for t in data_type.find_all(exp.DataType))
+
+
 def supertype(left: exp.DataType, right: exp.DataType) -> exp.DataType | None:
     """BigQuery's common supertype of two types (set operations, COALESCE), or None."""
+    # `[]` (ARRAY<UNKNOWN>) next to a typed array: the typed side is the supertype.
+    if _has_unknown(left) != _has_unknown(right):
+        known, unknown = (right, left) if _has_unknown(left) else (left, right)
+        return known if coerces(unknown, known) else None
     if left.this == T.NULL or coerces(right, left):
         return right if left.this == T.NULL else left
     if coerces(left, right):
@@ -193,8 +201,15 @@ _STRING_LITERAL_TARGETS = {"DATE", "DATETIME", "TIME", "TIMESTAMP"}
 
 def coerces(source: exp.DataType, target: exp.DataType, *, literal_string: bool = False) -> bool:
     """Whether BigQuery implicitly coerces a value of `source` type to `target` (e.g. on INSERT)."""
-    if source.this == T.NULL:
-        return True
+    if source.this in (T.NULL, T.UNKNOWN):
+        return source.this == T.NULL
+    if source.this == T.ARRAY and target.this == T.ARRAY:
+        # `[]` has no element type of its own and coerces to any array type. Otherwise the element
+        # types must match: element-wise array coercion is not documented (corpus case pending).
+        element, target_element = _element(source), _element(target)
+        if T.UNKNOWN in (element.this, target_element.this) or element.this == T.NULL:
+            return True
+        return _bq_name(element) == _bq_name(target_element)
     if source.this == T.STRUCT and target.this == T.STRUCT:
         pairs = list(zip(_fields(source), _fields(target), strict=False))
         return len(_fields(source)) == len(_fields(target)) and all(

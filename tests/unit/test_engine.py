@@ -15,7 +15,7 @@ from crucible.engine import (
     Result,
     Session,
 )
-from crucible.engine.errors import RUNTIME_ERROR_PREFIX
+from crucible.engine.errors import RUNTIME_ERROR_PREFIX, UNSUPPORTED_ERROR_PREFIX
 from tests.fakes import PassthroughDialect
 
 
@@ -211,3 +211,10 @@ def test_json_results_are_decoded(engine):
         """select '{"a": [1, null]}'::json as j, ['"x"'::json] as l, {'k': '2'::json} as s""",
     )
     assert r.rows == [({"a": [1, None]}, ["x"], {"k": 2})]
+
+
+def test_unsupported_error_from_generated_sql(engine):
+    with pytest.raises(CrucibleError) as info:
+        run(engine, f"select error('{UNSUPPORTED_ERROR_PREFIX}UPPER of a special-cased character')")
+    assert info.value.kind is ErrorKind.UNSUPPORTED
+    assert "UPPER of a special-cased character" in info.value.message

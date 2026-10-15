@@ -4,7 +4,6 @@ description: An array subscript with OFFSET raises an error when the index is ou
 tags:
 - probe
 - array
-- known-divergence
 query: SELECT [1, 2][OFFSET(5)] AS v
 ordered: false
 expected:

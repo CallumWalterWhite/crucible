@@ -1,0 +1,24 @@
+description: CAST of NUMERIC to INT64 rounds halfway values away from zero. Expected
+  value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- cast
+- unconfirmed
+- known-divergence
+query: SELECT CAST(NUMERIC '2.5' AS INT64) AS a, CAST(NUMERIC '-2.5' AS INT64) AS
+  b, CAST(NUMERIC '1.4999999999' AS INT64) AS c
+ordered: false
+expected:
+  columns:
+  - name: a
+    type: INT64
+  - name: b
+    type: INT64
+  - name: c
+    type: INT64
+  rows:
+  - - 3
+    - -3
+    - 1
+verified: false
+recorded_at: null

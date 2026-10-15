@@ -1,0 +1,11 @@
+description: A NULL ARRAY is returned as an empty array in the query result. See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types. Expected value from the BigQuery documentation; not yet recorded.
+tags: [slice2, errors]
+query: SELECT CAST(NULL AS ARRAY<INT64>) AS v
+ordered: false
+expected:
+  columns:
+  - {name: v, type: ARRAY<INT64>}
+  rows:
+  - - []
+verified: false
+recorded_at: null

@@ -1,0 +1,11 @@
+description: FORMAT with a NULL argument returns NULL. Expected value from the BigQuery documentation; not yet recorded.
+tags: [slice2, string, unconfirmed]
+query: SELECT FORMAT('%d', NULL) AS v
+ordered: false
+expected:
+  columns:
+  - {name: v, type: STRING}
+  rows:
+  - [null]
+verified: false
+recorded_at: null

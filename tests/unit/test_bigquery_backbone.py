@@ -120,6 +120,8 @@ def test_canonical_value(value, type_name, canonical):
         ("STRING", "DATE", False, False),
         ("DATE", "DATETIME", False, True),
         ("STRUCT<a INT64>", "STRUCT<x FLOAT64>", False, True),
+        ("ARRAY<INT64>", "ARRAY<FLOAT64>", False, False),
+        ("ARRAY<STRING>", "ARRAY<INT64>", False, False),
     ],
 )
 def test_coercion(source, target, literal, ok):
@@ -271,9 +273,11 @@ def test_ctas_stores_bigquery_types_and_records_properties(run):
     ]
 
 
-def test_create_table_options_are_not_silently_dropped(run):
-    with pytest.raises(CrucibleUnsupportedError):
-        run("CREATE TABLE t (a INT64) OPTIONS (description = 'x')")
+def test_create_table_options_are_accepted(run):
+    # Recorded as properties (checked in test_bq_statements); they do not change results.
+    assert (
+        run("CREATE TABLE t (a INT64) OPTIONS (description = 'x')").statement_type == "CREATE_TABLE"
+    )
 
 
 @pytest.mark.parametrize(
@@ -287,3 +291,14 @@ def test_create_table_options_are_not_silently_dropped(run):
 def test_out_of_scope_constructs_raise_unsupported(run, sql):
     with pytest.raises(CrucibleUnsupportedError):
         run(sql)
+
+
+def test_empty_array_literal_coerces_to_any_array_column(run):
+    run("CREATE TABLE t (tags ARRAY<STRING>)")
+    run("INSERT INTO t VALUES ([]), (['a'])")
+    assert sorted(run("SELECT tags FROM t").rows) == [([],), (["a"],)]
+
+
+def test_empty_array_in_a_set_operation_takes_the_typed_side(run):
+    result = run("SELECT [] AS a UNION ALL SELECT ['x']")
+    assert column_types(result) == [("a", "ARRAY<STRING>")]

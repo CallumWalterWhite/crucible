@@ -1,0 +1,14 @@
+description: UNNEST WITH OFFSET returns a zero-based position alongside each element. See https://cloud.google.com/bigquery/docs/reference/standard-sql/array_functions. Expected value from the BigQuery documentation; not yet recorded.
+tags: [slice2, unnest]
+setup: [CREATE TABLE t (arr ARRAY<STRING>), 'INSERT INTO t VALUES ([''a'', ''b''])']
+query: SELECT x, o FROM t, UNNEST(t.arr) AS x WITH OFFSET o
+ordered: false
+expected:
+  columns:
+  - {name: x, type: STRING}
+  - {name: o, type: INT64}
+  rows:
+  - [a, 0]
+  - [b, 1]
+verified: false
+recorded_at: null

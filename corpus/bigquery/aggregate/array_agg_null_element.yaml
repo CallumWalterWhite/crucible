@@ -5,7 +5,6 @@ description: ARRAY_AGG raises an error when an input is NULL, because arrays can
 tags:
 - probe
 - aggregate
-- known-divergence
 query: SELECT ARRAY_AGG(x) AS v FROM UNNEST([1, NULL]) AS x
 ordered: false
 expected:
