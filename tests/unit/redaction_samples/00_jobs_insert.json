@@ -1,0 +1,46 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/jobs",
+    "params": {},
+    "body": {
+      "jobReference": {
+        "projectId": "<project>",
+        "jobId": "<job-1>",
+        "location": "<location>"
+      },
+      "configuration": {
+        "query": {
+          "query": "SELECT 1 AS v",
+          "useLegacySql": false
+        }
+      }
+    }
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "id": "<project>:<location>.<job-1>",
+    "etag": "<etag>",
+    "selfLink": "<self-link>",
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-1>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "endTime": "<time>",
+      "query": {
+        "statementType": "SELECT"
+      }
+    },
+    "status": {
+      "state": "DONE"
+    }
+  }
+}

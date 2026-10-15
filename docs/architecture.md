@@ -123,9 +123,14 @@ the warehouse's shape.
 
 ### `crucible.corpus` and `crucible.cli`
 
-`crucible serve`, `crucible corpus run`, and `crucible corpus record` (ADR 0013). Record runs cases
-against the real warehouse; it requires `--max-bytes-billed` and
-`--i-understand-this-spends-credits`, and only maintainers run it.
+`crucible serve`, `crucible corpus run`, `crucible corpus record` (ADR 0013) and
+`crucible corpus record-api`. Record runs cases against the real warehouse; record-api records raw
+REST responses (jobs, results with and without int64 timestamps and paging, tables, datasets,
+routines, load jobs over resumable upload, errors, 404 and 409) as wire-format fixtures in
+`tests/fixtures/bigquery_api/`, redacted in code before writing (project, dataset, job ids, etags,
+selfLinks, emails, times and locations become placeholders) and refused if anything identifying
+remains. Both require `--max-bytes-billed` and `--i-understand-this-spends-credits`, and only
+maintainers run them.
 
 ## BigQuery API subset (Phase 3)
 

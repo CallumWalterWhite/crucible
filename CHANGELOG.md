@@ -12,3 +12,5 @@ and this project does not yet follow semantic versioning.
 - Initial project scaffolding.
 - BigQuery translation backbone: schema-aware translation, output types from the BigQuery AST,
   BigQuery literal typing, NUMERIC as DECIMAL(38,9), CREATE TABLE and INSERT with BigQuery coercion.
+- BigQuery error parity, SAFE., function fixes, UNNEST, ARRAY_AGG and the statements dbt emits.
+- `crucible corpus record-api`: redacted wire-format fixtures from the real BigQuery REST API.

@@ -7,6 +7,7 @@ import os
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
 from crucible.corpus.case import find_cases
 from crucible.corpus.runner import run_cases
@@ -19,6 +20,8 @@ def main(args: argparse.Namespace) -> int:
         return _run(args)
     if args.corpus_command == "record":
         return _record(args)
+    if args.corpus_command == "record-api":
+        return _record_api(args)
     print(f"unknown corpus command {args.corpus_command!r}", file=sys.stderr)
     return 2
 
@@ -90,4 +93,44 @@ def _record(args: argparse.Namespace) -> int:
     for case in mismatched:
         print(f"needs a new message_contains (left unverified): {case.path}")
     print(f"recorded {len(cases)} cases, {len(cases) - len(mismatched)} verified")
+    return 0
+
+
+def _record_api(args: argparse.Namespace) -> int:
+    if not args.confirmed:
+        print(
+            "refusing to record: record-api runs jobs against the real warehouse and spends "
+            "credits. Pass --i-understand-this-spends-credits to proceed.",
+            file=sys.stderr,
+        )
+        return 2
+    project = os.environ.get("BIGQUERY_PROJECT")
+    if not project:
+        print("BIGQUERY_PROJECT must be set to the sandbox project", file=sys.stderr)
+        return 2
+    try:
+        import google.auth
+        from google.auth.transport.requests import AuthorizedSession
+
+        from crucible.corpus.record_api import RecordApiError, record_api
+    except ImportError as exc:
+        extra = "pip install 'crucible-emulator[record-bigquery]'"
+        print(f"crucible corpus record-api needs: {extra} ({exc})", file=sys.stderr)
+        return 2
+    out = Path(args.out)
+    print(
+        f"Recording BigQuery API fixtures against project {project} into {out} with "
+        f"maximum_bytes_billed={args.max_bytes_billed} per query job"
+    )
+    # google.auth is untyped: Application Default Credentials (gcloud, or Workload Identity in CI).
+    credentials = cast(
+        object,
+        google.auth.default(scopes=["https://www.googleapis.com/auth/bigquery"])[0],  # pyright: ignore[reportUnknownMemberType]
+    )
+    session = AuthorizedSession(credentials)  # pyright: ignore[reportArgumentType]
+    try:
+        record_api(session, project, args.max_bytes_billed, out, print)
+    except RecordApiError as exc:
+        print(f"crucible corpus record-api stopped: {exc}", file=sys.stderr)
+        return 1
     return 0

@@ -66,6 +66,19 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="required: record runs every case against the real warehouse",
     )
+    record_api = corpus_sub.add_parser(
+        "record-api",
+        help="record raw BigQuery REST responses as redacted wire fixtures (spends credits)",
+    )
+    record_api.add_argument("--dialect", choices=("bigquery",), default="bigquery")
+    record_api.add_argument("--out", default="tests/fixtures/bigquery_api")
+    record_api.add_argument("--max-bytes-billed", type=int, required=True)
+    record_api.add_argument(
+        "--i-understand-this-spends-credits",
+        dest="confirmed",
+        action="store_true",
+        help="required: record-api runs jobs against the real warehouse",
+    )
     corpus.set_defaults(func=_corpus)
     return parser
 
