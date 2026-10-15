@@ -1,11 +1,28 @@
-"""TIMESTAMP_DIFF, EXTRACT(DAYOFWEEK|WEEK) and FORMAT_* `%e` (transforms/dates.py)."""
+"""TIMESTAMP_DIFF, EXTRACT, FORMAT_*, PARSE_TIMESTAMP, TIMESTAMP/STRING with a zone, CURRENT_*
+(transforms/dates.py).
+
+Expected values come from Python (`datetime`, `zoneinfo`, `date.isocalendar`), not from DuckDB, so a
+wrong DuckDB answer cannot agree with its own expectation.
+"""
 
 from __future__ import annotations
+
+from datetime import UTC, date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import pytest
 
 from crucible.engine import CrucibleError, CrucibleUnsupportedError, ErrorKind
 from tests.unit.bigquery import column_types, values
+
+LA = "America/Los_Angeles"
+
+
+def canonical_utc(moment: datetime) -> str:
+    """A TIMESTAMP as the corpus writes it: UTC, with a fraction only when non-zero (ADR 0014)."""
+    moment = moment.astimezone(UTC)
+    fraction = f".{moment.microsecond:06d}" if moment.microsecond else ""
+    return moment.strftime("%Y-%m-%dT%H:%M:%S") + fraction + "Z"
 
 
 # --- TIMESTAMP_DIFF: whole parts, truncated toward zero --------------------------------------
@@ -58,6 +75,30 @@ def test_dayofweek_null_is_null(bq):
     assert values(bq("SELECT EXTRACT(DAYOFWEEK FROM CAST(NULL AS DATE)) AS v")) == [[None]]
 
 
+# --- EXTRACT(ISOWEEK) and EXTRACT(ISOYEAR): ISO 8601, as date.isocalendar() defines it ---------
+@pytest.mark.parametrize("day", [date(2024, 1, 1), date(2024, 12, 30), date(2027, 1, 1)])
+def test_isoweek_and_isoyear_match_iso_8601(bq, day):
+    week = bq(f"SELECT EXTRACT(ISOWEEK FROM DATE '{day.isoformat()}') AS v")
+    year = bq(f"SELECT EXTRACT(ISOYEAR FROM DATE '{day.isoformat()}') AS v")
+    iso_year, iso_week, _ = day.isocalendar()
+    assert column_types(week) == [("v", "INT64")]
+    assert values(week) == [[iso_week]]
+    assert column_types(year) == [("v", "INT64")]
+    assert values(year) == [[iso_year]]
+
+
+def test_isoweek_and_isoyear_of_the_year_boundary_cases(bq):
+    # 2024-12-30 is ISO week 1 of 2025; 2027-01-01 is ISO week 53 of 2026.
+    assert values(bq("SELECT EXTRACT(ISOWEEK FROM DATE '2024-12-30') AS v")) == [[1]]
+    assert values(bq("SELECT EXTRACT(ISOYEAR FROM DATE '2024-12-30') AS v")) == [[2025]]
+    assert values(bq("SELECT EXTRACT(ISOWEEK FROM DATE '2027-01-01') AS v")) == [[53]]
+    assert values(bq("SELECT EXTRACT(ISOYEAR FROM DATE '2027-01-01') AS v")) == [[2026]]
+
+
+def test_isoweek_null_is_null(bq):
+    assert values(bq("SELECT EXTRACT(ISOWEEK FROM CAST(NULL AS DATE)) AS v")) == [[None]]
+
+
 # --- EXTRACT(WEEK): not translated -----------------------------------------------------------
 @pytest.mark.parametrize("part", ["WEEK", "WEEK(MONDAY)"])
 def test_week_extraction_is_unsupported(bq, part):
@@ -65,38 +106,152 @@ def test_week_extraction_is_unsupported(bq, part):
         bq(f"SELECT EXTRACT({part} FROM DATE '2024-01-07') AS v")
 
 
-# --- FORMAT_DATE / FORMAT_DATETIME / FORMAT_TIMESTAMP: `%e` pads the day to two characters ----
-def test_format_date_pads_a_one_digit_day(bq):
-    result = bq("SELECT FORMAT_DATE('%b %e %Y', DATE '2024-03-05') AS v")
-    assert column_types(result) == [("v", "STRING")]
-    assert values(result) == [["Mar  5 2024"]]
-
-
-def test_format_date_two_digit_day_is_unchanged(bq):
-    assert values(bq("SELECT FORMAT_DATE('%e', DATE '2024-03-15') AS v")) == [["15"]]
-
-
-def test_format_date_without_e_is_unchanged(bq):
+# --- FORMAT_DATE / FORMAT_DATETIME / FORMAT_TIMESTAMP: `%-` elements are refused -----------------
+def test_format_without_a_dash_element_is_unchanged(bq):
     assert values(bq("SELECT FORMAT_DATE('%Y-%m', DATE '2024-03-05') AS v")) == [["2024-03"]]
 
 
-def test_format_date_null_is_null(bq):
-    assert values(bq("SELECT FORMAT_DATE('%e', CAST(NULL AS DATE)) AS v")) == [[None]]
+def test_format_null_value_is_null(bq):
+    assert values(bq("SELECT FORMAT_DATE('%Y', CAST(NULL AS DATE)) AS v")) == [[None]]
 
 
-def test_escaped_percent_before_day_is_a_literal_percent(bq):
-    # '%%' is one literal percent, and '%e' after it is still the padded day.
-    assert values(bq("SELECT FORMAT_DATE('%%%e', DATE '2024-03-05') AS v")) == [["% 5"]]
+@pytest.mark.parametrize(
+    "sql",
+    [
+        # SQLGlot turns %e into %-d, so %e is refused whatever its origin (transforms/dates.py).
+        "SELECT FORMAT_DATE('%b %e %Y', DATE '2024-03-05') AS v",
+        "SELECT FORMAT_DATE('%e', DATE '2024-03-15') AS v",
+        "SELECT FORMAT_TIMESTAMP('%e %H', TIMESTAMP '2024-03-05 10:00:00+00') AS v",
+        "SELECT FORMAT_DATETIME('%e', DATETIME '2024-03-05 10:00:00') AS v",
+        # A literal %-d is the same after conversion, so it is refused too.
+        "SELECT FORMAT_DATE('%-d', DATE '2024-03-05') AS v",
+        # SQLGlot turns BigQuery's %%e into %%-d (prints %-d, where BigQuery prints e). Refused.
+        "SELECT FORMAT_DATE('%%e', DATE '2024-03-05') AS v",
+        "SELECT FORMAT_DATE('%%%e', DATE '2024-03-05') AS v",
+    ],
+)
+def test_percent_dash_elements_are_refused(bq, sql):
+    with pytest.raises(CrucibleUnsupportedError, match="format element %-"):
+        bq(sql)
 
 
-def test_escaped_percent_e_is_unsupported(bq):
-    # SQLGlot turns BigQuery's '%%e' into DuckDB's '%%-d', which prints the wrong text. Refused.
-    with pytest.raises(CrucibleUnsupportedError, match="with %%e"):
-        bq("SELECT FORMAT_DATE('%%e', DATE '2024-03-05') AS v")
+def test_other_percent_dash_elements_are_refused(bq):
+    with pytest.raises(CrucibleUnsupportedError, match="format element %-x"):
+        bq("SELECT FORMAT_DATE('%-x', DATE '2024-03-05') AS v")
 
 
-def test_format_timestamp_and_datetime_pad_the_day(bq):
-    ts = bq("SELECT FORMAT_TIMESTAMP('%e %H', TIMESTAMP '2024-03-05 10:00:00+00') AS v")
-    assert values(ts) == [[" 5 10"]]
-    dt = bq("SELECT FORMAT_DATETIME('%e', DATETIME '2024-03-05 10:00:00') AS v")
-    assert values(dt) == [[" 5"]]
+# --- Time zones: the argument is applied exactly, or refused (never dropped) ------------------
+@pytest.mark.parametrize(
+    "instant",
+    [
+        datetime(2024, 1, 1, 2, 0, tzinfo=UTC),  # the previous day in Los Angeles
+        datetime(2024, 3, 10, 9, 30, tzinfo=UTC),  # just before the spring-forward switch
+        datetime(2024, 3, 10, 11, 0, tzinfo=UTC),  # after it
+    ],
+)
+def test_format_timestamp_applies_the_zone(bq, instant):
+    literal = instant.strftime("%Y-%m-%d %H:%M:%S+00")
+    result = bq(f"SELECT FORMAT_TIMESTAMP('%Y-%m-%d %H:%M', TIMESTAMP '{literal}', '{LA}') AS v")
+    expected = instant.astimezone(ZoneInfo(LA)).strftime("%Y-%m-%d %H:%M")
+    assert column_types(result) == [("v", "STRING")]
+    assert values(result) == [[expected]]
+
+
+def test_format_date_and_datetime_with_a_third_argument_are_invalid_queries(bq):
+    for sql in [
+        f"SELECT FORMAT_DATE('%Y', DATE '2024-01-01', '{LA}') AS v",
+        f"SELECT FORMAT_DATETIME('%Y', DATETIME '2024-01-01 02:00:00', '{LA}') AS v",
+    ]:
+        with pytest.raises(CrucibleError) as info:
+            bq(sql)
+        assert info.value.kind is ErrorKind.INVALID_QUERY
+
+
+@pytest.mark.parametrize("element", ["%Z", "%z"])
+def test_zone_names_and_offsets_with_a_zone_are_unsupported(bq, element):
+    with pytest.raises(CrucibleUnsupportedError, match="with a time zone argument"):
+        bq(f"SELECT FORMAT_TIMESTAMP('{element}', TIMESTAMP '2024-01-01 02:00:00+00', '{LA}') AS v")
+
+
+def test_parse_timestamp_reads_the_wall_clock_in_the_zone(bq):
+    # '02' on 2024-01-01 in Los Angeles is 10:00 UTC, not 02:00 UTC.
+    result = bq(f"SELECT PARSE_TIMESTAMP('%Y-%m-%d %H', '2024-01-01 02', '{LA}') AS v")
+    assert column_types(result) == [("v", "TIMESTAMP")]
+    local = datetime(2024, 1, 1, 2, tzinfo=ZoneInfo(LA))
+    assert values(result) == [[canonical_utc(local)]]
+
+
+def test_parse_timestamp_with_an_offset_element_and_a_zone_is_unsupported(bq):
+    with pytest.raises(CrucibleUnsupportedError, match="with a time zone argument"):
+        bq(f"SELECT PARSE_TIMESTAMP('%Y %z', '2024 +0000', '{LA}') AS v")
+
+
+def test_timestamp_of_a_plain_string_applies_the_zone(bq):
+    result = bq(f"SELECT TIMESTAMP('2024-01-01 02:00:00', '{LA}') AS v")
+    local = datetime(2024, 1, 1, 2, tzinfo=ZoneInfo(LA))
+    assert values(result) == [[canonical_utc(local)]]
+
+
+@pytest.mark.parametrize("text", ["2024-01-01 02:00:00+05", "2024-01-01T02:00:00Z"])
+def test_timestamp_of_a_string_with_an_offset_is_unsupported_at_run_time(bq, text):
+    with pytest.raises(CrucibleUnsupportedError, match="offset or zone name"):
+        bq(f"SELECT TIMESTAMP('{text}', '{LA}') AS v")
+
+
+def test_timestamp_null_string_is_null(bq):
+    assert values(bq(f"SELECT TIMESTAMP(CAST(NULL AS STRING), '{LA}') AS v")) == [[None]]
+
+
+def test_string_of_a_timestamp_with_a_zone_is_unsupported(bq):
+    with pytest.raises(CrucibleUnsupportedError, match="STRING\\(timestamp, time_zone\\)"):
+        bq(f"SELECT STRING(TIMESTAMP '2024-01-01 02:00:00+00', '{LA}') AS v")
+
+
+def _midnight_utc(local: datetime) -> str:
+    return canonical_utc(local.replace(hour=0, minute=0, second=0, microsecond=0))
+
+
+# Each conversion, with its canonical value (ADR 0014) computed from the zoneinfo local time.
+ZONE_CONVERSIONS = [
+    ("DATE(TIMESTAMP '{ts}', '{tz}')", lambda local: local.date().isoformat()),
+    ("DATETIME(TIMESTAMP '{ts}', '{tz}')", lambda local: local.replace(tzinfo=None).isoformat()),
+    ("TIME(TIMESTAMP '{ts}', '{tz}')", lambda local: local.time().isoformat()),
+    ("EXTRACT(DAY FROM TIMESTAMP '{ts}' AT TIME ZONE '{tz}')", lambda local: local.day),
+    ("TIMESTAMP_TRUNC(TIMESTAMP '{ts}', DAY, '{tz}')", _midnight_utc),
+]
+
+
+@pytest.mark.parametrize(("sql", "expected"), ZONE_CONVERSIONS)
+@pytest.mark.parametrize(
+    "instant",
+    [
+        datetime(2024, 3, 10, 9, 30, tzinfo=UTC),  # before the spring-forward switch
+        datetime(2024, 3, 10, 11, 0, tzinfo=UTC),  # after it
+        datetime(2024, 1, 2, 3, 15, 30, 123456, tzinfo=UTC),
+    ],
+)
+def test_zone_conversions_match_zoneinfo(bq, sql, expected, instant):
+    query = sql.format(ts=instant.strftime("%Y-%m-%d %H:%M:%S.%f+00"), tz=LA)
+    local = instant.astimezone(ZoneInfo(LA))
+    assert values(bq(f"SELECT {query} AS v")) == [[expected(local)]]
+
+
+def test_current_datetime_is_now_in_the_zone(bq):
+    before = datetime.now(UTC)
+    local = values(bq(f"SELECT CURRENT_DATETIME('{LA}') AS v"))[0][0]
+    after = datetime.now(UTC)
+    parsed = datetime.fromisoformat(str(local)).replace(tzinfo=ZoneInfo(LA))
+    assert before - timedelta(minutes=1) <= parsed.astimezone(UTC) <= after + timedelta(minutes=1)
+
+
+def test_current_datetime_without_a_zone_is_utc(bq):
+    before = datetime.now(UTC).replace(tzinfo=None)
+    local = str(values(bq("SELECT CURRENT_DATETIME() AS v"))[0][0])
+    parsed = datetime.fromisoformat(local)
+    assert abs(parsed - before) < timedelta(minutes=1)
+
+
+def test_current_date_with_a_zone_is_the_local_date(bq):
+    today = datetime.now(ZoneInfo(LA)).date()
+    result = values(bq(f"SELECT CURRENT_DATE('{LA}') AS v"))
+    assert result[0][0] in (str(today), today.isoformat())

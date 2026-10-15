@@ -81,7 +81,9 @@ Each dialect package has the same modules:
 | Module | Owns |
 |---|---|
 | `statements.py` | splitting a request into statements and routing each to translation, a command, or the script interpreter; CREATE TABLE and INSERT (with the warehouse's assignment coercion rules) |
-| `translate.py` | the translation pipeline for queries: resolve names, qualify, annotate, fix annotation, transforms, storage casts, projection casts, generate |
+| `translate.py` | the translation pipeline for queries: resolve names, qualify, annotate, fix annotation, transforms, storage casts, projection casts (with BigQuery's write rules for arrays), generate |
+| `ddl.py` | CREATE SCHEMA / TABLE / VIEW (partitioning, clustering and OPTIONS recorded as properties), ALTER TABLE, DROP |
+| `dml.py` | MERGE: expressions translated as one synthetic query, values coerced like INSERT, the duplicate-match check |
 | `transforms/` | type-aware AST rewrites, one module per area (below) |
 | `generator.py` | the dialect's subclass of SQLGlot's DuckDB generator (ADR 0008) |
 | `types.py` | type mapping both ways, coercion and supertypes, and canonical values (ADR 0014) |

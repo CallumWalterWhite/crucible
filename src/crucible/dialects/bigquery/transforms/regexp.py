@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 
 from sqlglot import exp
 
-from crucible.dialects.bigquery.transforms.common import typed
+from crucible.dialects.bigquery.transforms.common import rewrite_bottom_up, typed
 from crucible.engine import CrucibleError, CrucibleUnsupportedError, ErrorKind
 
 if TYPE_CHECKING:
@@ -22,10 +22,11 @@ MAX_GROUPS = 1
 
 
 def transform(tree: exp.Expr, ctx: TransformContext) -> exp.Expr:
-    # Innermost first, so a call inside another rewrite's operand is rewritten too.
-    for node in reversed(list(tree.find_all(exp.RegexpExtract))):
-        node.replace(_extract(node))
-    return tree
+    return rewrite_bottom_up(tree, _rewrite)
+
+
+def _rewrite(node: exp.Expr) -> exp.Expr:
+    return _extract(node) if isinstance(node, exp.RegexpExtract) else node
 
 
 def _extract(node: exp.RegexpExtract) -> exp.Expr:
@@ -35,8 +36,10 @@ def _extract(node: exp.RegexpExtract) -> exp.Expr:
     if not isinstance(subject, exp.Expr) or not isinstance(pattern, exp.Expr):
         raise CrucibleUnsupportedError("REGEXP_EXTRACT without a value and a pattern")
     literal = _literal_text(pattern)
-    if literal is not None:
-        _check_groups(literal)
+    if literal is None:
+        # The one-capturing-group rule needs the pattern's text, so it cannot be checked here.
+        raise CrucibleUnsupportedError("REGEXP_EXTRACT with a non-literal pattern")
+    _check_groups(literal)
     matched = exp.Anonymous(this="regexp_matches", expressions=[subject.copy(), pattern.copy()])
     guarded = exp.Case(
         ifs=[exp.If(this=typed(matched, "BOOL"), true=node.copy())],

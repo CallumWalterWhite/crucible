@@ -55,6 +55,12 @@ recorded_at: null           # ISO-8601 UTC, written only by `crucible corpus rec
   `message_contains`, record writes the verbatim `message` and `recorded_at`, keeps `kind` and
   `message_contains` as written, leaves `verified: false`, and continues. It lists those cases at the
   end for a person to choose a new substring. Recording never invents a substring.
+- **Stored messages.** Record keeps only BigQuery's primary message (the client's text repeats it
+  with reason/location fields and appends Location and Job ID lines) and replaces the recording
+  project and temporary dataset with `<project>` and `<dataset>`, because case files are public.
+- **Unexpected errors.** When a case that expects rows gets an error from the warehouse, record
+  writes the error `message` with `verified: false` and lists the case. The file then needs a person
+  to add `kind` and `message_contains` (triage) before it loads again; recording never guesses them.
 - **Temporary datasets.** Each case runs in a dataset created with `default_table_expiration_ms` of
   one hour and the label `crucible-corpus=1`, and record deletes it when the case ends. The
   expiration and label only matter if the process dies before the delete.
