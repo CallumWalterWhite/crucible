@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from collections.abc import Callable, Iterable
 from datetime import UTC, datetime
@@ -95,7 +96,8 @@ class BigQueryRecorder:
                     raise RecordError(
                         f"{case.path}: exceeded maximum_bytes_billed: {message}"
                     ) from exc
-                return Expected(error_message=message)
+                project, dataset_id = dataset.split(".", 1)
+                return Expected(error_message=clean_message(message, project, dataset_id))
             return self._rows_expected(rows)
         finally:
             self._client.delete_dataset(dataset, delete_contents=True, not_found_ok=True)
@@ -115,6 +117,21 @@ class BigQueryRecorder:
                 ]
             )
         return Expected(columns=columns, rows=values)
+
+
+def clean_message(message: str, project: str, dataset: str) -> str:
+    """BigQuery's own message for a failed job, as a case file stores it (ADR 0013).
+
+    The client's text repeats the message with `; reason: ..., location: ..., message: ...` and
+    appends `Location:` and `Job ID:` lines; only the first message is BigQuery's answer. The
+    recording project and throwaway dataset become `<project>` and `<dataset>`, because case files
+    are public and the project id is the recorder's, not part of the behaviour.
+    """
+    primary = message.split("; reason: ", 1)[0].split("\n\nLocation:", 1)[0].strip()
+    for name, placeholder in ((project, "<project>"), (dataset, "<dataset>")):
+        # Whole names only: a project id is letters, digits and hyphens; a dataset adds underscores.
+        primary = re.sub(rf"(?<![\w-]){re.escape(name)}(?![\w-])", placeholder, primary)
+    return primary
 
 
 def _api_message(exc: GoogleAPICallError) -> str:

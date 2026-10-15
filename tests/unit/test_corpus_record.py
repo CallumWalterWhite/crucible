@@ -372,3 +372,17 @@ def test_run_for_a_dialect_not_built_yet_exits_2(capsys: pytest.CaptureFixture[s
     code = corpus_cli.main(argparse.Namespace(corpus_command="run", dialect="snowflake", path=None))
     assert code == 2
     assert "not built yet" in capsys.readouterr().err
+
+
+def test_clean_message_keeps_bigquery_message_and_hides_project():
+    from crucible.corpus.record import clean_message
+
+    raw = (
+        "Not found: Table my-sandbox:crucible_corpus_0123456789ab.t was not found in location US; "
+        "reason: notFound, message: Not found: Table my-sandbox:crucible_corpus_0123456789ab.t was "
+        "not found in location US\n\nLocation: US\nJob ID: 00000000-0000-0000-0000-000000000000\n"
+    )
+    assert clean_message(raw, "my-sandbox", "crucible_corpus_0123456789ab") == (
+        "Not found: Table <project>:<dataset>.t was not found in location US"
+    )
+    assert clean_message("division by zero: 1 / 0", "p", "d") == "division by zero: 1 / 0"
