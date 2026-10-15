@@ -9,7 +9,7 @@ ordered: false
 expected:
   error:
     kind: runtime
-    message_contains: numeric out of range
     message: 'numeric out of range: 1e+30'
-verified: false
-recorded_at: '2026-10-15T11:12:39Z'
+    message_contains: numeric out of range
+verified: true
+recorded_at: '2026-10-15T14:53:22Z'

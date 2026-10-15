@@ -9,7 +9,7 @@ ordered: false
 expected:
   error:
     kind: runtime
-    message_contains: Invalid date
     message: 'Invalid date: ''20240102'''
-verified: false
-recorded_at: '2026-10-15T11:13:03Z'
+    message_contains: Invalid date
+verified: true
+recorded_at: '2026-10-15T14:53:26Z'

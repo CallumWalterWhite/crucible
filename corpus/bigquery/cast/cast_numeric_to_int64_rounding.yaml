@@ -10,7 +10,7 @@ ordered: false
 expected:
   error:
     kind: invalid_query
-    message_contains: Invalid NUMERIC literal
     message: 'Invalid NUMERIC literal: "1.4999999999" at [1:84]'
-verified: false
-recorded_at: '2026-10-15T11:12:55Z'
+    message_contains: Invalid NUMERIC literal
+verified: true
+recorded_at: '2026-10-15T14:53:25Z'

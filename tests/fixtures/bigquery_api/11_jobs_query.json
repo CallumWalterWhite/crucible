@@ -53,13 +53,12 @@
     ],
     "totalBytesProcessed": "0",
     "jobComplete": true,
-    "cacheHit": false,
+    "cacheHit": true,
     "queryId": "<query-id>",
     "jobCreationReason": {
       "code": "REQUESTED"
     },
     "totalBytesBilled": "0",
-    "totalSlotMs": "<duration>",
     "location": "<location>",
     "creationTime": "<time>",
     "startTime": "<time>",

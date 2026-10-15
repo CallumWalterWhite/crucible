@@ -49,7 +49,7 @@
     ],
     "totalBytesProcessed": "0",
     "jobComplete": true,
-    "cacheHit": false,
+    "cacheHit": true,
     "queryId": "<query-id>",
     "totalBytesBilled": "0",
     "totalSlotMs": "<duration>",

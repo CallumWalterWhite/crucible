@@ -1,5 +1,5 @@
-description: TO_JSON_STRING of DATETIME. DuckDB writes a space separator; Crucible raises unsupported
-  until recorded (expected value is a guess).
+description: TO_JSON_STRING of DATETIME. DuckDB writes a space separator; Crucible
+  raises unsupported until recorded (expected value is a guess).
 tags:
 - phase4
 - json
@@ -11,6 +11,6 @@ expected:
   - name: v
     type: STRING
   rows:
-  - - '{"dt":"2024-03-04T05:06:07.500000"}'
-verified: false
-recorded_at: null
+  - - '{"dt":"2024-03-04T05:06:07.500"}'
+verified: true
+recorded_at: '2026-10-15T14:53:47Z'

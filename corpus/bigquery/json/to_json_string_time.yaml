@@ -1,4 +1,5 @@
-description: TO_JSON_STRING of TIME. Crucible raises unsupported until recorded (expected value is a guess).
+description: TO_JSON_STRING of TIME. Crucible raises unsupported until recorded (expected
+  value is a guess).
 tags:
 - phase4
 - json
@@ -10,6 +11,6 @@ expected:
   - name: v
     type: STRING
   rows:
-  - - '{"t":"05:06:07.250000"}'
-verified: false
-recorded_at: null
+  - - '{"t":"05:06:07.250"}'
+verified: true
+recorded_at: '2026-10-15T14:53:57Z'

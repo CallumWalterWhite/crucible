@@ -8,7 +8,7 @@ ordered: false
 expected:
   error:
     kind: runtime
-    message_contains: int64 out of range
     message: 'int64 out of range: 1e+20'
-verified: false
-recorded_at: '2026-10-15T11:12:35Z'
+    message_contains: int64 out of range
+verified: true
+recorded_at: '2026-10-15T14:53:20Z'

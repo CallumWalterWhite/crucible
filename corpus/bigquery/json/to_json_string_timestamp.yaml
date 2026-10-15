@@ -1,11 +1,11 @@
-description: TO_JSON_STRING writes a TIMESTAMP as RFC 3339 text in UTC with a T and a Z
-  ("2024-03-04T05:06:07Z", BigQuery's JSON encodings). DuckDB's own JSON has a space and +00.
-  Whole seconds only; a recording verifies the value.
+description: TO_JSON_STRING writes a TIMESTAMP as RFC 3339 text in UTC with a T and
+  a Z ("2024-03-04T05:06:07Z", BigQuery's JSON encodings). DuckDB's own JSON has a
+  space and +00. Whole seconds only; a recording verifies the value.
 tags:
 - phase3
 - json
-query: |-
-  SELECT TO_JSON_STRING(STRUCT(TIMESTAMP '2024-03-04 05:06:07+00' AS t, 1 AS i)) AS v
+query: SELECT TO_JSON_STRING(STRUCT(TIMESTAMP '2024-03-04 05:06:07+00' AS t, 1 AS
+  i)) AS v
 ordered: false
 expected:
   columns:
@@ -13,5 +13,5 @@ expected:
     type: STRING
   rows:
   - - '{"t":"2024-03-04T05:06:07Z","i":1}'
-verified: false
-recorded_at: null
+verified: true
+recorded_at: '2026-10-15T14:53:59Z'

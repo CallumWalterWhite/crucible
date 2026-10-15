@@ -9,7 +9,7 @@ ordered: false
 expected:
   error:
     kind: runtime
-    message_contains: Bad double value
     message: 'Bad double value: 1,5'
-verified: false
-recorded_at: '2026-10-15T11:13:11Z'
+    message_contains: Bad double value
+verified: true
+recorded_at: '2026-10-15T14:53:30Z'
