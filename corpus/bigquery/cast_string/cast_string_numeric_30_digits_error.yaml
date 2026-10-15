@@ -1,0 +1,15 @@
+description: A value outside the NUMERIC range is an overflow error. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions.
+  Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- cast_string
+- unconfirmed
+- known-divergence
+query: SELECT CAST('123456789012345678901234567890' AS NUMERIC) AS v
+ordered: false
+expected:
+  error:
+    kind: runtime
+    message_contains: overflow
+verified: false
+recorded_at: null

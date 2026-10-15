@@ -1,0 +1,15 @@
+description: 'A leading space before a DATE string is not in the DATE format (best
+  reading: error). Expected value from the BigQuery documentation; not yet recorded.'
+tags:
+- slice2
+- cast_string
+- unconfirmed
+- known-divergence
+query: SELECT CAST(' 2024-01-02' AS DATE) AS v
+ordered: false
+expected:
+  error:
+    kind: runtime
+    message_contains: Could not cast
+verified: false
+recorded_at: null

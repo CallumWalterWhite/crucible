@@ -1,0 +1,15 @@
+description: A string that is not a timestamp is a runtime error. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions.
+  Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- cast_string
+- unconfirmed
+- known-divergence
+query: SELECT CAST('not a time' AS TIMESTAMP) AS v
+ordered: false
+expected:
+  error:
+    kind: runtime
+    message_contains: Could not cast
+verified: false
+recorded_at: null

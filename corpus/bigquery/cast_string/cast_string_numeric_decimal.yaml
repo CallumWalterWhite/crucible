@@ -1,0 +1,11 @@
+description: A decimal string gives the NUMERIC value. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions. Expected value from the BigQuery documentation; not yet recorded.
+tags: [slice2, cast_string]
+query: SELECT CAST('1.5' AS NUMERIC) AS v
+ordered: false
+expected:
+  columns:
+  - {name: v, type: NUMERIC}
+  rows:
+  - ['1.5']
+verified: false
+recorded_at: null

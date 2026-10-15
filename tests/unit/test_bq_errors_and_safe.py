@@ -170,3 +170,33 @@ def test_nested_checks_are_applied(bq, sql, message):
 
 def test_nested_safe(bq):
     assert values(bq("SELECT SAFE.LOG(SAFE.LOG(-1)) AS v")) == [[None]]
+
+
+@pytest.mark.parametrize(
+    ("text", "type_name", "expected"),
+    [
+        ("2024-1-2", "DATE", "2024-01-02"),
+        ("2024-01-02 03:04:05.123456", "TIMESTAMP", "2024-01-02T03:04:05.123456Z"),
+        ("2024-01-02 03:04:05+05:30", "TIMESTAMP", "2024-01-01T21:34:05Z"),
+        ("2024-01-02 03:04:05 America/Los_Angeles", "TIMESTAMP", "2024-01-02T11:04:05Z"),
+        ("2024-01-02T03:04:05", "DATETIME", "2024-01-02T03:04:05"),
+    ],
+)
+def test_string_to_temporal_canonical_formats(bq, text, type_name, expected):
+    assert values(bq(f"SELECT CAST('{text}' AS {type_name}) AS v")) == [[expected]]
+
+
+@pytest.mark.parametrize(
+    ("text", "type_name"),
+    [
+        ("2024-01-02 03:04:05", "DATE"),
+        ("20240102", "DATE"),
+        ("2024-01-02 03:04:05.1234567", "TIMESTAMP"),
+        ("2024-01-02 03:04:05Z", "DATETIME"),
+    ],
+)
+def test_string_to_temporal_rejects_non_canonical(bq, text, type_name):
+    assert f"Invalid {type_name.lower()}" in raises(
+        bq, f"SELECT CAST('{text}' AS {type_name}) AS v"
+    )
+    assert values(bq(f"SELECT SAFE_CAST('{text}' AS {type_name}) AS v")) == [[None]]

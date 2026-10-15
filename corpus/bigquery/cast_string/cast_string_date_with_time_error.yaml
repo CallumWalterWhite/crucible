@@ -1,0 +1,16 @@
+description: A string with a time part is not a DATE literal and is a runtime error.
+  See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions.
+  Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- cast_string
+- unconfirmed
+- known-divergence
+query: SELECT CAST('2024-01-02 03:04:05' AS DATE) AS v
+ordered: false
+expected:
+  error:
+    kind: runtime
+    message_contains: Could not cast
+verified: false
+recorded_at: null

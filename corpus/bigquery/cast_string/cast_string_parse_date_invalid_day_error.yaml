@@ -1,0 +1,16 @@
+description: PARSE_DATE of a day that does not exist in the month is a runtime error.
+  See https://cloud.google.com/bigquery/docs/reference/standard-sql/date_functions.
+  Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- cast_string
+- unconfirmed
+- known-divergence
+query: SELECT PARSE_DATE('%Y-%m-%d', '2024-02-30') AS v
+ordered: false
+expected:
+  error:
+    kind: runtime
+    message_contains: Could not parse
+verified: false
+recorded_at: null

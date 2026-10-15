@@ -39,6 +39,17 @@ if TYPE_CHECKING:
 # Whitespace handling is not documented: such values raise unsupported until a recording settles it.
 INT64_TEXT = r"^[+-]?([0-9]+|0[xX][0-9a-fA-F]+)$"
 INT64_TEXT_WITH_SPACE = r"^\s*[+-]?([0-9]+|0[xX][0-9a-fA-F]+)\s*$"
+# Canonical formats for STRING -> DATE / DATETIME / TIMESTAMP casts (Conversion functions, "CAST
+# AS DATE" etc.): date YYYY-[M]M-[D]D; time [H]H:[M]M:[S]S[.F] with up to 6 fractional digits;
+# TIMESTAMP may add a zone: Z, +HH[:MM], or a space and a zone name.
+_DATE = r"[0-9]{1,4}-[0-9]{1,2}-[0-9]{1,2}"
+_TIME = r"[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}(\.[0-9]{1,6})?"
+_ZONE = r"(Z|z|[+-][0-9]{1,2}(:[0-9]{2})?| ?[A-Za-z_]+(/[A-Za-z_]+)*)"
+TEMPORAL_TEXT = {
+    T.DATE: ("date", rf"^{_DATE}$"),
+    T.TIMESTAMP: ("datetime", rf"^{_DATE}([ Tt]{_TIME})?$"),
+    T.TIMESTAMPTZ: ("timestamp", rf"^{_DATE}([ Tt]{_TIME})?{_ZONE}?$"),
+}
 _VOLATILE = re.compile(r"\b(rand|generate_uuid)\s*\(", re.IGNORECASE)
 
 
@@ -95,6 +106,27 @@ def _cast_string_to_int64(node: exp.Cast) -> exp.Expr:
     )
 
 
+def _cast_string_to_temporal(node: exp.Cast, kind: exp.DType) -> exp.Expr:
+    """BigQuery accepts only its canonical formats; DuckDB also accepts e.g. a time on a DATE."""
+    name, pattern = TEMPORAL_TEXT[kind]
+    value = node.this
+    safe = isinstance(node, exp.TryCast)
+    plain = exp.RegexpLike(this=value.copy(), expression=exp.Literal.string(pattern))
+    trimmed = exp.Anonymous(this="trim", expressions=[value.copy()])
+    spaced = exp.RegexpLike(this=trimmed, expression=exp.Literal.string(pattern))
+    bad: exp.Expr = exp.Null() if safe else raise_runtime(f"Invalid {name}: '", value.copy(), "'")
+    node.meta["crucible_checked"] = True
+    return check(
+        exp.Not(this=exp.Paren(this=plain)),
+        check(
+            spaced,
+            raise_unsupported(f"CAST of a string with surrounding whitespace to {name.upper()}"),
+            bad,
+        ),
+        node,
+    )
+
+
 def _cast_float_to_int64(node: exp.Cast) -> exp.Expr:
     rounded = typed(exp.Round(this=node.this.copy()), "FLOAT64")
     out = node.__class__(this=rounded, to=node.args["to"].copy())
@@ -142,6 +174,12 @@ def transform(tree: exp.Expr, ctx: TransformContext) -> exp.Expr:
             )
             div.meta["crucible_checked"] = True  # IEEE division never raises
             return typed(div, "FLOAT64")
+        if (
+            isinstance(node, exp.Cast)
+            and node.to.this in TEMPORAL_TEXT
+            and _is(node.this, T.TEXT, T.VARCHAR)
+        ):
+            return _cast_string_to_temporal(node, node.to.this)
         if isinstance(node, exp.Cast) and _is(node.to, T.BIGINT, T.INT):
             if _is(node.this, T.TEXT, T.VARCHAR):
                 return _cast_string_to_int64(node)

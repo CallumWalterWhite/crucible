@@ -1,0 +1,11 @@
+description: A NUMERIC string in exponent form gives the plain decimal value (best reading). Expected value from the BigQuery documentation; not yet recorded.
+tags: [slice2, cast_string, unconfirmed]
+query: SELECT CAST('1e3' AS NUMERIC) AS v
+ordered: false
+expected:
+  columns:
+  - {name: v, type: NUMERIC}
+  rows:
+  - ['1000']
+verified: false
+recorded_at: null

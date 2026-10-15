@@ -1,0 +1,11 @@
+description: Surrounding spaces in a FLOAT64 string are ignored (best reading). Expected value from the BigQuery documentation; not yet recorded.
+tags: [slice2, cast_string, unconfirmed]
+query: SELECT CAST(' 1.5 ' AS FLOAT64) AS v
+ordered: false
+expected:
+  columns:
+  - {name: v, type: FLOAT64}
+  rows:
+  - [1.5]
+verified: false
+recorded_at: null

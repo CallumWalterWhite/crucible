@@ -1,0 +1,15 @@
+description: More than six subsecond digits is a runtime error. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions.
+  Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- cast_string
+- unconfirmed
+- known-divergence
+query: SELECT CAST('2024-01-02 03:04:05.1234567' AS TIMESTAMP) AS v
+ordered: false
+expected:
+  error:
+    kind: runtime
+    message_contains: Could not cast
+verified: false
+recorded_at: null
