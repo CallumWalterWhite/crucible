@@ -266,6 +266,11 @@ def _cast_projections(select: exp.Select, names: list[str], out_types: list[exp.
     projections: list[exp.Expr] = []
     for projection, name, out_type in zip(select.expressions, names, out_types, strict=True):
         value = projection.this if isinstance(projection, exp.Alias) else projection
+        if isinstance(value, exp.Subquery) and value.args.get("alias"):
+            # qualify names an unaliased scalar subquery on the node itself ((...) AS _col_0);
+            # inside a CAST that alias is invalid SQL, and the output name is set below.
+            value = value.copy()
+            value.set("alias", None)
         if out_type.this != exp.DataType.Type.UNKNOWN:
             value = finalize_value(value, out_type, name, iter(range(1_000_000)))
             value = exp.Cast(this=value, to=types.storage_type(out_type))

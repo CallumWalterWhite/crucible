@@ -1,0 +1,14 @@
+description: INITCAP with delimiters over an array element. SQLGlot's DuckDB INITCAP re-parsed its own
+  output, so a[SAFE_OFFSET(1)] was read one element later; Crucible now writes it without re-parsing.
+tags:
+- phase4
+query: SELECT INITCAP((SELECT a[SAFE_OFFSET(1)] FROM (SELECT ['p q', 'q r', 'r s'] AS a)), ' ') AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: STRING
+  rows:
+  - - Q R
+verified: false
+recorded_at: null

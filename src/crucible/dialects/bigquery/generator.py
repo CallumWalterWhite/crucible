@@ -9,12 +9,23 @@ from __future__ import annotations
 from sqlglot import exp
 from sqlglot.dialects.duckdb import DuckDB
 from sqlglot.errors import ErrorLevel, UnsupportedError
+from sqlglot.generators.duckdb import (  # pinned SQLGlot (ADR 0008): private helpers reused as is
+    _escape_regex_metachars,  # pyright: ignore[reportPrivateUsage]
+    _implicit_datetime_cast,  # pyright: ignore[reportPrivateUsage]
+)
 
 from crucible.engine import CrucibleUnsupportedError
 
 
 class BigQueryToDuckDB(DuckDB):
     class Generator(DuckDB.Generator):
+        # TRANSFORMS entries win over *_sql methods: drop the ones overridden below.
+        TRANSFORMS = {  # noqa: RUF012 - overrides the base class table, as SQLGlot does
+            k: v
+            for k, v in DuckDB.Generator.TRANSFORMS.items()
+            if k not in (exp.Initcap, exp.UnixSeconds, exp.StrToTime, exp.StrToDate)
+        }
+
         def arrayagg_sql(self, expression: exp.ArrayAgg) -> str:
             """ARRAY_AGG([DISTINCT] x [IGNORE NULLS] [ORDER BY ...] [LIMIT n]).
 
@@ -43,6 +54,62 @@ class BigQueryToDuckDB(DuckDB):
             if limit is not None:
                 sql = f"LIST_SLICE({sql}, 1, {self.sql(limit)})"
             return sql
+
+        # SQLGlot 30.22 builds several DuckDB expressions from generated SQL TEXT (exp.case().when
+        # with an f-string, exp.cast of self.func(...)), which re-parses it in the default dialect:
+        # an array index DuckDB already shifted to 1-based (a[2]) is shifted again (a[3]). The
+        # overrides below build the same SQL without re-parsing. TODO(upstream): draft in
+        # .local/upstream/.
+
+        def initcap_sql(self, expression: exp.Initcap) -> str:
+            """INITCAP(x[, delimiters]) as SQLGlot writes it, assembled as text only."""
+            value = self.sql(expression, "this")
+            delimiters = expression.args.get("expression")
+            if delimiters is None:
+                delimiters = exp.Literal.string(self.dialect.INITCAP_DEFAULT_DELIMITER_CHARS)
+            escaped = _escape_regex_metachars(self, delimiters, self.sql(delimiters))
+            if escaped == "''":
+                return f"UPPER(LEFT({value}, 1)) || LOWER(SUBSTRING({value}, 2))"
+            first_is_delimiter = f"REGEXP_MATCHES(LEFT({value}, 1), CONCAT('[', {escaped}, ']'))"
+            segments = (
+                f"REGEXP_EXTRACT_ALL({value}, CONCAT('([', {escaped}, ']+|[^', {escaped}, ']+)'))"
+            )
+
+            def capitalize(parity: int) -> str:
+                return (
+                    f"LIST_TRANSFORM({segments}, (seg, idx) -> CASE WHEN idx % 2 = {parity} "
+                    "THEN UPPER(LEFT(seg, 1)) || LOWER(SUBSTRING(seg, 2)) ELSE seg END)"
+                )
+
+            return (
+                f"ARRAY_TO_STRING(CASE WHEN {first_is_delimiter} THEN {capitalize(0)} "
+                f"ELSE {capitalize(1)} END, '')"
+            )
+
+        def strtotime_sql(self, expression: exp.StrToTime) -> str:
+            """PARSE_TIMESTAMP / SAFE.PARSE_TIMESTAMP with the casts built as trees."""
+            target_type = expression.args.get("target_type")
+            needs_tz = bool(target_type) and target_type.this in (
+                exp.DType.TIMESTAMPLTZ,
+                exp.DType.TIMESTAMPTZ,
+            )
+            value, formatted_time = self._strptime_default_year(expression)
+            safe = bool(expression.args.get("safe"))
+            call = exp.Anonymous(
+                this="TRY_STRPTIME" if safe else "STRPTIME", expressions=[value, formatted_time]
+            )
+            if safe:
+                to = exp.DType.TIMESTAMPTZ if needs_tz else exp.DType.TIMESTAMP
+                return self.sql(exp.Cast(this=call, to=exp.DataType(this=to)))
+            if needs_tz:
+                return self.sql(exp.Cast(this=call, to=exp.DataType(this=exp.DType.TIMESTAMPTZ)))
+            return self.sql(call)
+
+        def unixseconds_sql(self, expression: exp.UnixSeconds) -> str:
+            epoch = exp.Anonymous(
+                this="EPOCH", expressions=[_implicit_datetime_cast(expression.this)]
+            )
+            return self.sql(exp.Cast(this=epoch, to=exp.DataType(this=exp.DType.BIGINT)))
 
         def strtodate_sql(self, expression: exp.StrToDate) -> str:
             """PARSE_DATE -> CAST(STRPTIME(...) AS DATE), built as a tree.

@@ -1,0 +1,15 @@
+description: 'TO_JSON_STRING writes a whole FLOAT64 without a fraction: a differential run of a dbt project
+  showed 778.0 written as 778 (Crucible wrote 778.0). The other values extend that one observation; a
+  recording verifies them.'
+tags:
+- phase4
+query: SELECT TO_JSON_STRING(STRUCT(778.0 AS s, 1.5 AS f, -3.0 AS m, 0.0 AS z)) AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: STRING
+  rows:
+  - - '{"s":778,"f":1.5,"m":-3,"z":0}'
+verified: false
+recorded_at: null

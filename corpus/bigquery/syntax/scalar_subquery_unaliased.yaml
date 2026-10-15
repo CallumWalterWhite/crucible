@@ -1,0 +1,14 @@
+description: An unaliased scalar subquery in the SELECT list is named f0_. Crucible generated invalid
+  SQL for it.
+tags:
+- phase4
+query: SELECT (SELECT x FROM (SELECT 1 AS x) WHERE x > 0)
+ordered: false
+expected:
+  columns:
+  - name: f0_
+    type: INT64
+  rows:
+  - - 1
+verified: false
+recorded_at: null

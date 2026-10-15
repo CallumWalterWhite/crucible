@@ -73,7 +73,8 @@ def _encodable(node: exp.JSONFormat) -> None:
       fraction is 3 digits when it is whole milliseconds (.500, .123) and 6 otherwise (.000001);
     - NUMERIC: a whole number is a JSON number (2), anything else a string without trailing
       zeros ("1.5"); a whole number beyond 2^53 is unrecorded and raises;
-    - BYTES base64; FLOAT64 NaN and infinities as the strings "NaN", "Infinity", "-Infinity";
+    - BYTES base64; FLOAT64 NaN and infinities as the strings "NaN", "Infinity", "-Infinity", and
+      a whole FLOAT64 below 2^53 without a fraction (778); a whole one beyond 2^53 raises;
     - TO_JSON_STRING(NULL) is 'null' (TO_JSON(NULL) is unrecorded and raises).
     Other types (INTERVAL, ...) raise unsupported."""
     value = node.this
@@ -202,6 +203,22 @@ def _leaf(value: exp.Expr, kind: exp.DType) -> exp.Expr:
                         this=value.copy(), expression=_cast(exp.Literal.string("-inf"), "DOUBLE")
                     ),
                     true=_json_text('"-Infinity"'),
+                ),
+                # A whole number is written without ".0" (778.0 -> 778: Phase 4 differential run
+                # and corpus json/to_json_string_float_whole*); beyond 2^53 it is unrecorded.
+                exp.If(
+                    this=exp.And(
+                        this=exp.EQ(this=_call("trunc", value.copy()), expression=value.copy()),
+                        expression=exp.LT(
+                            this=_call("abs", value.copy()),
+                            expression=exp.Literal.number(_MAX_EXACT_DOUBLE),
+                        ),
+                    ),
+                    true=_cast(_cast(_cast(value.copy(), "BIGINT"), "VARCHAR"), "JSON"),
+                ),
+                exp.If(
+                    this=exp.EQ(this=_call("trunc", value.copy()), expression=value.copy()),
+                    true=_unsupported("TO_JSON_STRING of a whole FLOAT64 beyond 2^53"),
                 ),
             ],
             default=_call("to_json", value),
