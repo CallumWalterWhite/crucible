@@ -1,12 +1,19 @@
-description: CAST of FLOAT64 to NUMERIC rounds half away from zero to nine decimal places. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, cast, unconfirmed]
-query: SELECT CAST(1.0000000005 AS NUMERIC) AS a, CAST(-1.0000000005 AS NUMERIC) AS b
+description: CAST of FLOAT64 to NUMERIC rounds half away from zero to nine decimal
+  places. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions.
+tags:
+- slice2
+- cast
+query: SELECT CAST(1.0000000005 AS NUMERIC) AS a, CAST(-1.0000000005 AS NUMERIC) AS
+  b
 ordered: false
 expected:
   columns:
-  - {name: a, type: NUMERIC}
-  - {name: b, type: NUMERIC}
+  - name: a
+    type: NUMERIC
+  - name: b
+    type: NUMERIC
   rows:
-  - ['1.000000001', '-1.000000001']
-verified: false
-recorded_at: null
+  - - '1.000000001'
+    - '-1.000000001'
+verified: true
+recorded_at: '2026-10-15T11:12:49Z'

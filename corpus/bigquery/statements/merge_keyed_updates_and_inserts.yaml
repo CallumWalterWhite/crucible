@@ -1,15 +1,28 @@
-description: MERGE updates matched keys and inserts unmatched source rows. See https://cloud.google.com/bigquery/docs/reference/standard-sql/dml-syntax. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, statements]
-setup: ['CREATE TABLE tgt (k INT64, v STRING)', 'CREATE TABLE src (k INT64, v STRING)', 'INSERT INTO tgt VALUES (1, ''old''), (2, ''keep'')', 'INSERT INTO src VALUES (1, ''new''), (3, ''c'')', 'MERGE INTO tgt AS d USING src AS s ON s.k = d.k WHEN MATCHED THEN UPDATE SET v = s.v WHEN NOT MATCHED THEN INSERT (k, v) VALUES (k, v)']
+description: MERGE updates matched keys and inserts unmatched source rows. See https://cloud.google.com/bigquery/docs/reference/standard-sql/dml-syntax.
+tags:
+- slice2
+- statements
+setup:
+- CREATE TABLE tgt (k INT64, v STRING)
+- CREATE TABLE src (k INT64, v STRING)
+- INSERT INTO tgt VALUES (1, 'old'), (2, 'keep')
+- INSERT INTO src VALUES (1, 'new'), (3, 'c')
+- MERGE INTO tgt AS d USING src AS s ON s.k = d.k WHEN MATCHED THEN UPDATE SET v =
+  s.v WHEN NOT MATCHED THEN INSERT (k, v) VALUES (k, v)
 query: SELECT k, v FROM tgt
 ordered: false
 expected:
   columns:
-  - {name: k, type: INT64}
-  - {name: v, type: STRING}
+  - name: k
+    type: INT64
+  - name: v
+    type: STRING
   rows:
-  - [1, new]
-  - [2, keep]
-  - [3, c]
-verified: false
-recorded_at: null
+  - - 1
+    - new
+  - - 2
+    - keep
+  - - 3
+    - c
+verified: true
+recorded_at: '2026-10-15T11:17:18Z'

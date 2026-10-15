@@ -4,13 +4,12 @@ description: A compact yyyymmdd string without separators is a runtime error. Se
 tags:
 - slice2
 - cast_string
-- unconfirmed
-- known-divergence
 query: SELECT CAST('20240102' AS DATE) AS v
 ordered: false
 expected:
   error:
     kind: runtime
-    message_contains: Could not cast
+    message_contains: Invalid date
+    message: 'Invalid date: ''20240102'''
 verified: false
-recorded_at: null
+recorded_at: '2026-10-15T11:13:03Z'

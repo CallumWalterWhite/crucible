@@ -12,4 +12,4 @@ expected:
   rows:
   - - '{"a":1,"b":"x"}'
 verified: true
-recorded_at: '2026-10-15T10:16:54Z'
+recorded_at: '2026-10-15T11:16:01Z'

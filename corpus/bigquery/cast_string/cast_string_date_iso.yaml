@@ -1,11 +1,14 @@
-description: A four-digit year, two-digit month and day give that DATE. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, cast_string]
+description: A four-digit year, two-digit month and day give that DATE. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions.
+tags:
+- slice2
+- cast_string
 query: SELECT CAST('2024-01-02' AS DATE) AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: DATE}
+  - name: v
+    type: DATE
   rows:
-  - ['2024-01-02']
-verified: false
-recorded_at: null
+  - - '2024-01-02'
+verified: true
+recorded_at: '2026-10-15T11:13:05Z'

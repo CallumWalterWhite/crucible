@@ -4,13 +4,12 @@ description: An empty string is not a floating point literal and is a runtime er
 tags:
 - slice2
 - cast_string
-- unconfirmed
-- known-divergence
 query: SELECT CAST('' AS FLOAT64) AS v
 ordered: false
 expected:
   error:
     kind: runtime
-    message_contains: Could not cast
+    message_contains: Bad double value
+    message: 'Bad double value:'
 verified: false
-recorded_at: null
+recorded_at: '2026-10-15T11:13:14Z'

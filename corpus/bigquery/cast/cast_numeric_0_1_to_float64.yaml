@@ -1,11 +1,14 @@
-description: CAST of NUMERIC 0.1 to FLOAT64 gives the nearest FLOAT64 value. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, cast]
+description: CAST of NUMERIC 0.1 to FLOAT64 gives the nearest FLOAT64 value. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions.
+tags:
+- slice2
+- cast
 query: SELECT CAST(NUMERIC '0.1' AS FLOAT64) AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: FLOAT64}
+  - name: v
+    type: FLOAT64
   rows:
-  - [0.1]
-verified: false
-recorded_at: null
+  - - 0.1
+verified: true
+recorded_at: '2026-10-15T11:12:54Z'

@@ -1,14 +1,24 @@
-description: CREATE OR REPLACE TABLE with PARTITION BY, CLUSTER BY and OPTIONS creates the table with its selected columns. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, statements]
-setup: ['CREATE OR REPLACE TABLE t PARTITION BY d CLUSTER BY k OPTIONS (description = ''x'') AS SELECT DATE ''2024-01-01'' AS d, ''k1'' AS k, 1 AS v']
+description: CREATE OR REPLACE TABLE with PARTITION BY, CLUSTER BY and OPTIONS creates
+  the table with its selected columns.
+tags:
+- slice2
+- statements
+setup:
+- CREATE OR REPLACE TABLE t PARTITION BY d CLUSTER BY k OPTIONS (description = 'x')
+  AS SELECT DATE '2024-01-01' AS d, 'k1' AS k, 1 AS v
 query: SELECT * FROM t
 ordered: false
 expected:
   columns:
-  - {name: d, type: DATE}
-  - {name: k, type: STRING}
-  - {name: v, type: INT64}
+  - name: d
+    type: DATE
+  - name: k
+    type: STRING
+  - name: v
+    type: INT64
   rows:
-  - ['2024-01-01', k1, 1]
-verified: false
-recorded_at: null
+  - - '2024-01-01'
+    - k1
+    - 1
+verified: true
+recorded_at: '2026-10-15T11:16:50Z'

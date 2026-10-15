@@ -1,11 +1,14 @@
-description: The SAFE. prefix turns an error inside the function into NULL. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, errors]
+description: The SAFE. prefix turns an error inside the function into NULL.
+tags:
+- slice2
+- errors
 query: SELECT SAFE.LOG(-1) AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: FLOAT64}
+  - name: v
+    type: FLOAT64
   rows:
-  - [null]
-verified: false
-recorded_at: null
+  - - null
+verified: true
+recorded_at: '2026-10-15T11:15:32Z'

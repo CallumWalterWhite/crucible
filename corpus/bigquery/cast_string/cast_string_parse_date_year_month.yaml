@@ -1,11 +1,15 @@
-description: PARSE_DATE fills an unspecified day from 1970-01-01, giving day 1. See https://cloud.google.com/bigquery/docs/reference/standard-sql/date_functions. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, cast_string]
+description: PARSE_DATE fills an unspecified day from 1970-01-01, giving day 1. See
+  https://cloud.google.com/bigquery/docs/reference/standard-sql/date_functions.
+tags:
+- slice2
+- cast_string
 query: SELECT PARSE_DATE('%Y-%m', '2024-02') AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: DATE}
+  - name: v
+    type: DATE
   rows:
-  - ['2024-02-01']
-verified: false
-recorded_at: null
+  - - '2024-02-01'
+verified: true
+recorded_at: '2026-10-15T11:13:40Z'

@@ -1,8 +1,13 @@
-description: CAST of an empty STRING to INT64 raises a runtime error. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, errors]
+description: CAST of an empty STRING to INT64 raises a runtime error.
+tags:
+- slice2
+- errors
 query: SELECT CAST('' AS INT64) AS v
 ordered: false
 expected:
-  error: {kind: runtime, message_contains: Bad int64 value}
-verified: false
-recorded_at: null
+  error:
+    kind: runtime
+    message: 'Bad int64 value:'
+    message_contains: Bad int64 value
+verified: true
+recorded_at: '2026-10-15T11:14:52Z'

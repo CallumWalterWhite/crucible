@@ -216,7 +216,37 @@ def _multi_character_class(name: str) -> str:
     return "[" + "".join(f"\\x{{{ord(char):x}}}" for char in chars) + "]"
 
 
+# LOWER: the only character with a multi-character lowercase is U+0130 (recorded: LOWER('İ') is
+# 'i' + U+0307), so it is replaced first; capital sigma lowercases by context (final ς), which
+# DuckDB cannot see, so it still raises.
+_LOWER_SPECIAL = "\u0130"
+_LOWER_CONTEXTUAL = "[\u03a3]"
+
+
+def _lower(node: exp.Expr) -> exp.Expr:
+    value = node.this
+    if not isinstance(value, exp.Expr):
+        raise CrucibleUnsupportedError("LOWER without a value")
+    replaced = exp.Anonymous(
+        this="replace",
+        expressions=[
+            value.copy(),
+            exp.Literal.string(_LOWER_SPECIAL),
+            exp.Literal.string("i\u0307"),
+        ],
+    )
+    lowered = node.copy()
+    lowered.set("this", replaced)
+    contextual = exp.Anonymous(
+        this="regexp_matches", expressions=[value.copy(), exp.Literal.string(_LOWER_CONTEXTUAL)]
+    )
+    failure = raise_unsupported("LOWER of a capital sigma (its lowercase depends on context)")
+    return typed(check(contextual, failure, lowered), "STRING")
+
+
 def _case_mapping(node: exp.Expr, name: str) -> exp.Expr:
+    if name == "LOWER":
+        return _lower(node)
     value = node.this
     if not isinstance(value, exp.Expr):
         raise CrucibleUnsupportedError(f"{name} without a value")

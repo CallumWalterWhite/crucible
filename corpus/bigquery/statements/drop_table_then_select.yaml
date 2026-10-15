@@ -1,9 +1,16 @@
-description: Selecting a dropped table raises a not-found error. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, statements]
-setup: [CREATE TABLE t (a INT64), DROP TABLE t]
+description: Selecting a dropped table raises a not-found error.
+tags:
+- slice2
+- statements
+setup:
+- CREATE TABLE t (a INT64)
+- DROP TABLE t
 query: SELECT * FROM t
 ordered: false
 expected:
-  error: {kind: not_found, message_contains: 'Not found: Table'}
-verified: false
-recorded_at: null
+  error:
+    kind: not_found
+    message: 'Not found: Table <project>:<dataset>.t was not found in location US'
+    message_contains: 'Not found: Table'
+verified: true
+recorded_at: '2026-10-15T11:16:57Z'

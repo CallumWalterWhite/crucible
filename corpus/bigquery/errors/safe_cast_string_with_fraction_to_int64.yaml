@@ -1,11 +1,15 @@
-description: SAFE_CAST returns NULL when a STRING with a fraction cannot be cast to INT64. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, errors]
+description: SAFE_CAST returns NULL when a STRING with a fraction cannot be cast to
+  INT64. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions.
+tags:
+- slice2
+- errors
 query: SELECT SAFE_CAST('1.5' AS INT64) AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: INT64}
+  - name: v
+    type: INT64
   rows:
-  - [null]
-verified: false
-recorded_at: null
+  - - null
+verified: true
+recorded_at: '2026-10-15T11:15:21Z'

@@ -98,11 +98,21 @@ def _timestamp_diff(node: exp.TimestampDiff) -> exp.Expr:
 # --- EXTRACT -----------------------------------------------------------------------------------
 def _extract(node: exp.Extract) -> exp.Expr | None:
     part = node.this
-    if isinstance(part, exp.WeekStart) or (
-        isinstance(part, exp.Var) and part.name.upper() == "WEEK"
-    ):
-        # BigQuery weeks start on Sunday (or the named day), DuckDB's are ISO: not translated.
-        raise CrucibleUnsupportedError("EXTRACT(WEEK)")
+    if isinstance(part, exp.WeekStart):
+        # WEEK(<weekday>): weeks starting on another day; unrecorded, not translated.
+        raise CrucibleUnsupportedError("EXTRACT(WEEK(<weekday>))")
+    if isinstance(part, exp.Var) and part.name.upper() == "WEEK":
+        # BigQuery WEEK: weeks start on Sunday, days before the year's first Sunday are week 0
+        # (recorded: 2024-01-07, a Sunday, is week 1). DuckDB's week is ISO.
+        value = node.expression
+        day_of_year = exp.Anonymous(this="dayofyear", expressions=[value.copy()])
+        weekday = exp.Anonymous(this="dayofweek", expressions=[value.copy()])  # Sunday = 0
+        shifted = exp.Sub(
+            this=exp.Add(this=day_of_year, expression=exp.Literal.number(6)), expression=weekday
+        )
+        return typed(
+            exp.IntDiv(this=exp.Paren(this=shifted), expression=exp.Literal.number(7)), "INT64"
+        )
     if not isinstance(part, exp.Var):
         return None
     name = part.name.upper()

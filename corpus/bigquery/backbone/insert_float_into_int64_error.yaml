@@ -13,4 +13,4 @@ expected:
       has type INT64 at [1:27]
     message_contains: cannot be inserted into column
 verified: true
-recorded_at: '2026-10-15T10:15:01Z'
+recorded_at: '2026-10-15T11:12:03Z'

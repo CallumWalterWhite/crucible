@@ -1,15 +1,28 @@
-description: A cross join with UNNEST of an array of STRUCT keeps rows where the value is positive. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, unnest]
-setup: ['CREATE TABLE t (id INT64, a INT64, b INT64)', 'INSERT INTO t VALUES (1, 5, 0), (2, 0, 7)']
-query: SELECT id, m, v FROM t, UNNEST([STRUCT('a' AS m, a AS v), STRUCT('b' AS m, b AS v)]) WHERE v > 0
+description: A cross join with UNNEST of an array of STRUCT keeps rows where the value
+  is positive.
+tags:
+- slice2
+- unnest
+setup:
+- CREATE TABLE t (id INT64, a INT64, b INT64)
+- INSERT INTO t VALUES (1, 5, 0), (2, 0, 7)
+query: SELECT id, m, v FROM t, UNNEST([STRUCT('a' AS m, a AS v), STRUCT('b' AS m,
+  b AS v)]) WHERE v > 0
 ordered: false
 expected:
   columns:
-  - {name: id, type: INT64}
-  - {name: m, type: STRING}
-  - {name: v, type: INT64}
+  - name: id
+    type: INT64
+  - name: m
+    type: STRING
+  - name: v
+    type: INT64
   rows:
-  - [1, a, 5]
-  - [2, b, 7]
-verified: false
-recorded_at: null
+  - - 2
+    - b
+    - 7
+  - - 1
+    - a
+    - 5
+verified: true
+recorded_at: '2026-10-15T11:18:30Z'

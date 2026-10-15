@@ -1,16 +1,15 @@
 description: A hexadecimal string is not a floating point literal and is a runtime
   error (best reading). See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - slice2
 - cast_string
-- unconfirmed
-- known-divergence
 query: SELECT CAST('0x10' AS FLOAT64) AS v
 ordered: false
 expected:
-  error:
-    kind: runtime
-    message_contains: Could not cast
-verified: false
-recorded_at: null
+  columns:
+  - name: v
+    type: FLOAT64
+  rows:
+  - - 16.0
+verified: true
+recorded_at: '2026-10-15T11:13:18Z'

@@ -1,8 +1,14 @@
-description: Multiplying two INT64 literals beyond the INT64 range raises an overflow error. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, errors]
+description: Multiplying two INT64 literals beyond the INT64 range raises an overflow
+  error. Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- errors
 query: SELECT 3000000000 * 4000000000 AS v
 ordered: false
 expected:
-  error: {kind: runtime, message_contains: overflow}
+  error:
+    kind: runtime
+    message_contains: Integer Overflow
+    message: Integer Overflow
 verified: false
-recorded_at: null
+recorded_at: '2026-10-15T11:15:10Z'

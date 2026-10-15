@@ -3,13 +3,12 @@ description: 'A leading space before a DATE string is not in the DATE format (be
 tags:
 - slice2
 - cast_string
-- unconfirmed
-- known-divergence
 query: SELECT CAST(' 2024-01-02' AS DATE) AS v
 ordered: false
 expected:
   error:
     kind: runtime
-    message_contains: Could not cast
+    message_contains: Invalid date
+    message: 'Invalid date: '' 2024-01-02'''
 verified: false
-recorded_at: null
+recorded_at: '2026-10-15T11:13:06Z'

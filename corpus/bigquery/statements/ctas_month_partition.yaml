@@ -1,12 +1,17 @@
-description: CREATE OR REPLACE TABLE with DATE_TRUNC partitioning creates the table. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, statements]
-setup: ['CREATE OR REPLACE TABLE t PARTITION BY DATE_TRUNC(d, MONTH) AS SELECT DATE ''2024-03-05'' AS d']
+description: CREATE OR REPLACE TABLE with DATE_TRUNC partitioning creates the table.
+tags:
+- slice2
+- statements
+setup:
+- CREATE OR REPLACE TABLE t PARTITION BY DATE_TRUNC(d, MONTH) AS SELECT DATE '2024-03-05'
+  AS d
 query: SELECT * FROM t
 ordered: false
 expected:
   columns:
-  - {name: d, type: DATE}
+  - name: d
+    type: DATE
   rows:
-  - ['2024-03-05']
-verified: false
-recorded_at: null
+  - - '2024-03-05'
+verified: true
+recorded_at: '2026-10-15T11:16:46Z'

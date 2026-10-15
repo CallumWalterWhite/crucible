@@ -8,7 +8,7 @@ ordered: false
 expected:
   error:
     kind: invalid_query
-    message_contains: Operands of || cannot be literal NULL
     message: Operands of || cannot be literal NULL at [1:15]
-verified: false
-recorded_at: '2026-10-15T10:17:27Z'
+    message_contains: Operands of || cannot be literal NULL
+verified: true
+recorded_at: '2026-10-15T11:17:32Z'

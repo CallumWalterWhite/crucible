@@ -1,11 +1,14 @@
-description: A Z suffix means UTC. See https://cloud.google.com/bigquery/docs/reference/standard-sql/lexical. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, cast_string]
+description: A Z suffix means UTC. See https://cloud.google.com/bigquery/docs/reference/standard-sql/lexical.
+tags:
+- slice2
+- cast_string
 query: SELECT CAST('2024-01-02 03:04:05Z' AS TIMESTAMP) AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: TIMESTAMP}
+  - name: v
+    type: TIMESTAMP
   rows:
-  - ['2024-01-02T03:04:05Z']
-verified: false
-recorded_at: null
+  - - '2024-01-02T03:04:05Z'
+verified: true
+recorded_at: '2026-10-15T11:13:59Z'

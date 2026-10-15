@@ -1,11 +1,14 @@
-description: A NULL ARRAY field inside a STRUCT result is returned as an empty array. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, errors, unconfirmed]
+description: A NULL ARRAY field inside a STRUCT result is returned as an empty array.
+tags:
+- slice2
+- errors
 query: SELECT STRUCT(CAST(NULL AS ARRAY<INT64>) AS a) AS s
 ordered: false
 expected:
   columns:
-  - {name: s, type: STRUCT<a ARRAY<INT64>>}
+  - name: s
+    type: STRUCT<a ARRAY<INT64>>
   rows:
   - - a: []
-verified: false
-recorded_at: null
+verified: true
+recorded_at: '2026-10-15T11:15:15Z'

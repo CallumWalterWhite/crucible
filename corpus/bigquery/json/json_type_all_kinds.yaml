@@ -1,16 +1,31 @@
-description: JSON_TYPE returns the type name of each JSON kind. See https://cloud.google.com/bigquery/docs/reference/standard-sql/json_functions. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, json, unconfirmed]
-query: 'SELECT JSON_TYPE(JSON ''{"a": 1}'') AS o, JSON_TYPE(JSON ''[1]'') AS arr, JSON_TYPE(JSON ''"s"'') AS s, JSON_TYPE(JSON ''1'') AS n, JSON_TYPE(JSON ''true'') AS b, JSON_TYPE(JSON ''null'') AS z'
+description: JSON_TYPE returns the type name of each JSON kind. See https://cloud.google.com/bigquery/docs/reference/standard-sql/json_functions.
+tags:
+- slice2
+- json
+query: 'SELECT JSON_TYPE(JSON ''{"a": 1}'') AS o, JSON_TYPE(JSON ''[1]'') AS arr,
+  JSON_TYPE(JSON ''"s"'') AS s, JSON_TYPE(JSON ''1'') AS n, JSON_TYPE(JSON ''true'')
+  AS b, JSON_TYPE(JSON ''null'') AS z'
 ordered: false
 expected:
   columns:
-  - {name: o, type: STRING}
-  - {name: arr, type: STRING}
-  - {name: s, type: STRING}
-  - {name: n, type: STRING}
-  - {name: b, type: STRING}
-  - {name: z, type: STRING}
+  - name: o
+    type: STRING
+  - name: arr
+    type: STRING
+  - name: s
+    type: STRING
+  - name: n
+    type: STRING
+  - name: b
+    type: STRING
+  - name: z
+    type: STRING
   rows:
-  - [object, array, string, number, boolean, 'null']
-verified: false
-recorded_at: null
+  - - object
+    - array
+    - string
+    - number
+    - boolean
+    - 'null'
+verified: true
+recorded_at: '2026-10-15T11:15:44Z'

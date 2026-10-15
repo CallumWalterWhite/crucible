@@ -1,8 +1,13 @@
-description: OFFSET with a negative index raises an underflow error. See https://cloud.google.com/bigquery/docs/reference/standard-sql/array_functions. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, errors]
+description: OFFSET with a negative index raises an underflow error. See https://cloud.google.com/bigquery/docs/reference/standard-sql/array_functions.
+tags:
+- slice2
+- errors
 query: SELECT [1, 2][OFFSET(-1)] AS v
 ordered: false
 expected:
-  error: {kind: runtime, message_contains: is out of bounds (underflow)}
-verified: false
-recorded_at: null
+  error:
+    kind: runtime
+    message: Array index -1 is out of bounds (underflow)
+    message_contains: is out of bounds (underflow)
+verified: true
+recorded_at: '2026-10-15T11:15:18Z'

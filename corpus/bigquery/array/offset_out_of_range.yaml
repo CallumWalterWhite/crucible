@@ -12,4 +12,4 @@ expected:
     message: Array index 5 is out of bounds (overflow)
     message_contains: out of bounds
 verified: true
-recorded_at: '2026-10-15T10:14:34Z'
+recorded_at: '2026-10-15T11:11:36Z'
