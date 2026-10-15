@@ -344,13 +344,17 @@ def test_location_is_redacted_in_text_as_a_whole_word():
 
 
 def test_load_cases_change_one_field_each():
+    import csv
+    import io
+
     from crucible.corpus.record_api import LOAD_CASES
 
-    baseline = LOAD_CASES["baseline"].splitlines()[1].split(",")
+    def rows(text: str) -> list[list[str]]:
+        return list(csv.reader(io.StringIO(text)))[1:]
+
+    plain = ["1", "true", "2024-01-02 03:04:05", "2024-01-02", "1.5", "1.5", "x"]
     for name, text in LOAD_CASES.items():
         if name in ("baseline", "empty_fields", "float_inf_nan"):
             continue
-        row = text.splitlines()[1].split(",")
-        assert sum(a != b for a, b in zip(row, baseline, strict=True)) <= 2, (
-            name
-        )  # field + quoted s
+        [row] = rows(text)
+        assert sum(a != b for a, b in zip(row, plain, strict=True)) == 1, name
