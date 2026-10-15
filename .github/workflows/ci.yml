@@ -159,15 +159,19 @@ jobs:
         include:
           - dialect: bigquery
             port: 9050
+            core: dbt-core==1.9.11
             adapter: dbt-bigquery==1.9.0
           - dialect: bigquery
             port: 9050
+            core: dbt-core
             adapter: dbt-bigquery
           - dialect: snowflake
             port: 8080
+            core: dbt-core==1.9.11
             adapter: dbt-snowflake==1.9.0
           - dialect: snowflake
             port: 8080
+            core: dbt-core
             adapter: dbt-snowflake
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -202,12 +206,13 @@ jobs:
           exit 1
       - name: Run dbt tests
         env:
+          CORE_SPEC: ${{ matrix.core }}
           ADAPTER_SPEC: ${{ matrix.adapter }}
           DIALECT: ${{ matrix.dialect }}
           CRUCIBLE_URL: http://127.0.0.1:${{ matrix.port }}
         run: |
           set +e
-          uv run --with "$ADAPTER_SPEC" pytest -m dbt tests/dbt -k "$DIALECT"
+          uv run --with "$CORE_SPEC" --with "$ADAPTER_SPEC" pytest -m dbt tests/dbt -k "$DIALECT"
           rc=$?
           set -e
           # Exit 5 (no tests collected) is accepted only for snowflake, whose suites come later.

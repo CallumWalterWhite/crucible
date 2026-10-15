@@ -383,6 +383,34 @@ class Recorder:
         self.call("datasets_list", "GET", datasets, params={"filter": "labels.crucible-corpus:1"})
         self.call("routines_list", "GET", f"{datasets}/{d}/routines")
 
+        # tabledata.list: a stored table and an anonymous result table, with paging.
+        data = f"{tables}/all_types/data"
+        self.call("tabledata_list", "GET", data)
+        first, _ = self.call("tabledata_list_page_1", "GET", data, params={"maxResults": "1"})
+        token = first.get("pageToken")
+        if not token:
+            raise RecordApiError("no pageToken from tabledata.list with maxResults=1 over 3 rows")
+        self.redactor.add(token, "page-token")
+        self.call(
+            "tabledata_list_page_2",
+            "GET",
+            data,
+            params={"maxResults": "1", "pageToken": token},
+        )
+        self.call("tabledata_list_start_index", "GET", data, params={"startIndex": "2"})
+        self.call(
+            "tabledata_list_int64_timestamp",
+            "GET",
+            data,
+            params={"formatOptions.useInt64Timestamp": "true"},
+        )
+        self.call(
+            "tabledata_list_anonymous",
+            "GET",
+            f"{API}/projects/{p}/datasets/{anonymous['datasetId']}/tables/"
+            f"{anonymous['tableId']}/data",
+        )
+
         dml = self.insert_job(
             "jobs_insert_dml",
             "dml",
@@ -439,6 +467,13 @@ class Recorder:
             body={"datasetReference": {"projectId": p, "datasetId": d}},
             expect=None,
         )
+        # Partitioned and clustered tables, as tables.get and tables.list report them. Last, so
+        # the job placeholders of every earlier call keep their numbers.
+        for name, sql in PARTITIONED_TABLES.items():
+            job = self.insert_job(f"jobs_insert_{name}", name, self.query_config(sql))
+            self.wait_ok(job, f"CREATE TABLE {name}")
+            self.call(f"tables_get_{name}", "GET", f"{tables}/{name}")
+        self.call("tables_list_partitioned", "GET", tables)
         self.call("tables_delete", "DELETE", f"{tables}/all_types", expect=(200, 204))
 
     def load(self, name: str, csv_text: str) -> None:
@@ -514,6 +549,18 @@ SELECT 3, -9223372036854775808, CAST('nan' AS FLOAT64), NUMERIC '-0.000000001', 
   CAST([] AS ARRAY<STRUCT<k INT64, w STRING>>), INTERVAL -3 MONTH
 """
 
+# CREATE TABLE AS SELECT of literals (bills nothing); one per partitioning kind.
+PARTITIONED_TABLES: dict[str, str] = {
+    "partitioned_day": "CREATE TABLE partitioned_day PARTITION BY d CLUSTER BY s, n "
+    "AS SELECT DATE '2024-01-02' AS d, 'x' AS s, 1 AS n",
+    "partitioned_hour": "CREATE TABLE partitioned_hour PARTITION BY TIMESTAMP_TRUNC(ts, HOUR) "
+    "AS SELECT TIMESTAMP '2024-01-02 03:04:05+00' AS ts",
+    "partitioned_month": "CREATE TABLE partitioned_month PARTITION BY DATE_TRUNC(d, MONTH) "
+    "AS SELECT DATE '2024-01-02' AS d",
+    "partitioned_range": "CREATE TABLE partitioned_range "
+    "PARTITION BY RANGE_BUCKET(n, GENERATE_ARRAY(0, 100, 10)) AS SELECT 5 AS n",
+}
+
 LOAD_SCHEMA: list[dict[str, str]] = [
     {"name": "id", "type": "INTEGER"},
     {"name": "b", "type": "BOOLEAN"},
@@ -568,6 +615,16 @@ LOAD_CASES: dict[str, str] = {
     "numeric_exponent": _HEADER + _row(n="1e3"),
     "float_inf_nan": _HEADER + _row(f="-inf") + _row(id="2", f="NaN"),
     "bad_value": _HEADER + _row(b="maybe"),
+    "bool_upper": _HEADER + _row(b="TRUE"),
+    "int_negative": _HEADER + _row(id="-1"),
+    "int_plus": _HEADER + _row(id="+1"),
+    "int_quoted": _HEADER + _row(id='"1"'),
+    "ts_t_no_z": _HEADER + _row(ts="2024-01-02T03:04:05"),
+    "ts_fraction_3": _HEADER + _row(ts="2024-01-02 03:04:05.123"),
+    "date_invalid": _HEADER + _row(d="2024-02-30"),
+    "numeric_many_digits": _HEADER + _row(n="1.0000000001"),
+    "string_escaped_quote": _HEADER + _row(s='"a""b"'),
+    "crlf": (_HEADER + _row()).replace("\n", "\r\n"),
 }
 
 

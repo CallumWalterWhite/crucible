@@ -1,0 +1,16 @@
+description: TO_JSON_STRING of NUMERIC. DuckDB writes the scale's trailing zeros; Crucible raises unsupported
+  until recorded (expected value is a guess).
+tags:
+- phase4
+- json
+- known-divergence
+query: SELECT TO_JSON_STRING(STRUCT(NUMERIC '1.50' AS n)) AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: STRING
+  rows:
+  - - '{"n":1.5}'
+verified: false
+recorded_at: null

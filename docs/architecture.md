@@ -146,6 +146,7 @@ the not-implemented error.
 | `jobs.query` | `POST /projects/{p}/queries` | `query_and_wait` in recent clients |
 | `tables.get` | `GET .../datasets/{d}/tables/{t}` | columns, row counts, anonymous result tables (ADR 0004) |
 | `tables.list` | `GET .../datasets/{d}/tables` | dbt relation cache |
+| `tabledata.list` | `GET .../datasets/{d}/tables/{t}/data` | `list_rows` (paging, `useInt64Timestamp`; views and `selectedFields` unsupported) |
 | `tables.patch` | `PATCH .../datasets/{d}/tables/{t}` | `on_schema_change: append_new_columns` |
 | `tables.delete` | `DELETE .../datasets/{d}/tables/{t}` | `drop_relation` |
 | `routines.list` / `routines.get` | `GET .../routines[/{r}]` | dbt relation cache (empty) |

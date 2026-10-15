@@ -64,6 +64,12 @@ class FakeSession:
             return FakeResponse(200, None, {"Location": location})
         if method == "DELETE":
             return FakeResponse(204, None)
+        if url.endswith("/data"):
+            params = kwargs.get("params") or {}
+            page: dict[str, Any] = {"totalRows": "3", "rows": [{"f": [{"v": "1"}]}]}
+            if params.get("maxResults") == "1" and "pageToken" not in params:
+                page["pageToken"] = "DATATOKEN456"
+            return FakeResponse(200, page)
         if "/queries/" in url and method == "GET":
             params = kwargs.get("params") or {}
             result: dict[str, Any] = {
@@ -144,6 +150,11 @@ def test_every_call_is_recorded_and_the_dataset_is_deleted(recorded):
         "load_baseline_upload",
         "load_bad_value_jobs_get",
         "jobs_insert_conflict",
+        "tabledata_list_page_2",
+        "tabledata_list_anonymous",
+        "tables_get_partitioned_range",
+        "tables_list_partitioned",
+        "load_crlf_upload",
     ):
         assert expected in names
 
@@ -160,6 +171,7 @@ def test_no_identifying_value_reaches_a_fixture(recorded):
             "anon1234abcd",
             "SECRETUPLOAD",
             "PAGETOKEN123",
+            "DATATOKEN456",
             "1700000000000",
             "abc==",
         ):
@@ -244,17 +256,15 @@ def test_location_is_redacted_in_text_as_a_whole_word():
 
 
 def test_load_cases_change_one_field_each():
-    import csv
-    import io
-
     from crucible.corpus.record_api import LOAD_CASES
 
     def rows(text: str) -> list[list[str]]:
-        return list(csv.reader(io.StringIO(text)))[1:]
+        # Raw fields: a quoted value ("1") is itself the spelling under test.
+        return [line.split(",") for line in text.splitlines()[1:]]
 
     plain = ["1", "true", "2024-01-02 03:04:05", "2024-01-02", "1.5", "1.5", "x"]
     for name, text in LOAD_CASES.items():
-        if name in ("baseline", "empty_fields", "float_inf_nan"):
+        if name in ("baseline", "empty_fields", "float_inf_nan", "crlf"):
             continue
         [row] = rows(text)
         assert sum(a != b for a, b in zip(row, plain, strict=True)) == 1, name

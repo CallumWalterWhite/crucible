@@ -3,8 +3,8 @@
 Marked `clients`; CI runs `pytest -m clients tests/clients -k bigquery` against the oldest and
 latest client. Credentials are anonymous and the endpoint is always CRUCIBLE_URL, so nothing here
 reaches the real BigQuery. Each test makes its own dataset and deletes it. The server is expected
-to implement the Phase 3 API subset (docs/architecture.md, "BigQuery API subset"); `list_rows`
-needs tabledata.list, which is outside it.
+to implement the BigQuery API subset (docs/architecture.md, "BigQuery API subset"), tabledata.list
+included.
 
 Client behaviour the tests depend on, read from google-cloud-bigquery 3.27.0 and 3.46.1:
 - `Client.query(..., job_id=...)` with a caller-supplied id re-raises Conflict on a second insert;
@@ -12,11 +12,13 @@ Client behaviour the tests depend on, read from google-cloud-bigquery 3.27.0 and
   in `query_jobs_insert`). 3.46 also warns (FutureWarning, `_job_helpers.py`: `validate_job_retry`)
   unless `job_retry=None` is passed with a custom job_id, so the test passes it.
 - JSON cells are parsed with `json.loads` (`_helpers.py`: `_json_from_json`).
-- `list_rows` reads `tables/{id}/data` (`client.py`: `list_rows`), outside the Phase 3 subset.
+- `list_rows` reads `tables/{id}/data` (tabledata.list) with `maxResults`, `pageToken`,
+  `startIndex` and `formatOptions.useInt64Timestamp=True` (`client.py`: `list_rows`; 3.46.1 at
+  :4256-4264, 3.27.0 at :4038-4042).
 - `num_dml_affected_rows` is the query job's `statistics.query.numDmlAffectedRows`.
-- `query_and_wait` exists in 3.27.0 (`client.py`: `query_and_wait`; it posts to jobs/query via
-  `_job_helpers.py`), the floor of the `record-bigquery` extra in pyproject.toml, so no version
-  guard is needed.
+- `query_and_wait` exists in 3.27.0 (`client.py`: `query_and_wait`; it posts to jobs/query
+  via `_job_helpers.py`), the floor of the `record-bigquery` extra in pyproject.toml, so no
+  version guard is needed.
 """
 
 from __future__ import annotations
@@ -233,3 +235,27 @@ def test_bigquery_concurrent_clients_return_correct_rows():
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
         results = list(pool.map(worker, range(8)))
     assert results == [[n * 100 + i for i in range(5)] for n in range(8)]
+
+
+def make_numbers(client: bigquery.Client, dataset: str) -> str:
+    ref = f"{PROJECT}.{dataset}.numbers"
+    schema = [bigquery.SchemaField("x", "INTEGER"), bigquery.SchemaField("s", "STRING")]
+    client.create_table(bigquery.Table(ref, schema=schema))
+    client.query(
+        f"INSERT INTO `{ref}` (x, s) SELECT x, CONCAT('row', CAST(x AS STRING))"
+        " FROM UNNEST(GENERATE_ARRAY(1, 25)) AS x"
+    ).result()
+    return ref
+
+
+def test_bigquery_list_rows_with_max_results_and_start_index(client, dataset):
+    ref = make_numbers(client, dataset)
+    rows = list(client.list_rows(ref, max_results=5, start_index=3))
+    assert [(row.x, row.s) for row in rows] == [(x, f"row{x}") for x in range(4, 9)]
+
+
+def test_bigquery_list_rows_pages_with_page_size(client, dataset):
+    ref = make_numbers(client, dataset)
+    pages = list(client.list_rows(ref, page_size=10).pages)
+    assert len(pages) == 3
+    assert [row.x for page in pages for row in page] == list(range(1, 26))

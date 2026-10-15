@@ -694,3 +694,153 @@ def test_reset_clears_jobs_and_uploads(client):
     assert client.get(f"{API}/jobs/before").status_code == 404
     response = client.put(url, content=b"id,s\n", headers={"Content-Range": "bytes 0-4/*"})
     assert response.status_code == 404
+
+
+# --- 15. tabledata.list ------------------------------------------------------------------------
+def list_data(client: TestClient, table: str = "big", dataset: str = "ds", **params: Any) -> Any:
+    return client.get(f"{API}/datasets/{dataset}/tables/{table}/data", params=params)
+
+
+def make_big_table(client: TestClient) -> None:
+    make_dataset(client)
+    assert insert_query(client, f"CREATE TABLE ds.big AS {ROWS_25}").json()["status"]["state"] == (
+        "DONE"
+    )
+
+
+def test_tabledata_list_pages_through_25_rows_in_order(client):
+    make_big_table(client)
+    seen: list[str] = []
+    token: str | None = None
+    pages = 0
+    while True:
+        params: dict[str, Any] = {"maxResults": 10}
+        if token is not None:
+            params["pageToken"] = token
+        body = list_data(client, **params).json()
+        pages += 1
+        seen.extend(values(body["rows"]))
+        token = body.get("pageToken")
+        if token is None:
+            break
+        assert pages < 10, "paging did not end"
+    assert pages == 3
+    assert seen == [str(i) for i in range(1, 26)]
+    assert body["kind"] == "bigquery#tableDataList"
+    assert body["totalRows"] == "25"
+    assert len(body["rows"]) == 5
+
+
+def test_tabledata_list_start_index_20_returns_the_last_5_rows_and_no_token(client):
+    make_big_table(client)
+    body = list_data(client, startIndex=20).json()
+    assert values(body["rows"]) == ["21", "22", "23", "24", "25"]
+    assert "pageToken" not in body
+    assert body["totalRows"] == "25"
+
+
+def test_tabledata_list_max_results_zero_gives_no_rows_and_a_token(client):
+    make_big_table(client)
+    body = list_data(client, maxResults=0).json()
+    assert "rows" not in body
+    assert body["pageToken"]
+    assert body["totalRows"] == "25"
+
+
+def test_tabledata_list_past_the_end_gives_no_rows_and_no_token(client):
+    make_big_table(client)
+    body = list_data(client, startIndex=99).json()
+    assert "rows" not in body
+    assert "pageToken" not in body
+    assert body["totalRows"] == "25"
+
+
+def test_tabledata_list_of_an_empty_table_has_total_rows_zero(client):
+    make_dataset(client)
+    make_table(client, "t")
+    body = list_data(client, table="t").json()
+    assert body == {
+        "kind": "bigquery#tableDataList",
+        "etag": body["etag"],
+        "totalRows": "0",
+    }
+
+
+def test_tabledata_list_timestamps_are_float_seconds_unless_int64_is_asked_for(client):
+    make_dataset(client)
+    insert_query(client, "CREATE TABLE ds.ts (t TIMESTAMP)")
+    insert_query(client, "INSERT INTO ds.ts VALUES (TIMESTAMP '2024-01-02 03:04:05.123456 UTC')")
+    default = list_data(client, table="ts").json()["rows"]
+    assert values(default) == ["1.704164645123456E9"]
+    for flag in ("true", "True"):
+        int64 = list_data(client, table="ts", **{"formatOptions.useInt64Timestamp": flag}).json()
+        assert values(int64["rows"]) == ["1704164645123456"]
+
+
+def test_tabledata_list_of_an_anonymous_table_reads_the_job_result(client):
+    make_dataset(client)
+    job = insert_query(client, "SELECT 1 AS a, 'x' AS b", job_id="anonrows").json()
+    destination = job["configuration"]["query"]["destinationTable"]
+    body = client.get(
+        f"{API}/datasets/{destination['datasetId']}/tables/{destination['tableId']}/data"
+    ).json()
+    assert body["totalRows"] == "1"
+    assert body["rows"] == [{"f": [{"v": "1"}, {"v": "x"}]}]
+
+
+def test_tabledata_list_of_a_view_is_unsupported(client):
+    make_big_table(client)
+    insert_query(client, "CREATE VIEW ds.v AS SELECT x FROM ds.big")
+    response = list_data(client, table="v")
+    assert response.status_code == 400
+    error = response.json()["error"]["errors"][0]
+    assert error["reason"] == "invalidQuery"
+    assert error["message"].startswith("Not supported by Crucible")
+    assert "tabledata.list of a view" in error["message"]
+
+
+def test_tabledata_list_of_a_missing_table_is_a_404(client):
+    make_dataset(client)
+    response = list_data(client, table="missing")
+    assert response.status_code == 404
+    assert response.json()["error"]["errors"][0]["reason"] == "notFound"
+
+
+def test_tabledata_list_of_a_missing_dataset_is_a_404(client):
+    response = list_data(client, table="t", dataset="nods")
+    assert response.status_code == 404
+
+
+def test_tabledata_list_with_selected_fields_is_unsupported(client):
+    make_big_table(client)
+    response = list_data(client, selectedFields="x")
+    assert response.status_code == 400
+    assert response.json()["error"]["errors"][0]["reason"] == "invalidQuery"
+
+
+def test_tabledata_list_with_an_empty_selected_fields_is_the_full_row(client):
+    make_big_table(client)
+    body = list_data(client, maxResults=1, selectedFields="").json()
+    assert values(body["rows"]) == ["1"]
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"formatOptions.timestampOutputFormat": "ISO8601_STRING"},
+        {"fields": "rows"},
+        {"unknownParam": "1"},
+    ],
+)
+def test_tabledata_list_with_a_parameter_that_changes_the_answer_is_unsupported(client, params):
+    make_big_table(client)
+    response = list_data(client, **params)
+    assert response.status_code == 400
+    assert response.json()["error"]["errors"][0]["reason"] == "invalidQuery"
+
+
+def test_tabledata_list_with_a_non_integer_max_results_is_invalid(client):
+    make_big_table(client)
+    response = list_data(client, maxResults="ten")
+    assert response.status_code == 400
+    assert response.json()["error"]["errors"][0]["reason"] == "invalidQuery"

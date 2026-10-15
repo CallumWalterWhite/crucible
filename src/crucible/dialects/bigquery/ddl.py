@@ -9,8 +9,9 @@ ignored (require_partition_filter = TRUE) raises CrucibleUnsupportedError instea
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
+import sqlglot
 from sqlglot import exp
 
 from crucible.dialects.bigquery import errors, metadata, types
@@ -109,6 +110,39 @@ def table_properties(tree: exp.Create, columns: list[str]) -> dict[str, Any]:
     if option_props:
         recorded["options"] = _options(option_props)
     return recorded
+
+
+def rest_partitioning(properties: dict[str, Any]) -> dict[str, Any]:
+    """A table's recorded PARTITION BY / CLUSTER BY as REST Table fields (REST reference, Table:
+    timePartitioning, rangePartitioning, clustering), for tables.get and tables.list."""
+    out: dict[str, Any] = {}
+    text = properties.get("partition_by")
+    if isinstance(text, str):
+        node = sqlglot.parse_one(text, read="bigquery")
+        if isinstance(node, exp.Column):  # a DATE column: daily partitions
+            out["timePartitioning"] = {"type": "DAY", "field": node.name}
+        elif isinstance(node, exp.RangeBucket):
+            bounds = node.expression
+            assert isinstance(bounds, exp.GenerateSeries)
+            step = bounds.args.get("step")
+            out["rangePartitioning"] = {
+                "field": node.this.name,
+                "range": {
+                    "start": str(bounds.args["start"].to_py()),
+                    "end": str(bounds.args["end"].to_py()),
+                    "interval": str(step.to_py() if step is not None else 1),
+                },
+            }
+        else:  # DATE_TRUNC / TIMESTAMP_TRUNC / DATETIME_TRUNC (column, unit)
+            unit = node.args.get("unit")
+            out["timePartitioning"] = {
+                "type": unit.name.upper() if isinstance(unit, exp.Expr) else "DAY",
+                "field": node.this.name,
+            }
+    clustering = properties.get("cluster_by")
+    if isinstance(clustering, list) and clustering:
+        out["clustering"] = {"fields": [str(f) for f in cast("list[Any]", clustering)]}
+    return out
 
 
 def plan_create(tree: exp.Create, ctx: ExecContext) -> Plan:

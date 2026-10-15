@@ -1,0 +1,15 @@
+description: TO_JSON_STRING of TIME. Crucible raises unsupported until recorded (expected value is a guess).
+tags:
+- phase4
+- json
+- known-divergence
+query: SELECT TO_JSON_STRING(STRUCT(TIME '05:06:07.25' AS t)) AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: STRING
+  rows:
+  - - '{"t":"05:06:07.250000"}'
+verified: false
+recorded_at: null

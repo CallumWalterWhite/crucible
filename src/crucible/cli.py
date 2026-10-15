@@ -66,6 +66,11 @@ def build_parser() -> argparse.ArgumentParser:
     record.add_argument("--path", help="case file or directory (default: corpus/<dialect>)")
     record.add_argument("--max-bytes-billed", type=int, required=True)
     record.add_argument(
+        "--unverified-only",
+        action="store_true",
+        help="record only cases whose verified flag is false",
+    )
+    record.add_argument(
         "--i-understand-this-spends-credits",
         dest="confirmed",
         action="store_true",

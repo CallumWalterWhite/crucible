@@ -1,0 +1,16 @@
+description: TO_JSON_STRING of a TIMESTAMP with fractional seconds. Whole seconds are encoded; the fraction's
+  digits are unrecorded, so Crucible raises unsupported (expected value is a guess).
+tags:
+- phase4
+- json
+- known-divergence
+query: SELECT TO_JSON_STRING(STRUCT(TIMESTAMP '2024-03-04 05:06:07.5+00' AS t)) AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: STRING
+  rows:
+  - - '{"t":"2024-03-04T05:06:07.500000Z"}'
+verified: false
+recorded_at: null

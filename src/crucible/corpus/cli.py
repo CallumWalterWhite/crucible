@@ -111,6 +111,8 @@ def _record(args: argparse.Namespace) -> int:
     except (CrucibleUnsupportedError, ValueError) as exc:
         print(f"crucible corpus record: {exc}", file=sys.stderr)
         return 2
+    if getattr(args, "unverified_only", False):
+        cases = [c for c in cases if not c.verified]
     jobs = sum(len(c.setup) + 1 for c in cases)
     print(
         f"Recording {len(cases)} cases ({jobs} jobs) against project {project} "

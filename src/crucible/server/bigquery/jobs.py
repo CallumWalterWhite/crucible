@@ -302,22 +302,40 @@ class Runner:
         }
 
 
-def page(
-    job: Job, *, max_results: int | None, page_token: str | None, start_index: int | None
-) -> tuple[list[tuple[Any, ...]], str | None]:
-    """The rows of one getQueryResults page and the next page token, if rows remain.
+def page_bounds(
+    total: int, *, max_results: int | None, page_token: str | None, start_index: int | None
+) -> tuple[int, int, str | None]:
+    """Where one page starts and ends among `total` rows, and the next page token if rows remain.
 
-    A page token names the offset of the next row (opaque to clients). maxResults=0 returns no
-    rows and a token when the result has rows (10_get_query_results_wait.json); startIndex
-    pages carry a token only if rows remain (09).
+    Shared by getQueryResults (05-10) and tabledata.list (REST reference, tabledata/list). A page
+    token names the offset of the next row (opaque to clients); it takes precedence over
+    startIndex, which a client sends again on every page (api-core==2.42.0:
+    google/api_core/page_iterator.py:397-419). maxResults=0 returns no rows and a token when rows
+    remain (10_get_query_results_wait.json); startIndex pages carry a token only if rows remain
+    (09).
     """
     if page_token is not None:
         try:
-            offset = int(page_token.removeprefix(PAGE_TOKEN_PREFIX))
+            start = int(page_token.removeprefix(PAGE_TOKEN_PREFIX))
         except ValueError as exc:
             raise CrucibleError(ErrorKind.INVALID_QUERY, "Invalid page token") from exc
     else:
-        offset = start_index or 0
-    end = len(job.rows) if max_results is None else min(len(job.rows), offset + max_results)
-    token = f"{PAGE_TOKEN_PREFIX}{end}" if end < len(job.rows) else None
-    return job.rows[offset:end], token
+        start = start_index or 0
+    if start < 0:
+        raise CrucibleError(ErrorKind.INVALID_QUERY, "Invalid startIndex: must not be negative")
+    if max_results is not None and max_results < 0:
+        raise CrucibleError(ErrorKind.INVALID_QUERY, "Invalid maxResults: must not be negative")
+    start = min(start, total)
+    end = total if max_results is None else min(total, start + max_results)
+    token = f"{PAGE_TOKEN_PREFIX}{end}" if end < total else None
+    return start, end, token
+
+
+def page(
+    job: Job, *, max_results: int | None, page_token: str | None, start_index: int | None
+) -> tuple[list[tuple[Any, ...]], str | None]:
+    """The rows of one getQueryResults page and the next page token, if rows remain."""
+    start, end, token = page_bounds(
+        len(job.rows), max_results=max_results, page_token=page_token, start_index=start_index
+    )
+    return job.rows[start:end], token

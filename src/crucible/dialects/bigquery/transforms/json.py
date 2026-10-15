@@ -60,22 +60,41 @@ def _encodable(node: exp.JSONFormat) -> None:
     """Rewrite the operand so DuckDB's JSON is BigQuery's, or raise for types whose encoding is
     not confirmed (DuckDB writes NUMERIC with trailing zeros, BYTES raw, DATETIME with a space).
     TIMESTAMP is "YYYY-MM-DDTHH:MM:SSZ" (BigQuery JSON encodings; corpus case
-    json/to_json_string_timestamp); a fractional second is unsupported until recorded."""
+    json/to_json_string_timestamp); a fractional second is unsupported until recorded.
+    Unrecorded values raise at run time: a NaN or infinite FLOAT64 anywhere in the value, and a
+    NULL operand (DuckDB answers SQL NULL; BigQuery's answer is not recorded)."""
     value = node.this
     if not isinstance(value, exp.Expr) or value.type is None:
         raise CrucibleUnsupportedError("TO_JSON_STRING of a value of unknown type")
-    if _has_timestamp(value.type):
-        value.replace(_encode(value.copy(), value.type))
+    encoded = _encode(value.copy(), value.type) if _needs_rewrite(value.type) else value.copy()
+    value.replace(
+        exp.Case(
+            ifs=[
+                exp.If(
+                    this=exp.Is(this=value.copy(), expression=exp.Null()),
+                    true=_unsupported("TO_JSON_STRING of NULL"),
+                )
+            ],
+            default=encoded,
+        )
+    )
 
 
-def _has_timestamp(data_type: exp.DataType) -> bool:
+def _unsupported(construct: str) -> exp.Expr:
+    return exp.Anonymous(
+        this="error", expressions=[exp.Literal.string(UNSUPPORTED_ERROR_PREFIX + construct)]
+    )
+
+
+def _needs_rewrite(data_type: exp.DataType) -> bool:
+    """Whether a TIMESTAMP (re-encoded) or FLOAT64 (checked for NaN/Inf) is inside."""
     kind = data_type.this
     if kind in (exp.DType.ARRAY, exp.DType.STRUCT):
         inner = [
             f.args["kind"] if isinstance(f, exp.ColumnDef) else f for f in data_type.expressions
         ]
-        return any(_has_timestamp(t) for t in inner if isinstance(t, exp.DataType))
-    if kind == exp.DType.TIMESTAMPTZ:
+        return any(_needs_rewrite(t) for t in inner if isinstance(t, exp.DataType))
+    if kind in (exp.DType.TIMESTAMPTZ, exp.DType.DOUBLE):
         return True
     if kind not in _SAME_JSON:
         raise CrucibleUnsupportedError(f"TO_JSON_STRING of a {data_type.sql('bigquery')} value")
@@ -83,8 +102,18 @@ def _has_timestamp(data_type: exp.DataType) -> bool:
 
 
 def _encode(value: exp.Expr, data_type: exp.DataType) -> exp.Expr:
-    """`value` with every TIMESTAMP inside it replaced by BigQuery's JSON text for it."""
+    """`value` with every TIMESTAMP inside it replaced by BigQuery's JSON text for it, and every
+    FLOAT64 checked for NaN and infinities."""
     kind = data_type.this
+    if kind == exp.DType.DOUBLE:
+        special = exp.Or(
+            this=exp.Anonymous(this="isnan", expressions=[value.copy()]),
+            expression=exp.Anonymous(this="isinf", expressions=[value.copy()]),
+        )
+        return exp.Case(
+            ifs=[exp.If(this=special, true=_unsupported("TO_JSON_STRING of NaN or Infinity"))],
+            default=value,
+        )
     if kind == exp.DType.TIMESTAMPTZ:
         # Typed explicitly: a field of a NULL struct literal reaches DuckDB untyped.
         value = exp.Cast(this=value, to=exp.DataType.build("TIMESTAMPTZ", dialect="duckdb"))
@@ -101,15 +130,7 @@ def _encode(value: exp.Expr, data_type: exp.DataType) -> exp.Expr:
                 exp.Literal.string("%Y-%m-%dT%H:%M:%SZ"),
             ],
         )
-        fractional = exp.Anonymous(
-            this="error",
-            expressions=[
-                exp.Literal.string(
-                    f"{UNSUPPORTED_ERROR_PREFIX}TO_JSON_STRING of a TIMESTAMP with fractional "
-                    "seconds"
-                )
-            ],
-        )
+        fractional = _unsupported("TO_JSON_STRING of a TIMESTAMP with fractional seconds")
         return exp.Case(
             ifs=[
                 exp.If(this=exp.Is(this=value.copy(), expression=exp.Null()), true=exp.Null()),
@@ -120,7 +141,7 @@ def _encode(value: exp.Expr, data_type: exp.DataType) -> exp.Expr:
     if kind == exp.DType.ARRAY:
         [element] = data_type.expressions
         assert isinstance(element, exp.DataType)
-        if not _has_timestamp(element):
+        if not _needs_rewrite(element):
             return value
         var = exp.to_identifier("crucible_e")
         body = _encode(exp.column(var), element)

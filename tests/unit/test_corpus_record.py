@@ -398,3 +398,25 @@ def test_clean_message_drops_the_request_prefix():
     assert clean_message(raw, "p", "d") == (
         "UPDATE/MERGE must match at most one source row for each target row"
     )
+
+
+def test_record_unverified_only_skips_verified_cases(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
+):
+    make_case(tmp_path, name="open")
+    done = make_case(tmp_path, name="done")
+    done.path.write_text(
+        done.path.read_text(encoding="utf-8")
+        .replace("verified: false", "verified: true")
+        .replace("recorded_at: null", "recorded_at: '2026-01-01T00:00:00Z'"),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(corpus_cli, "get_dialect", lambda _name: PassthroughDialect())
+    monkeypatch.setenv("BIGQUERY_PROJECT", "local-project")
+    from google.cloud import bigquery
+
+    monkeypatch.setattr(bigquery, "Client", lambda project: FakeClient())
+
+    args = record_args(confirmed=True, path=str(tmp_path / "corpus"), unverified_only=True)
+    assert corpus_cli.main(args) == 0
+    assert capsys.readouterr().out.startswith("Recording 1 cases")

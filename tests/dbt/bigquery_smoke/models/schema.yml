@@ -10,8 +10,7 @@ seeds:
       - name: tier
         data_tests:
           - accepted_values:
-              arguments:
-                values: ["gold", "silver", "bronze"]
+              values: ["gold", "silver", "bronze"]
 
 models:
   - name: vip_customers
@@ -19,9 +18,8 @@ models:
       - name: customer_id
         data_tests:
           - relationships:
-              arguments:
-                to: ref('customers')
-                field: customer_id
+              to: ref('customers')
+              field: customer_id
   - name: customer_signups
     columns:
       - name: customer_id

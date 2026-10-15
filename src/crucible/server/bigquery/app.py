@@ -13,12 +13,13 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
 
+from sqlglot import exp
 from starlette.concurrency import run_in_threadpool
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.routing import BaseRoute, Route
 
-from crucible.dialects.bigquery import metadata, types
+from crucible.dialects.bigquery import ddl, metadata, types
 from crucible.dialects.bigquery.dialect import DIALECT
 from crucible.engine import (
     CrucibleError,
@@ -44,6 +45,7 @@ from crucible.server.bigquery.jobs import (
     now_ms,
     obj,
     page,
+    page_bounds,
 )
 
 DEFAULT_PORT = 9050
@@ -69,6 +71,29 @@ _QUERY_REQUEST_KEYS = frozenset(
 )
 # REST reference, Dataset resource: fields Crucible stores and echoes.
 _DATASET_FIELDS = ("defaultTableExpirationMs", "labels", "description", "location")
+# tabledata.list query parameters the client sends that do not change the rows it reads: paging,
+# and the int64 timestamp format it always asks for (google-cloud-bigquery==3.46.1:
+# google/cloud/bigquery/client.py:4258 startIndex, :4264 useInt64Timestamp; api-core paging:
+# google/api_core/page_iterator.py:397-419). Any other parameter is refused.
+_TABLEDATA_PARAMS = frozenset(
+    {"maxResults", "pageToken", "startIndex", "formatOptions.useInt64Timestamp"}
+)
+# Standard Google API query parameters that change nothing in the response
+# (https://cloud.google.com/apis/docs/system-parameters).
+_SYSTEM_PARAMS = frozenset(
+    {
+        "alt",
+        "callback",
+        "key",
+        "access_token",
+        "oauth_token",
+        "prettyPrint",
+        "quotaUser",
+        "userIp",
+        "$.xgafv",
+        "upload_protocol",
+    }
+)
 
 Handler = Callable[[Request], Awaitable[Response]]
 
@@ -115,6 +140,7 @@ class BigQueryServer:
             route(f"{API}/datasets/{{dataset}}/tables/{{table}}", self.tables_get, "GET"),
             route(f"{API}/datasets/{{dataset}}/tables/{{table}}", self.tables_patch, "PATCH"),
             route(f"{API}/datasets/{{dataset}}/tables/{{table}}", self.tables_delete, "DELETE"),
+            route(f"{API}/datasets/{{dataset}}/tables/{{table}}/data", self.tabledata_list, "GET"),
             route(f"{API}/datasets/{{dataset}}/routines", self.routines_list, "GET"),
             route(f"{API}/datasets/{{dataset}}/routines/{{routine}}", self.routines_get, "GET"),
             route(UPLOAD, self.upload_initiate, "POST"),
@@ -535,6 +561,7 @@ class BigQueryServer:
             "selfLink": f"{base}/bigquery/v2/projects/{project}/datasets/{dataset}/tables/{table}",
             "tableReference": {"projectId": project, "datasetId": dataset, "tableId": table},
             "schema": encoding.schema([(c.name, c.type) for c in info.columns], with_mode=False),
+            **ddl.rest_partitioning(info.properties),
         }
         if rows is not None:
             resource["numRows"] = str(rows)
@@ -567,6 +594,65 @@ class BigQueryServer:
 
         try:
             return JSONResponse(await run_in_threadpool(self._context_run, project, describe))
+        except CrucibleError as exc:
+            return http_error(exc)
+
+    async def tabledata_list(self, request: Request) -> Response:
+        """tabledata.list: a table's rows in storage order, paged like getQueryResults."""
+        p = request.path_params
+        project, dataset, table = p["project"], p["dataset"], p["table"]
+        params = request.query_params
+        try:
+            _refuse_changed_answers(params)
+            max_results = _int_arg(params, "maxResults")
+            start_index = _int_arg(params, "startIndex")
+            page_token = params.get("pageToken")
+            # requests sends the client's Python True as "True" (as getQueryResults does).
+            int64 = params.get("formatOptions.useInt64Timestamp", "").lower() == "true"
+            if dataset == ANONYMOUS_DATASET:
+                job = self.store.anonymous(project, table)
+                if job is None or job.columns is None:
+                    raise CrucibleError(
+                        ErrorKind.NOT_FOUND,
+                        f"Not found: Table {project}:{ANONYMOUS_DATASET}.{table}",
+                    )
+                start, end, token = page_bounds(
+                    len(job.rows),
+                    max_results=max_results,
+                    page_token=page_token,
+                    start_index=start_index,
+                )
+                body = _table_data(
+                    len(job.rows),
+                    token,
+                    job.rows[start:end],
+                    [c.type for c in job.columns],
+                    int64=int64,
+                )
+                return JSONResponse(body)
+
+            def read(ctx: ExecContext) -> dict[str, Any]:
+                info = self._find(ctx, project, dataset, table)
+                if info.kind == "view":
+                    raise CrucibleUnsupportedError("tabledata.list of a view")
+                name = qualified(info.catalog, info.schema, info.name)
+                total = int(ctx.run_sql(f"select count(*) from {name}").rows[0][0])
+                start, end, token = page_bounds(
+                    total,
+                    max_results=max_results,
+                    page_token=page_token,
+                    start_index=start_index,
+                )
+                rows: list[tuple[Any, ...]] = []
+                if end > start:
+                    # rowid is storage order: a table's rows come back as they were inserted.
+                    rows = ctx.run_sql(
+                        f"select * from {name} order by rowid limit ? offset ?",
+                        [end - start, start],
+                    ).rows
+                return _table_data(total, token, rows, [c.type for c in info.columns], int64=int64)
+
+            return JSONResponse(await run_in_threadpool(self._context_run, project, read))
         except CrucibleError as exc:
             return http_error(exc)
 
@@ -626,6 +712,7 @@ class BigQueryServer:
                     "tableId": info.name,
                 },
                 "type": "VIEW" if info.kind == "view" else "TABLE",
+                **ddl.rest_partitioning(info.properties),
             }
             for info in infos[offset:end]
         ]
@@ -801,6 +888,54 @@ def _check_fields(body: dict[str, Any], allowed: tuple[str, ...], call: str) -> 
     for key, value in body.items():
         if key not in allowed and value not in (None, {}, []):
             raise CrucibleUnsupportedError(f"{call} field {key}")
+
+
+def _refuse_changed_answers(params: Any) -> None:
+    """Refuse query parameters that would change the rows: a column subset, a timestamp format
+    other than the int64 one, and anything unknown."""
+    for key, value in params.items():
+        if key == "selectedFields":
+            if value:
+                raise CrucibleUnsupportedError("tabledata.list with selectedFields")
+        elif key not in _TABLEDATA_PARAMS and key not in _SYSTEM_PARAMS:
+            raise CrucibleUnsupportedError(f"tabledata.list query parameter {key}")
+
+
+def _int_arg(params: Any, name: str) -> int | None:
+    value = params.get(name)
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except ValueError as exc:
+        raise CrucibleError(ErrorKind.INVALID_QUERY, f"Invalid {name}: {value!r}") from exc
+
+
+def _table_data(
+    total: int,
+    token: str | None,
+    rows: list[tuple[Any, ...]],
+    column_types: list[exp.DataType],
+    *,
+    int64: bool,
+) -> dict[str, Any]:
+    """A TableDataList (REST reference, tabledata/list, response body): kind, etag, totalRows,
+    pageToken and rows. The client reads `rows` and `pageToken`
+    (google-cloud-bigquery==3.46.1: google/cloud/bigquery/table.py:1953 items_key, :1958
+    next_token) and `totalRows` (table.py:4139). `pageToken` is present only while rows remain
+    and `rows` only when the page has some."""
+    # REST reference, tabledata/list: TableDataList.kind and .etag.
+    body: dict[str, Any] = {"kind": "bigquery#tableDataList", "etag": _etag()}
+    # REST reference: totalRows is int64, so a string. Read by google-cloud-bigquery==3.46.1
+    # google/cloud/bigquery/table.py:4139 (_rows_page_start).
+    body["totalRows"] = str(total)
+    if token is not None:
+        # google-api-core==2.42.0: google/api_core/page_iterator.py:377 (next token)
+        body["pageToken"] = token
+    if rows:
+        # google-cloud-bigquery==3.46.1: google/cloud/bigquery/table.py:1953 (items key "rows")
+        body["rows"] = encoding.encode_rows(rows, column_types, int64_timestamp=int64)
+    return body
 
 
 def _column_sql(field: dict[str, Any]) -> str:

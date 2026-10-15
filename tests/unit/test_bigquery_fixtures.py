@@ -151,6 +151,16 @@ DIFFERENCES: list[tuple[str, str, str]] = [
 ]
 
 
+# Calls the recorder makes that the committed fixtures predate (Phase 4, Step A). The replay
+# makes them, so Crucible must answer; they are compared once the user records them.
+NOT_RECORDED_YET = [
+    "tabledata_list*",
+    "jobs_insert_partitioned_*",
+    "tables_get_partitioned_*",
+    "tables_list_partitioned",
+]
+
+
 class AppSession:
     """The recorder's HTTP session interface over Starlette's test client."""
 
@@ -314,7 +324,10 @@ def test_every_fixture_matches_or_the_difference_is_listed(replayed):
             else:
                 used.add(entry)
     for name in replayed.keys() - recorded.keys():
-        unexplained.append(f"{name}: only in Crucible's replay")
+        if not any(fnmatch.fnmatch(name, pattern) for pattern in NOT_RECORDED_YET):
+            unexplained.append(f"{name}: only in Crucible's replay")
+    recorded_now = [p for p in NOT_RECORDED_YET if any(fnmatch.fnmatch(n, p) for n in recorded)]
+    assert not recorded_now, f"recorded now, remove from NOT_RECORDED_YET: {recorded_now}"
     assert not unexplained, "\n".join(sorted(unexplained))
     stale = [entry for entry in DIFFERENCES if entry not in used]
     assert not stale, f"listed differences that no longer occur: {stale}"
