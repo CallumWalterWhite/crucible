@@ -704,3 +704,27 @@ Wire details the fixtures show: REST schemas use legacy type names (`INTEGER`, `
 `RECORD`) with `mode` `NULLABLE`/`REPEATED`; row values are strings in `f`/`v` cells; TIMESTAMP is
 float seconds in scientific notation (`"1.704164645E9"`) unless `formatOptions.useInt64Timestamp`
 is set.
+
+## Found while building the server (Phase 3)
+
+- `formatOptions.useInt64Timestamp` arrives as the text `True`: the client sets the Python value
+  `True` as a query parameter (google-cloud-bigquery==3.46.1: google/cloud/bigquery/client.py:2144,
+  :4264, :4386), so the server compares case-insensitively. 3.46.1 then parses TIMESTAMP cells with
+  `int(value)` (google/cloud/bigquery/_helpers.py:264), so ignoring the option breaks every
+  TIMESTAMP read.
+- A query whose getQueryResults response has no `totalRows` is read as a statement without rows
+  (DDL), and `result()` returns an empty iterator without paging
+  (google-cloud-bigquery==3.45.2: google/cloud/bigquery/job/query.py:1827). Crucible therefore
+  omits `totalRows` and `schema` for every non-SELECT job and sends `numDmlAffectedRows` for DML.
+- The client retries any error whose reason is `rateLimitExceeded`, `backendError`,
+  `internalError` or `badGateway` for up to 10 minutes
+  (google-cloud-bigquery==3.45.2: google/cloud/bigquery/retry.py:25-26, :41). Crucible's own
+  internal errors use the reason `crucibleInternalError` so they fail at once.
+- The client always sends `useLegacySql: false` for query jobs and jobs.query
+  (google-cloud-bigquery==3.45.2: google/cloud/bigquery/_job_helpers.py:288, :330); Crucible
+  treats an absent field as legacy SQL (the REST default) and raises unsupported.
+- `create_table` sends `labels: {}` (empty); empty request fields are accepted, non-empty ones
+  Crucible does not apply raise unsupported.
+- dbt seeds send `ALTER TABLE ... SET OPTIONS()` with an empty option list after the load.
+- `uv run --with dbt-bigquery==1.9.0` resolves the newest dbt-core (1.12.6 here); the CI "oldest"
+  dbt row pins the adapter, not dbt-core.
