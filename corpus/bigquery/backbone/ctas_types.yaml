@@ -1,14 +1,24 @@
-description: CREATE TABLE AS SELECT keeps the type of each selected expression. A table created with CTAS keeps the INT64, FLOAT64 and NUMERIC types of its select list. Expected value from the BigQuery documentation; not yet recorded.
-tags: [backbone, ddl]
-setup: ['CREATE TABLE t AS SELECT 1 AS i, 2.5 AS f, NUMERIC ''1.5'' AS n']
+description: CREATE TABLE AS SELECT keeps the type of each selected expression. A
+  table created with CTAS keeps the INT64, FLOAT64 and NUMERIC types of its select
+  list.
+tags:
+- backbone
+- ddl
+setup:
+- CREATE TABLE t AS SELECT 1 AS i, 2.5 AS f, NUMERIC '1.5' AS n
 query: SELECT * FROM t
 ordered: false
 expected:
   columns:
-  - {name: i, type: INT64}
-  - {name: f, type: FLOAT64}
-  - {name: n, type: NUMERIC}
+  - name: i
+    type: INT64
+  - name: f
+    type: FLOAT64
+  - name: n
+    type: NUMERIC
   rows:
-  - [1, 2.5, '1.5']
-verified: false
-recorded_at: null
+  - - 1
+    - 2.5
+    - '1.5'
+verified: true
+recorded_at: '2026-10-15T10:14:50Z'

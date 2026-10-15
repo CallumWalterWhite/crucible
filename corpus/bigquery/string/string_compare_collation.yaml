@@ -1,11 +1,15 @@
-description: String comparison orders by Unicode code point, so uppercase letters sort before lowercase. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, string]
+description: String comparison orders by Unicode code point, so uppercase letters
+  sort before lowercase.
+tags:
+- probe
+- string
 query: SELECT 'B' < 'a' AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: BOOL}
+  - name: v
+    type: BOOL
   rows:
-  - [true]
-verified: false
-recorded_at: null
+  - - true
+verified: true
+recorded_at: '2026-10-15T10:17:43Z'

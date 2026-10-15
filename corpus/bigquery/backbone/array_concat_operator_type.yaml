@@ -1,11 +1,16 @@
-description: The || operator concatenates two arrays and keeps ARRAY<INT64>. Expected value from the BigQuery documentation; not yet recorded.
-tags: [backbone, array]
+description: The || operator concatenates two arrays and keeps ARRAY<INT64>.
+tags:
+- backbone
+- array
 query: SELECT [1, 2] || [3] AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: ARRAY<INT64>}
+  - name: v
+    type: ARRAY<INT64>
   rows:
-  - - [1, 2, 3]
-verified: false
-recorded_at: null
+  - - - 1
+      - 2
+      - 3
+verified: true
+recorded_at: '2026-10-15T10:14:42Z'

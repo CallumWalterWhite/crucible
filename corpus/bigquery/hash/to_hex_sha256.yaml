@@ -1,11 +1,15 @@
-description: TO_HEX of the BYTES result of SHA256 returns the 64-character lowercase hexadecimal digest. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, hash]
+description: TO_HEX of the BYTES result of SHA256 returns the 64-character lowercase
+  hexadecimal digest.
+tags:
+- probe
+- hash
 query: SELECT TO_HEX(SHA256('a')) AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: STRING}
+  - name: v
+    type: STRING
   rows:
-  - [ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb]
-verified: false
-recorded_at: null
+  - - ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb
+verified: true
+recorded_at: '2026-10-15T10:16:33Z'

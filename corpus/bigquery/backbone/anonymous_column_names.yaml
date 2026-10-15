@@ -1,13 +1,21 @@
-description: Unnamed select-list expressions get generated names f0_ and f1_. Unnamed expressions receive generated names; the recording confirms BigQuery's numbering. Expected value from the BigQuery documentation; not yet recorded.
-tags: [backbone, names, name-unconfirmed]
+description: Unnamed select-list expressions get generated names f0_ and f1_. Unnamed
+  expressions receive generated names; the recording confirms BigQuery's numbering.
+tags:
+- backbone
+- names
 query: SELECT 1, 'x' AS named, 2
 ordered: false
 expected:
   columns:
-  - {name: f0_, type: INT64}
-  - {name: named, type: STRING}
-  - {name: f1_, type: INT64}
+  - name: f0_
+    type: INT64
+  - name: named
+    type: STRING
+  - name: f1_
+    type: INT64
   rows:
-  - [1, x, 2]
-verified: false
-recorded_at: null
+  - - 1
+    - x
+    - 2
+verified: true
+recorded_at: '2026-10-15T10:14:40Z'

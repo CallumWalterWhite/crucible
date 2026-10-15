@@ -1,12 +1,15 @@
-description: LAG returns the previous row's value, or NULL for the first row. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, window]
+description: LAG returns the previous row's value, or NULL for the first row.
+tags:
+- probe
+- window
 query: SELECT LAG(x) OVER (ORDER BY x) AS v FROM UNNEST([1, 2]) AS x ORDER BY x
 ordered: true
 expected:
   columns:
-  - {name: v, type: INT64}
+  - name: v
+    type: INT64
   rows:
-  - [null]
-  - [1]
-verified: false
-recorded_at: null
+  - - null
+  - - 1
+verified: true
+recorded_at: '2026-10-15T10:18:07Z'

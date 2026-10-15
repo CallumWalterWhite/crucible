@@ -1,11 +1,14 @@
-description: Multiplying two NUMERIC values keeps nine fractional digits. Expected value from the BigQuery documentation; not yet recorded.
-tags: [backbone, arithmetic]
+description: Multiplying two NUMERIC values keeps nine fractional digits.
+tags:
+- backbone
+- arithmetic
 query: SELECT CAST('1.000000001' AS NUMERIC) * CAST('2' AS NUMERIC) AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: NUMERIC}
+  - name: v
+    type: NUMERIC
   rows:
-  - ['2.000000002']
-verified: false
-recorded_at: null
+  - - '2.000000002'
+verified: true
+recorded_at: '2026-10-15T10:15:17Z'

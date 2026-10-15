@@ -1,11 +1,15 @@
-description: FARM_FINGERPRINT returns a deterministic INT64 fingerprint of a STRING. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, hash, known-divergence]
+description: FARM_FINGERPRINT returns a deterministic INT64 fingerprint of a STRING.
+tags:
+- probe
+- hash
+- known-divergence
 query: SELECT FARM_FINGERPRINT('a') AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: INT64}
+  - name: v
+    type: INT64
   rows:
-  - [7393016322855681216]
-verified: false
-recorded_at: null
+  - - -5528939962900187677
+verified: true
+recorded_at: '2026-10-15T10:16:30Z'

@@ -1,11 +1,15 @@
-description: FORMAT with %.2f renders a FLOAT64 with two decimal places. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, string, known-divergence]
+description: FORMAT with %.2f renders a FLOAT64 with two decimal places.
+tags:
+- probe
+- string
+- known-divergence
 query: SELECT FORMAT('%.2f', 1.005) AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: STRING}
+  - name: v
+    type: STRING
   rows:
-  - ['1.00']
-verified: false
-recorded_at: null
+  - - '1.00'
+verified: true
+recorded_at: '2026-10-15T10:17:31Z'

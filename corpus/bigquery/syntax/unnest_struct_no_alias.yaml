@@ -1,11 +1,15 @@
-description: UNNEST of an array of STRUCT without an alias exposes the struct fields as columns. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, syntax]
+description: UNNEST of an array of STRUCT without an alias exposes the struct fields
+  as columns.
+tags:
+- probe
+- syntax
 query: SELECT a FROM UNNEST([STRUCT(1 AS a)])
 ordered: false
 expected:
   columns:
-  - {name: a, type: INT64}
+  - name: a
+    type: INT64
   rows:
-  - [1]
-verified: false
-recorded_at: null
+  - - 1
+verified: true
+recorded_at: '2026-10-15T10:18:03Z'

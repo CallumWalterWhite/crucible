@@ -1,11 +1,15 @@
-description: Integer arithmetic on INT64 literals returns INT64 and does not overflow at 2^31. Expected value from the BigQuery documentation; not yet recorded.
-tags: [backbone, arithmetic]
+description: Integer arithmetic on INT64 literals returns INT64 and does not overflow
+  at 2^31.
+tags:
+- backbone
+- arithmetic
 query: SELECT 2147483647 + 1 AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: INT64}
+  - name: v
+    type: INT64
   rows:
-  - [2147483648]
-verified: false
-recorded_at: null
+  - - 2147483648
+verified: true
+recorded_at: '2026-10-15T10:15:13Z'

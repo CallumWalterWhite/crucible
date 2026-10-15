@@ -1,11 +1,15 @@
-description: The || operator returns NULL when either operand is NULL. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, string]
+description: The || operator rejects a literal NULL operand at analysis time. Message
+  from BigQuery's recorded error; a re-record verifies the kind and substring.
+tags:
+- probe
+- string
+- known-divergence
 query: SELECT 'a' || NULL AS v
 ordered: false
 expected:
-  columns:
-  - {name: v, type: STRING}
-  rows:
-  - [null]
+  error:
+    kind: invalid_query
+    message_contains: Operands of || cannot be literal NULL
+    message: Operands of || cannot be literal NULL at [1:15]
 verified: false
-recorded_at: null
+recorded_at: '2026-10-15T10:17:27Z'

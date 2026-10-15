@@ -1,11 +1,14 @@
-description: SPLIT of an empty STRING returns an array holding a single empty STRING. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, string]
+description: SPLIT of an empty STRING returns an array holding a single empty STRING.
+tags:
+- probe
+- string
 query: SELECT SPLIT('', ',') AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: ARRAY<STRING>}
+  - name: v
+    type: ARRAY<STRING>
   rows:
-  - - ['']
-verified: false
-recorded_at: null
+  - - - ''
+verified: true
+recorded_at: '2026-10-15T10:17:40Z'

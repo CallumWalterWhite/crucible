@@ -1,11 +1,14 @@
-description: A NUMERIC literal keeps all nine fractional digits. Expected value from the BigQuery documentation; not yet recorded.
-tags: [backbone, types]
+description: A NUMERIC literal keeps all nine fractional digits.
+tags:
+- backbone
+- types
 query: SELECT NUMERIC '123456789.123456789' AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: NUMERIC}
+  - name: v
+    type: NUMERIC
   rows:
-  - ['123456789.123456789']
-verified: false
-recorded_at: null
+  - - '123456789.123456789'
+verified: true
+recorded_at: '2026-10-15T10:15:15Z'

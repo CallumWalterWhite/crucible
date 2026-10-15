@@ -1,11 +1,14 @@
-description: SUBSTR with a negative position counts from the end of the string. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, string]
+description: SUBSTR with a negative position counts from the end of the string.
+tags:
+- probe
+- string
 query: SELECT SUBSTR('abcdef', -2) AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: STRING}
+  - name: v
+    type: STRING
   rows:
-  - [ef]
-verified: false
-recorded_at: null
+  - - ef
+verified: true
+recorded_at: '2026-10-15T10:17:47Z'

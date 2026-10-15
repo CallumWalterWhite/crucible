@@ -1,8 +1,16 @@
-description: An array subscript with OFFSET raises an error when the index is out of range. The message_contains value is the message from BigQuery's runtime error text; not yet recorded. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, array, known-divergence]
+description: An array subscript with OFFSET raises an error when the index is out
+  of range. The message_contains value is the message from BigQuery's runtime error
+  text; not yet recorded.
+tags:
+- probe
+- array
+- known-divergence
 query: SELECT [1, 2][OFFSET(5)] AS v
 ordered: false
 expected:
-  error: {kind: runtime, message_contains: out of bounds}
-verified: false
-recorded_at: null
+  error:
+    kind: runtime
+    message: Array index 5 is out of bounds (overflow)
+    message_contains: out of bounds
+verified: true
+recorded_at: '2026-10-15T10:14:34Z'

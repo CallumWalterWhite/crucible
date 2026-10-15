@@ -1,11 +1,16 @@
-description: GENERATE_ARRAY returns an inclusive INT64 sequence with the given step. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, array]
+description: GENERATE_ARRAY returns an inclusive INT64 sequence with the given step.
+tags:
+- probe
+- array
 query: SELECT GENERATE_ARRAY(1, 5, 2) AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: ARRAY<INT64>}
+  - name: v
+    type: ARRAY<INT64>
   rows:
-  - - [1, 3, 5]
-verified: false
-recorded_at: null
+  - - - 1
+      - 3
+      - 5
+verified: true
+recorded_at: '2026-10-15T10:14:32Z'

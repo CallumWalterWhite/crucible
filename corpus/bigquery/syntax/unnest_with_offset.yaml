@@ -1,13 +1,21 @@
-description: UNNEST WITH OFFSET returns a zero-based element position alongside each value. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, syntax, known-divergence]
+description: UNNEST WITH OFFSET returns a zero-based element position alongside each
+  value.
+tags:
+- probe
+- syntax
+- known-divergence
 query: SELECT x, o FROM UNNEST(['a', 'b']) AS x WITH OFFSET o ORDER BY o
 ordered: true
 expected:
   columns:
-  - {name: x, type: STRING}
-  - {name: o, type: INT64}
+  - name: x
+    type: STRING
+  - name: o
+    type: INT64
   rows:
-  - [a, 0]
-  - [b, 1]
-verified: false
-recorded_at: null
+  - - a
+    - 0
+  - - b
+    - 1
+verified: true
+recorded_at: '2026-10-15T10:18:05Z'

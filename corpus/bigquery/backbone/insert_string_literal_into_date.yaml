@@ -1,12 +1,17 @@
-description: A STRING literal inserted into a DATE column is parsed as a DATE. Expected value from the BigQuery documentation; not yet recorded.
-tags: [backbone, dml]
-setup: [CREATE TABLE t (d DATE), INSERT INTO t VALUES ('2024-02-29')]
+description: A STRING literal inserted into a DATE column is parsed as a DATE.
+tags:
+- backbone
+- dml
+setup:
+- CREATE TABLE t (d DATE)
+- INSERT INTO t VALUES ('2024-02-29')
 query: SELECT d FROM t
 ordered: false
 expected:
   columns:
-  - {name: d, type: DATE}
+  - name: d
+    type: DATE
   rows:
-  - ['2024-02-29']
-verified: false
-recorded_at: null
+  - - '2024-02-29'
+verified: true
+recorded_at: '2026-10-15T10:15:11Z'

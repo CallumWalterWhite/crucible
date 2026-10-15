@@ -1,11 +1,15 @@
-description: FORMAT_DATE with %e renders the day of month space-padded to two characters. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, date_time, known-divergence]
+description: FORMAT_DATE with %e renders the day of month space-padded to two characters.
+tags:
+- probe
+- date_time
+- known-divergence
 query: SELECT FORMAT_DATE('%b %e %Y', DATE '2024-03-05') AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: STRING}
+  - name: v
+    type: STRING
   rows:
-  - [Mar  5 2024]
-verified: false
-recorded_at: null
+  - - Mar  5 2024
+verified: true
+recorded_at: '2026-10-15T10:16:17Z'

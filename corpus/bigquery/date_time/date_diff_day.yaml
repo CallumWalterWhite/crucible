@@ -1,11 +1,14 @@
-description: DATE_DIFF(first, second, DAY) returns first minus second in whole days. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, date_time]
+description: DATE_DIFF(first, second, DAY) returns first minus second in whole days.
+tags:
+- probe
+- date_time
 query: SELECT DATE_DIFF(DATE '2024-03-05', DATE '2024-01-31', DAY) AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: INT64}
+  - name: v
+    type: INT64
   rows:
-  - [34]
-verified: false
-recorded_at: null
+  - - 34
+verified: true
+recorded_at: '2026-10-15T10:15:55Z'

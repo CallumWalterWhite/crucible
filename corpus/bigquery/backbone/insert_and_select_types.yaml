@@ -1,23 +1,44 @@
-description: Inserts one row with every supported type and selects it back. Expected value from the BigQuery documentation; not yet recorded.
-tags: [backbone, types]
-setup: ['CREATE TABLE t (a INT64, b FLOAT64, c NUMERIC, d BOOL, e STRING, f BYTES, g DATE, h DATETIME, i TIME, j TIMESTAMP, k JSON, l ARRAY<INT64>, m STRUCT<a INT64, b STRING>)', 'INSERT INTO t VALUES (1, 2.5, NUMERIC ''1.123456789'', TRUE, ''x'', b''ab'', DATE ''2024-02-29'', DATETIME ''2024-02-29 01:02:03.5'', TIME ''12:34:56.123456'', TIMESTAMP ''2024-02-29 01:02:03.123456+00'', JSON ''{"k": 1}'', [1, 2], STRUCT(1 AS a, ''y'' AS b))']
+description: Inserts one row with every supported type and selects it back.
+tags:
+- backbone
+- types
+setup:
+- CREATE TABLE t (a INT64, b FLOAT64, c NUMERIC, d BOOL, e STRING, f BYTES, g DATE,
+  h DATETIME, i TIME, j TIMESTAMP, k JSON, l ARRAY<INT64>, m STRUCT<a INT64, b STRING>)
+- 'INSERT INTO t VALUES (1, 2.5, NUMERIC ''1.123456789'', TRUE, ''x'', b''ab'', DATE
+  ''2024-02-29'', DATETIME ''2024-02-29 01:02:03.5'', TIME ''12:34:56.123456'', TIMESTAMP
+  ''2024-02-29 01:02:03.123456+00'', JSON ''{"k": 1}'', [1, 2], STRUCT(1 AS a, ''y''
+  AS b))'
 query: SELECT * FROM t
 ordered: false
 expected:
   columns:
-  - {name: a, type: INT64}
-  - {name: b, type: FLOAT64}
-  - {name: c, type: NUMERIC}
-  - {name: d, type: BOOL}
-  - {name: e, type: STRING}
-  - {name: f, type: BYTES}
-  - {name: g, type: DATE}
-  - {name: h, type: DATETIME}
-  - {name: i, type: TIME}
-  - {name: j, type: TIMESTAMP}
-  - {name: k, type: JSON}
-  - {name: l, type: ARRAY<INT64>}
-  - {name: m, type: 'STRUCT<a INT64, b STRING>'}
+  - name: a
+    type: INT64
+  - name: b
+    type: FLOAT64
+  - name: c
+    type: NUMERIC
+  - name: d
+    type: BOOL
+  - name: e
+    type: STRING
+  - name: f
+    type: BYTES
+  - name: g
+    type: DATE
+  - name: h
+    type: DATETIME
+  - name: i
+    type: TIME
+  - name: j
+    type: TIMESTAMP
+  - name: k
+    type: JSON
+  - name: l
+    type: ARRAY<INT64>
+  - name: m
+    type: STRUCT<a INT64, b STRING>
   rows:
   - - 1
     - 2.5
@@ -29,8 +50,10 @@ expected:
     - '2024-02-29T01:02:03.500000'
     - '12:34:56.123456'
     - '2024-02-29T01:02:03.123456Z'
-    - {k: 1}
-    - [1, 2]
-    - {a: 1, b: y}
-verified: false
-recorded_at: null
+    - k: 1
+    - - 1
+      - 2
+    - a: 1
+      b: y
+verified: true
+recorded_at: '2026-10-15T10:14:58Z'

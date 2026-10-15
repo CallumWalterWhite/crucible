@@ -1,11 +1,14 @@
-description: TIMESTAMP converts a STRING without a time zone to a TIMESTAMP in UTC. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, date_time]
+description: TIMESTAMP converts a STRING without a time zone to a TIMESTAMP in UTC.
+tags:
+- probe
+- date_time
 query: SELECT TIMESTAMP('2024-01-02 03:04:05') AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: TIMESTAMP}
+  - name: v
+    type: TIMESTAMP
   rows:
-  - ['2024-01-02T03:04:05Z']
-verified: false
-recorded_at: null
+  - - '2024-01-02T03:04:05Z'
+verified: true
+recorded_at: '2026-10-15T10:16:26Z'

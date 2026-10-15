@@ -1,11 +1,14 @@
-description: DATE_DIFF with MONTH counts the month boundaries crossed, not whole months. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, date_time]
+description: DATE_DIFF with MONTH counts the month boundaries crossed, not whole months.
+tags:
+- probe
+- date_time
 query: SELECT DATE_DIFF(DATE '2024-03-01', DATE '2024-01-31', MONTH) AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: INT64}
+  - name: v
+    type: INT64
   rows:
-  - [2]
-verified: false
-recorded_at: null
+  - - 2
+verified: true
+recorded_at: '2026-10-15T10:15:57Z'

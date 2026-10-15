@@ -1,11 +1,14 @@
-description: SAFE_CAST returns NULL when a STRING cannot be converted to INT64. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, cast]
+description: SAFE_CAST returns NULL when a STRING cannot be converted to INT64.
+tags:
+- probe
+- cast
 query: SELECT SAFE_CAST('x' AS INT64) AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: INT64}
+  - name: v
+    type: INT64
   rows:
-  - [null]
-verified: false
-recorded_at: null
+  - - null
+verified: true
+recorded_at: '2026-10-15T10:15:42Z'

@@ -1,11 +1,14 @@
-description: ANY_VALUE returns the value from some row in the group. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, aggregate]
+description: ANY_VALUE returns the value from some row in the group.
+tags:
+- probe
+- aggregate
 query: SELECT ANY_VALUE(x) AS v FROM UNNEST([7]) AS x
 ordered: false
 expected:
   columns:
-  - {name: v, type: INT64}
+  - name: v
+    type: INT64
   rows:
-  - [7]
-verified: false
-recorded_at: null
+  - - 7
+verified: true
+recorded_at: '2026-10-15T10:14:00Z'

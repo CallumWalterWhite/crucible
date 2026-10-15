@@ -1,11 +1,14 @@
-description: COUNTIF counts the rows where the expression is TRUE. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, aggregate]
+description: COUNTIF counts the rows where the expression is TRUE.
+tags:
+- probe
+- aggregate
 query: SELECT COUNTIF(x > 1) AS v FROM UNNEST([1, 2, 3]) AS x
 ordered: false
 expected:
   columns:
-  - {name: v, type: INT64}
+  - name: v
+    type: INT64
   rows:
-  - [2]
-verified: false
-recorded_at: null
+  - - 2
+verified: true
+recorded_at: '2026-10-15T10:14:12Z'

@@ -1,11 +1,15 @@
-description: DATE_DIFF with YEAR counts the year boundaries crossed, so 31 December and 1 January differ by one year. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, date_time]
+description: DATE_DIFF with YEAR counts the year boundaries crossed, so 31 December
+  and 1 January differ by one year.
+tags:
+- probe
+- date_time
 query: SELECT DATE_DIFF(DATE '2024-01-01', DATE '2023-12-31', YEAR) AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: INT64}
+  - name: v
+    type: INT64
   rows:
-  - [1]
-verified: false
-recorded_at: null
+  - - 1
+verified: true
+recorded_at: '2026-10-15T10:15:59Z'

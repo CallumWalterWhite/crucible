@@ -1,11 +1,16 @@
-description: JSON_VALUE_ARRAY returns the scalar elements of a JSON array as unquoted strings. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, json]
+description: JSON_VALUE_ARRAY returns the scalar elements of a JSON array as unquoted
+  strings.
+tags:
+- probe
+- json
 query: 'SELECT JSON_VALUE_ARRAY(''{"a": ["x", 2]}'', ''$.a'') AS v'
 ordered: false
 expected:
   columns:
-  - {name: v, type: ARRAY<STRING>}
+  - name: v
+    type: ARRAY<STRING>
   rows:
-  - - [x, '2']
-verified: false
-recorded_at: null
+  - - - x
+      - '2'
+verified: true
+recorded_at: '2026-10-15T10:16:43Z'
