@@ -1,11 +1,15 @@
-description: LENGTH of a STRING counts Unicode characters, not bytes. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, string]
+description: LENGTH of a STRING counts Unicode characters, not bytes. Expected value
+  from the BigQuery documentation; not yet recorded.
+tags:
+- probe
+- string
 query: SELECT LENGTH('äb') AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: INT64}
+  - name: v
+    type: INT64
   rows:
-  - [2]
-verified: false
-recorded_at: null
+  - - 2
+verified: true
+recorded_at: '2026-10-15T10:17:35Z'

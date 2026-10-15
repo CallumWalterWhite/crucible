@@ -1,11 +1,15 @@
-description: An array subscript with OFFSET(0) returns the first element. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, array]
+description: An array subscript with OFFSET(0) returns the first element. Expected
+  value from the BigQuery documentation; not yet recorded.
+tags:
+- probe
+- array
 query: SELECT ['a', 'b'][OFFSET(0)] AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: STRING}
+  - name: v
+    type: STRING
   rows:
-  - [a]
-verified: false
-recorded_at: null
+  - - a
+verified: true
+recorded_at: '2026-10-15T10:14:36Z'

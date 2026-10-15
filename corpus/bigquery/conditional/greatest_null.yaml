@@ -1,11 +1,15 @@
-description: GREATEST returns NULL when any argument is NULL. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, conditional]
+description: GREATEST returns NULL when any argument is NULL. Expected value from
+  the BigQuery documentation; not yet recorded.
+tags:
+- probe
+- conditional
 query: SELECT GREATEST(1, NULL) AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: INT64}
+  - name: v
+    type: INT64
   rows:
-  - [null]
-verified: false
-recorded_at: null
+  - - null
+verified: true
+recorded_at: '2026-10-15T10:15:44Z'

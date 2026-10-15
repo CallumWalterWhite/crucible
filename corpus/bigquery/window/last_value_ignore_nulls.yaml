@@ -1,12 +1,18 @@
-description: LAST_VALUE IGNORE NULLS skips NULL rows when choosing the value in the frame. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, window]
-query: SELECT LAST_VALUE(x IGNORE NULLS) OVER (ORDER BY o ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS v FROM UNNEST([STRUCT(1 AS o, 5 AS x), STRUCT(2 AS o, NULL AS x)]) ORDER BY o
+description: LAST_VALUE IGNORE NULLS skips NULL rows when choosing the value in the
+  frame. Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- probe
+- window
+query: SELECT LAST_VALUE(x IGNORE NULLS) OVER (ORDER BY o ROWS BETWEEN UNBOUNDED PRECEDING
+  AND CURRENT ROW) AS v FROM UNNEST([STRUCT(1 AS o, 5 AS x), STRUCT(2 AS o, NULL AS
+  x)]) ORDER BY o
 ordered: true
 expected:
   columns:
-  - {name: v, type: INT64}
+  - name: v
+    type: INT64
   rows:
-  - [5]
-  - [5]
-verified: false
-recorded_at: null
+  - - 5
+  - - 5
+verified: true
+recorded_at: '2026-10-15T10:18:09Z'

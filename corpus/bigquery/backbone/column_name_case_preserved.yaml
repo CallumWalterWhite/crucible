@@ -1,13 +1,25 @@
-description: A column reference is case-insensitive, and an alias keeps its written case. Column names are case-insensitive, and the result name of an unaliased reference is the stored name (best reading; the docs do not state it). Expected value from the BigQuery documentation; not yet recorded.
-tags: [backbone, names, name-unconfirmed, known-divergence]
-setup: [CREATE TABLE t (MixedCase INT64), INSERT INTO t VALUES (7)]
+description: A column reference is case-insensitive, and an alias keeps its written
+  case. Column names are case-insensitive, and the result name of an unaliased reference
+  is the stored name (best reading; the docs do not state it). Expected value from
+  the BigQuery documentation; not yet recorded.
+tags:
+- backbone
+- names
+- name-unconfirmed
+- known-divergence
+setup:
+- CREATE TABLE t (MixedCase INT64)
+- INSERT INTO t VALUES (7)
 query: SELECT mixedcase, MIXEDCASE AS Renamed FROM t
 ordered: false
 expected:
   columns:
-  - {name: MixedCase, type: INT64}
-  - {name: Renamed, type: INT64}
+  - name: mixedcase
+    type: INT64
+  - name: Renamed
+    type: INT64
   rows:
-  - [7, 7]
-verified: false
-recorded_at: null
+  - - 7
+    - 7
+verified: true
+recorded_at: '2026-10-15T10:14:46Z'

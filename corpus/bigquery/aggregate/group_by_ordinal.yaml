@@ -1,13 +1,20 @@
-description: GROUP BY with an ordinal groups by the select-list position. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, aggregate]
+description: GROUP BY with an ordinal groups by the select-list position. Expected
+  value from the BigQuery documentation; not yet recorded.
+tags:
+- probe
+- aggregate
 query: SELECT x, COUNT(*) AS v FROM UNNEST([1, 1, 2]) AS x GROUP BY 1 ORDER BY 1
 ordered: true
 expected:
   columns:
-  - {name: x, type: INT64}
-  - {name: v, type: INT64}
+  - name: x
+    type: INT64
+  - name: v
+    type: INT64
   rows:
-  - [1, 2]
-  - [2, 1]
-verified: false
-recorded_at: null
+  - - 1
+    - 2
+  - - 2
+    - 1
+verified: true
+recorded_at: '2026-10-15T10:14:15Z'

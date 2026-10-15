@@ -1,11 +1,15 @@
-description: An array subscript with SAFE_OFFSET returns NULL when the index is out of range. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, array]
+description: An array subscript with SAFE_OFFSET returns NULL when the index is out
+  of range. Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- probe
+- array
 query: SELECT [1, 2][SAFE_OFFSET(5)] AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: INT64}
+  - name: v
+    type: INT64
   rows:
-  - [null]
-verified: false
-recorded_at: null
+  - - null
+verified: true
+recorded_at: '2026-10-15T10:14:38Z'

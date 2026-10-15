@@ -1,12 +1,18 @@
-description: SELECT * REPLACE substitutes an expression for the named column and keeps its name. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, syntax]
+description: SELECT * REPLACE substitutes an expression for the named column and keeps
+  its name. Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- probe
+- syntax
 query: SELECT * REPLACE (5 AS b) FROM (SELECT 1 AS a, 2 AS b)
 ordered: false
 expected:
   columns:
-  - {name: a, type: INT64}
-  - {name: b, type: INT64}
+  - name: a
+    type: INT64
+  - name: b
+    type: INT64
   rows:
-  - [1, 5]
-verified: false
-recorded_at: null
+  - - 1
+    - 5
+verified: true
+recorded_at: '2026-10-15T10:18:01Z'

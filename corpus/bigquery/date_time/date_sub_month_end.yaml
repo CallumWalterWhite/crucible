@@ -1,11 +1,15 @@
-description: DATE_SUB clamps the day to the last day of the month when the result month is shorter. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, date_time]
+description: DATE_SUB clamps the day to the last day of the month when the result
+  month is shorter. Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- probe
+- date_time
 query: SELECT DATE_SUB(DATE '2024-03-31', INTERVAL 1 MONTH) AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: DATE}
+  - name: v
+    type: DATE
   rows:
-  - ['2024-02-29']
-verified: false
-recorded_at: null
+  - - '2024-02-29'
+verified: true
+recorded_at: '2026-10-15T10:16:05Z'

@@ -1,11 +1,16 @@
-description: SAFE.PARSE_JSON returns NULL instead of an error when the input is not valid JSON. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, json, known-divergence]
+description: SAFE.PARSE_JSON returns NULL instead of an error when the input is not
+  valid JSON. Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- probe
+- json
+- known-divergence
 query: SELECT SAFE.PARSE_JSON('{bad') AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: JSON}
+  - name: v
+    type: JSON
   rows:
-  - [null]
-verified: false
-recorded_at: null
+  - - null
+verified: true
+recorded_at: '2026-10-15T10:16:52Z'

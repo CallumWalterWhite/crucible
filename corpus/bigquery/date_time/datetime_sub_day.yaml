@@ -1,11 +1,15 @@
-description: DATETIME_SUB subtracts an INTERVAL from a DATETIME and returns a DATETIME. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, date_time]
+description: DATETIME_SUB subtracts an INTERVAL from a DATETIME and returns a DATETIME.
+  Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- probe
+- date_time
 query: SELECT DATETIME_SUB(DATETIME '2024-01-02 00:00:00', INTERVAL 1 DAY) AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: DATETIME}
+  - name: v
+    type: DATETIME
   rows:
-  - ['2024-01-01T00:00:00']
-verified: false
-recorded_at: null
+  - - '2024-01-01T00:00:00'
+verified: true
+recorded_at: '2026-10-15T10:16:12Z'

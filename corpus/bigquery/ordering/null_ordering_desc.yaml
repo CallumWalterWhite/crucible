@@ -1,13 +1,17 @@
-description: ORDER BY descending sorts NULL last. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, ordering]
+description: ORDER BY descending sorts NULL last. Expected value from the BigQuery
+  documentation; not yet recorded.
+tags:
+- probe
+- ordering
 query: SELECT x FROM UNNEST([2, NULL, 1]) AS x ORDER BY x DESC
 ordered: true
 expected:
   columns:
-  - {name: x, type: INT64}
+  - name: x
+    type: INT64
   rows:
-  - [2]
-  - [1]
-  - [null]
-verified: false
-recorded_at: null
+  - - 2
+  - - 1
+  - - null
+verified: true
+recorded_at: '2026-10-15T10:17:12Z'

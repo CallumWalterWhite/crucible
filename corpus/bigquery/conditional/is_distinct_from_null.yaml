@@ -1,11 +1,15 @@
-description: IS DISTINCT FROM treats NULL as a comparable value, so NULL and 1 are distinct. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, conditional]
+description: IS DISTINCT FROM treats NULL as a comparable value, so NULL and 1 are
+  distinct. Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- probe
+- conditional
 query: SELECT NULL IS DISTINCT FROM 1 AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: BOOL}
+  - name: v
+    type: BOOL
   rows:
-  - [true]
-verified: false
-recorded_at: null
+  - - true
+verified: true
+recorded_at: '2026-10-15T10:15:48Z'

@@ -1,11 +1,16 @@
-description: FORMAT substitutes arguments into a printf-style template. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, string, known-divergence]
+description: FORMAT substitutes arguments into a printf-style template. Expected value
+  from the BigQuery documentation; not yet recorded.
+tags:
+- probe
+- string
+- known-divergence
 query: SELECT FORMAT('%d-%s', 5, 'x') AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: STRING}
+  - name: v
+    type: STRING
   rows:
-  - [5-x]
-verified: false
-recorded_at: null
+  - - 5-x
+verified: true
+recorded_at: '2026-10-15T10:17:29Z'

@@ -1,11 +1,17 @@
-description: TIMESTAMP_DIFF with DAY truncates the elapsed time, so 12 hours is 0 days. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, date_time, known-divergence]
-query: SELECT TIMESTAMP_DIFF(TIMESTAMP '2024-01-02 00:00:00+00', TIMESTAMP '2024-01-01 12:00:00+00', DAY) AS v
+description: TIMESTAMP_DIFF with DAY truncates the elapsed time, so 12 hours is 0
+  days. Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- probe
+- date_time
+- known-divergence
+query: SELECT TIMESTAMP_DIFF(TIMESTAMP '2024-01-02 00:00:00+00', TIMESTAMP '2024-01-01
+  12:00:00+00', DAY) AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: INT64}
+  - name: v
+    type: INT64
   rows:
-  - [0]
-verified: false
-recorded_at: null
+  - - 0
+verified: true
+recorded_at: '2026-10-15T10:16:25Z'

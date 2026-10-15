@@ -1,11 +1,17 @@
-description: ARRAY_AGG accepts ORDER BY and LIMIT inside the call, and its result can be subscripted. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, aggregate, known-divergence]
-query: SELECT ARRAY_AGG(x ORDER BY x DESC LIMIT 1)[OFFSET(0)] AS v FROM UNNEST([2, 3, 1]) AS x
+description: ARRAY_AGG accepts ORDER BY and LIMIT inside the call, and its result
+  can be subscripted. Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- probe
+- aggregate
+- known-divergence
+query: SELECT ARRAY_AGG(x ORDER BY x DESC LIMIT 1)[OFFSET(0)] AS v FROM UNNEST([2,
+  3, 1]) AS x
 ordered: false
 expected:
   columns:
-  - {name: v, type: INT64}
+  - name: v
+    type: INT64
   rows:
-  - [3]
-verified: false
-recorded_at: null
+  - - 3
+verified: true
+recorded_at: '2026-10-15T10:14:10Z'

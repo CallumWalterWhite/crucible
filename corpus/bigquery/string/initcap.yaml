@@ -1,11 +1,16 @@
-description: INITCAP uppercases the first letter of each word, where words are separated by non-letters such as spaces and hyphens. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, string]
+description: INITCAP uppercases the first letter of each word, where words are separated
+  by non-letters such as spaces and hyphens. Expected value from the BigQuery documentation;
+  not yet recorded.
+tags:
+- probe
+- string
 query: SELECT INITCAP('hello wORLD-foo') AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: STRING}
+  - name: v
+    type: STRING
   rows:
-  - [Hello World-Foo]
-verified: false
-recorded_at: null
+  - - Hello World-Foo
+verified: true
+recorded_at: '2026-10-15T10:17:33Z'

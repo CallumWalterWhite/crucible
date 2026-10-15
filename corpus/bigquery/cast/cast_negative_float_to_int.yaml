@@ -1,11 +1,16 @@
-description: CAST rounds a negative FLOAT64 to INT64, with halves rounded away from zero. Expected value from the BigQuery documentation; not yet recorded.
-tags: [probe, cast, known-divergence]
+description: CAST rounds a negative FLOAT64 to INT64, with halves rounded away from
+  zero. Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- probe
+- cast
+- known-divergence
 query: SELECT CAST(-2.5 AS INT64) AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: INT64}
+  - name: v
+    type: INT64
   rows:
-  - [-3]
-verified: false
-recorded_at: null
+  - - -3
+verified: true
+recorded_at: '2026-10-15T10:15:37Z'
