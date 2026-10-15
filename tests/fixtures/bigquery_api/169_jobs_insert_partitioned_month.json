@@ -1,0 +1,74 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/jobs",
+    "params": {},
+    "body": {
+      "jobReference": {
+        "projectId": "<project>",
+        "jobId": "<job-62>"
+      },
+      "configuration": {
+        "query": {
+          "query": "CREATE TABLE partitioned_month PARTITION BY DATE_TRUNC(d, MONTH) AS SELECT DATE '2024-01-02' AS d",
+          "useLegacySql": false,
+          "maximumBytesBilled": "104857600",
+          "defaultDataset": {
+            "projectId": "<project>",
+            "datasetId": "<dataset>"
+          },
+          "useQueryCache": false
+        }
+      }
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:<location>.<job-62>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "query": {
+        "query": "CREATE TABLE partitioned_month PARTITION BY DATE_TRUNC(d, MONTH) AS SELECT DATE '2024-01-02' AS d",
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "partitioned_month"
+        },
+        "defaultDataset": {
+          "datasetId": "<dataset>",
+          "projectId": "<project>"
+        },
+        "priority": "INTERACTIVE",
+        "useQueryCache": false,
+        "maximumBytesBilled": "104857600",
+        "useLegacySql": false
+      },
+      "jobType": "QUERY"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-62>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "query": {
+        "statementType": "CREATE_TABLE_AS_SELECT"
+      }
+    },
+    "status": {
+      "state": "RUNNING"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

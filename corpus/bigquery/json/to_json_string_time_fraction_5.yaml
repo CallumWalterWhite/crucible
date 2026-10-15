@@ -1,0 +1,15 @@
+description: TO_JSON_STRING of TIME with fraction '.5'. Crucible raises unsupported
+  until recorded (expected value is a guess).
+tags:
+- phase4
+- json
+query: SELECT TO_JSON_STRING(STRUCT(TIME '05:06:07.5' AS t)) AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: STRING
+  rows:
+  - - '{"t":"05:06:07.500"}'
+verified: true
+recorded_at: '2026-10-15T15:08:21Z'

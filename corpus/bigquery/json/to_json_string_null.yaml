@@ -1,9 +1,9 @@
-description: TO_JSON_STRING of a NULL operand. DuckDB answers SQL NULL; Crucible raises unsupported until
-  BigQuery's answer is recorded (expected value is a guess the recording replaces).
+description: TO_JSON_STRING of a NULL operand. DuckDB answers SQL NULL; Crucible raises
+  unsupported until BigQuery's answer is recorded (expected value is a guess the recording
+  replaces).
 tags:
 - phase4
 - json
-- known-divergence
 query: SELECT TO_JSON_STRING(CAST(NULL AS INT64)) AS v
 ordered: false
 expected:
@@ -12,5 +12,5 @@ expected:
     type: STRING
   rows:
   - - 'null'
-verified: false
-recorded_at: null
+verified: true
+recorded_at: '2026-10-15T14:53:51Z'

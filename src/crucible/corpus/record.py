@@ -84,6 +84,8 @@ class BigQueryRecorder:
                 default_dataset=dataset,
                 maximum_bytes_billed=self._max_bytes_billed,
                 use_legacy_sql=False,
+                # A cached answer is not a fresh query's answer (job/query.py use_query_cache).
+                use_query_cache=False,
             )
             for statement in case.setup:
                 try:

@@ -1,0 +1,65 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/upload/projects/<project>/jobs",
+    "params": {
+      "uploadType": "resumable"
+    },
+    "body": {
+      "jobReference": {
+        "projectId": "<project>",
+        "jobId": "<job-37>"
+      },
+      "configuration": {
+        "load": {
+          "destinationTable": {
+            "projectId": "<project>",
+            "datasetId": "<dataset>",
+            "tableId": "load_bad_value"
+          },
+          "schema": {
+            "fields": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              },
+              {
+                "name": "b",
+                "type": "BOOLEAN"
+              },
+              {
+                "name": "ts",
+                "type": "TIMESTAMP"
+              },
+              {
+                "name": "d",
+                "type": "DATE"
+              },
+              {
+                "name": "n",
+                "type": "NUMERIC"
+              },
+              {
+                "name": "f",
+                "type": "FLOAT"
+              },
+              {
+                "name": "s",
+                "type": "STRING"
+              }
+            ]
+          },
+          "sourceFormat": "CSV",
+          "skipLeadingRows": 1,
+          "writeDisposition": "WRITE_TRUNCATE"
+        }
+      }
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "text/plain; charset=utf-8, application/json; charset=UTF-8",
+    "Location": "https://bigquery.googleapis.com/upload/bigquery/v2/projects/<project>/jobs?uploadType=resumable&upload_id=<upload-id>"
+  },
+  "body": null
+}

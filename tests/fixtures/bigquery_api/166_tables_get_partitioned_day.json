@@ -1,0 +1,67 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/datasets/<dataset>/tables/partitioned_day",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#table",
+    "etag": "<etag>",
+    "id": "<project>:<dataset>.partitioned_day",
+    "selfLink": "<self-link>",
+    "tableReference": {
+      "projectId": "<project>",
+      "datasetId": "<dataset>",
+      "tableId": "partitioned_day"
+    },
+    "schema": {
+      "fields": [
+        {
+          "name": "d",
+          "type": "DATE"
+        },
+        {
+          "name": "s",
+          "type": "STRING"
+        },
+        {
+          "name": "n",
+          "type": "INTEGER"
+        }
+      ]
+    },
+    "timePartitioning": {
+      "type": "DAY",
+      "field": "d"
+    },
+    "numBytes": "19",
+    "numLongTermBytes": "0",
+    "numRows": "1",
+    "creationTime": "<time>",
+    "expirationTime": "<time>",
+    "lastModifiedTime": "<time>",
+    "type": "TABLE",
+    "location": "<location>",
+    "clustering": {
+      "fields": [
+        "s",
+        "n"
+      ]
+    },
+    "numTotalLogicalBytes": "19",
+    "numActiveLogicalBytes": "19",
+    "numLongTermLogicalBytes": "0",
+    "partitionDefinition": {
+      "partitionedColumn": [
+        {
+          "field": "d"
+        }
+      ]
+    }
+  }
+}

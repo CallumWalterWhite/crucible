@@ -112,7 +112,7 @@ def table_properties(tree: exp.Create, columns: list[str]) -> dict[str, Any]:
     return recorded
 
 
-def rest_partitioning(properties: dict[str, Any]) -> dict[str, Any]:
+def rest_partitioning(properties: dict[str, Any], *, definition: bool = True) -> dict[str, Any]:
     """A table's recorded PARTITION BY / CLUSTER BY as REST Table fields (REST reference, Table:
     timePartitioning, rangePartitioning, clustering), for tables.get and tables.list."""
     out: dict[str, Any] = {}
@@ -139,6 +139,10 @@ def rest_partitioning(properties: dict[str, Any]) -> dict[str, Any]:
                 "type": unit.name.upper() if isinstance(unit, exp.Expr) else "DAY",
                 "field": node.this.name,
             }
+    # Recorded in tables.get next to either kind of partitioning; not in tables.list entries.
+    for kind in ("timePartitioning", "rangePartitioning"):
+        if kind in out and definition:
+            out["partitionDefinition"] = {"partitionedColumn": [{"field": out[kind]["field"]}]}
     clustering = properties.get("cluster_by")
     if isinstance(clustering, list) and clustering:
         out["clustering"] = {"fields": [str(f) for f in cast("list[Any]", clustering)]}

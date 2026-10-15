@@ -1,0 +1,87 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/datasets/<dataset>/tables/all_types/data",
+    "params": {
+      "maxResults": "1"
+    },
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#tableDataList",
+    "etag": "<etag>",
+    "totalRows": "3",
+    "pageToken": "<page-token-4>",
+    "rows": [
+      {
+        "f": [
+          {
+            "v": "3"
+          },
+          {
+            "v": "-9223372036854775808"
+          },
+          {
+            "v": "NaN"
+          },
+          {
+            "v": "-0.000000001"
+          },
+          {
+            "v": "false"
+          },
+          {
+            "v": ""
+          },
+          {
+            "v": ""
+          },
+          {
+            "v": "0001-01-01"
+          },
+          {
+            "v": "9999-12-31T23:59:59.999999"
+          },
+          {
+            "v": "00:00:00"
+          },
+          {
+            "v": "0.0"
+          },
+          {
+            "v": "null"
+          },
+          {
+            "v": [
+              {
+                "v": "-1"
+              }
+            ]
+          },
+          {
+            "v": {
+              "f": [
+                {
+                  "v": null
+                },
+                {
+                  "v": []
+                }
+              ]
+            }
+          },
+          {
+            "v": []
+          },
+          {
+            "v": "-0-3 0 0:0:0"
+          }
+        ]
+      }
+    ]
+  }
+}

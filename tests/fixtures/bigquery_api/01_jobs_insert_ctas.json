@@ -16,7 +16,8 @@
           "defaultDataset": {
             "projectId": "<project>",
             "datasetId": "<dataset>"
-          }
+          },
+          "useQueryCache": false
         }
       }
     }
@@ -28,7 +29,7 @@
   "body": {
     "kind": "bigquery#job",
     "etag": "<etag>",
-    "id": "<project>:US.<job-1>",
+    "id": "<project>:<location>.<job-1>",
     "selfLink": "<self-link>",
     "user_email": "<email>",
     "configuration": {
@@ -44,6 +45,7 @@
           "projectId": "<project>"
         },
         "priority": "INTERACTIVE",
+        "useQueryCache": false,
         "maximumBytesBilled": "104857600",
         "useLegacySql": false
       },

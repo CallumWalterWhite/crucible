@@ -35,10 +35,13 @@ class FakeSession:
 
     def __init__(self) -> None:
         self.calls: list[tuple[str, str]] = []
+        self.query_bodies: list[dict[str, Any]] = []
 
     def request(self, method: str, url: str, **kwargs: Any) -> FakeResponse:
         self.calls.append((method, url))
         body = kwargs.get("json") or {}
+        if "query" in body.get("configuration", {}) or url.endswith("/queries"):
+            self.query_bodies.append(body.get("configuration", {}).get("query", body))
         job_ref = {"projectId": PROJECT, "jobId": "server_minted_job_42", "location": "EU"}
         done = {
             "kind": "bigquery#job",
@@ -276,3 +279,10 @@ def test_an_upload_fixture_holds_the_csv_it_sent(recorded):
     _, directory, written = recorded
     [upload] = [w for w in written if w.endswith("_load_baseline_upload.json")]
     assert json.loads((directory / upload).read_text())["request"]["body"] == LOAD_CASES["baseline"]
+
+
+def test_every_query_bypasses_the_query_cache(recorded):
+    session, _, _ = recorded
+    real = [b for b in session.query_bodies if not b.get("dryRun")]
+    assert len(real) > 10
+    assert all(b.get("useQueryCache") is False for b in real)

@@ -1,0 +1,16 @@
+description: TO_JSON_STRING of NUMERIC 2. One recorded example (1.50 -> "1.5") is
+  not generalised; Crucible raises unsupported until recorded (expected value is a
+  guess).
+tags:
+- phase4
+- json
+query: SELECT TO_JSON_STRING(STRUCT(NUMERIC '2' AS n)) AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: STRING
+  rows:
+  - - '{"n":2}'
+verified: true
+recorded_at: '2026-10-15T15:08:08Z'

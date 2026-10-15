@@ -1,9 +1,8 @@
-description: TO_JSON_STRING of BYTES. DuckDB writes the raw bytes; Crucible raises unsupported until recorded
-  (expected base64 value is a guess).
+description: TO_JSON_STRING of BYTES. DuckDB writes the raw bytes; Crucible raises
+  unsupported until recorded (expected base64 value is a guess).
 tags:
 - phase4
 - json
-- known-divergence
 query: SELECT TO_JSON_STRING(STRUCT(b'ab' AS b)) AS v
 ordered: false
 expected:
@@ -12,5 +11,5 @@ expected:
     type: STRING
   rows:
   - - '{"b":"YWI="}'
-verified: false
-recorded_at: null
+verified: true
+recorded_at: '2026-10-15T14:53:42Z'

@@ -1,0 +1,43 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/jobs",
+    "params": {},
+    "body": {
+      "jobReference": {
+        "projectId": "<project>",
+        "jobId": "<job-2>"
+      },
+      "configuration": {
+        "query": {
+          "query": "SELECT 1",
+          "useLegacySql": false,
+          "maximumBytesBilled": "104857600",
+          "defaultDataset": {
+            "projectId": "<project>",
+            "datasetId": "<dataset>"
+          },
+          "useQueryCache": false
+        }
+      }
+    }
+  },
+  "status": 409,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "error": {
+      "code": 409,
+      "message": "Already Exists: Job <project>:<location>.<job-2>",
+      "errors": [
+        {
+          "message": "Already Exists: Job <project>:<location>.<job-2>",
+          "domain": "global",
+          "reason": "duplicate"
+        }
+      ],
+      "status": "ALREADY_EXISTS"
+    }
+  }
+}

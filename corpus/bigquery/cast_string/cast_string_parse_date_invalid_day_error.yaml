@@ -9,7 +9,7 @@ ordered: false
 expected:
   error:
     kind: runtime
-    message_contains: Out-of-range datetime field in parsing function
     message: Out-of-range datetime field in parsing function
-verified: false
-recorded_at: '2026-10-15T11:13:38Z'
+    message_contains: Out-of-range datetime field in parsing function
+verified: true
+recorded_at: '2026-10-15T14:53:36Z'

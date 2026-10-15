@@ -614,7 +614,7 @@ def test_write_append_with_a_different_schema_fails_the_job(client):
 def test_a_rejected_csv_fails_the_job_and_leaves_the_table_unchanged(client):
     make_dataset(client)
     load_csv(client, "loaded", CSV)
-    bad = b"id,s\n1,2024-01-02\n"  # a date alone is not a TIMESTAMP (fixture 28)
+    bad = b"id,s\n1,2024-01-02\n"  # a date alone is not a TIMESTAMP (load_empty_fields_jobs_get)
     url = upload_url(
         client.post(
             UPLOAD,
@@ -767,14 +767,29 @@ def test_tabledata_list_of_an_empty_table_has_total_rows_zero(client):
 
 
 def test_tabledata_list_timestamps_are_float_seconds_unless_int64_is_asked_for(client):
+    # tabledata.list writes float seconds, not getQueryResults' "1.704164645123456E9"
+    # (tabledata_list: "1704164645.123456"); the int64 form is tabledata_list_int64_timestamp.
     make_dataset(client)
     insert_query(client, "CREATE TABLE ds.ts (t TIMESTAMP)")
     insert_query(client, "INSERT INTO ds.ts VALUES (TIMESTAMP '2024-01-02 03:04:05.123456 UTC')")
     default = list_data(client, table="ts").json()["rows"]
-    assert values(default) == ["1.704164645123456E9"]
+    assert values(default) == ["1704164645.123456"]
     for flag in ("true", "True"):
         int64 = list_data(client, table="ts", **{"formatOptions.useInt64Timestamp": flag}).json()
         assert values(int64["rows"]) == ["1704164645123456"]
+
+
+def test_a_whole_second_timestamp_in_float_form_is_unsupported_and_int64_loads(client):
+    # The float form of a whole second is unrecorded (encoding._tabledata_seconds): refused, not
+    # guessed. The int64 form is the one the clients ask for.
+    make_dataset(client)
+    insert_query(client, "CREATE TABLE ds.ts (t TIMESTAMP)")
+    insert_query(client, "INSERT INTO ds.ts VALUES (TIMESTAMP '2024-01-02 03:04:05 UTC')")
+    response = list_data(client, table="ts")
+    assert response.status_code == 400
+    assert "tabledata.list float TIMESTAMP" in response.json()["error"]["message"]
+    int64 = list_data(client, table="ts", **{"formatOptions.useInt64Timestamp": "true"}).json()
+    assert values(int64["rows"]) == ["1704164645000000"]
 
 
 def test_tabledata_list_of_an_anonymous_table_reads_the_job_result(client):

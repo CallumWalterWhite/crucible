@@ -1,0 +1,73 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/datasets/<dataset>/tables/all_types/data",
+    "params": {
+      "startIndex": "2"
+    },
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#tableDataList",
+    "etag": "<etag>",
+    "totalRows": "3",
+    "rows": [
+      {
+        "f": [
+          {
+            "v": "2"
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": []
+          },
+          {
+            "v": null
+          },
+          {
+            "v": []
+          },
+          {
+            "v": null
+          }
+        ]
+      }
+    ]
+  }
+}

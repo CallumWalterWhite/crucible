@@ -1,11 +1,11 @@
-description: TO_JSON_STRING of NaN and infinite FLOAT64 values. DuckDB writes a bare NaN (not JSON); Crucible
-  raises unsupported until recorded (expected values are guesses the recording replaces).
+description: TO_JSON_STRING of NaN and infinite FLOAT64 values. DuckDB writes a bare
+  NaN (not JSON); Crucible raises unsupported until recorded (expected values are
+  guesses the recording replaces).
 tags:
 - phase4
 - json
-- known-divergence
-query: SELECT TO_JSON_STRING([CAST('nan' AS FLOAT64), CAST('inf' AS FLOAT64), CAST('-inf' AS FLOAT64)])
-  AS v
+query: SELECT TO_JSON_STRING([CAST('nan' AS FLOAT64), CAST('inf' AS FLOAT64), CAST('-inf'
+  AS FLOAT64)]) AS v
 ordered: false
 expected:
   columns:
@@ -13,5 +13,5 @@ expected:
     type: STRING
   rows:
   - - '["NaN","Infinity","-Infinity"]'
-verified: false
-recorded_at: null
+verified: true
+recorded_at: '2026-10-15T14:53:49Z'

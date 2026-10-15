@@ -11,6 +11,7 @@
         "projectId": "<project>",
         "datasetId": "<dataset>"
       },
+      "useQueryCache": false,
       "jobCreationMode": "JOB_CREATION_OPTIONAL"
     }
   },

@@ -1,0 +1,57 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/datasets/<dataset>/tables/partitioned_range",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#table",
+    "etag": "<etag>",
+    "id": "<project>:<dataset>.partitioned_range",
+    "selfLink": "<self-link>",
+    "tableReference": {
+      "projectId": "<project>",
+      "datasetId": "<dataset>",
+      "tableId": "partitioned_range"
+    },
+    "schema": {
+      "fields": [
+        {
+          "name": "n",
+          "type": "INTEGER"
+        }
+      ]
+    },
+    "numBytes": "8",
+    "numLongTermBytes": "0",
+    "numRows": "1",
+    "creationTime": "<time>",
+    "expirationTime": "<time>",
+    "lastModifiedTime": "<time>",
+    "type": "TABLE",
+    "location": "<location>",
+    "rangePartitioning": {
+      "field": "n",
+      "range": {
+        "start": "0",
+        "end": "100",
+        "interval": "10"
+      }
+    },
+    "numTotalLogicalBytes": "8",
+    "numActiveLogicalBytes": "8",
+    "numLongTermLogicalBytes": "0",
+    "partitionDefinition": {
+      "partitionedColumn": [
+        {
+          "field": "n"
+        }
+      ]
+    }
+  }
+}

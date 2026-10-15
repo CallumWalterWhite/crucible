@@ -1,0 +1,91 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/queries/<job-14>",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#getQueryResultsResponse",
+    "etag": "<etag>",
+    "schema": {
+      "fields": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "b",
+          "type": "BOOLEAN",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "ts",
+          "type": "TIMESTAMP",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "d",
+          "type": "DATE",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "n",
+          "type": "NUMERIC",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "f",
+          "type": "FLOAT",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "s",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        }
+      ]
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-14>",
+      "location": "<location>"
+    },
+    "totalRows": "1",
+    "rows": [
+      {
+        "f": [
+          {
+            "v": "1"
+          },
+          {
+            "v": "true"
+          },
+          {
+            "v": "1.704164645E9"
+          },
+          {
+            "v": "2024-01-02"
+          },
+          {
+            "v": "1.5"
+          },
+          {
+            "v": "1.5"
+          },
+          {
+            "v": "x"
+          }
+        ]
+      }
+    ],
+    "totalBytesProcessed": "52",
+    "jobComplete": true,
+    "cacheHit": false
+  }
+}

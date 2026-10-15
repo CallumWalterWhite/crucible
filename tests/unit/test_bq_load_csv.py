@@ -1,14 +1,15 @@
-"""CSV load parsing against the recorded BigQuery load fixtures (server/bigquery/load.py).
+"""CSV load parsing (server/bigquery/load.py) against the recorded BigQuery load fixtures.
 
-The CSV strings below are copied from `git show 941942f:src/crucible/corpus/record_api.py`
-(LOAD_CASES and LOAD_SCHEMA). Each expected outcome is read from the fixture that BigQuery answered
-with, not written from the parser's output.
+The data-driven test reads every load case by name from tests/fixtures/bigquery_api: the CSV is the
+upload's request body, the schema and skip count are the load job's configuration, and the outcome
+is the job's recorded errors (LoadError) or the query results of the loaded table. The edge tests
+below use inline CSV for the rules the fixtures do not single out.
 """
 
 from __future__ import annotations
 
 import json
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -16,11 +17,12 @@ from typing import Any
 import pytest
 
 from crucible.engine import CrucibleUnsupportedError
+from crucible.server.bigquery.encoding import encode_value, warehouse_type_from_field
 from crucible.server.bigquery.load import LoadError, parse_csv
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "bigquery_api"
 
-# 941942f LOAD_SCHEMA
+# The load schema every inline case uses: the recorded baseline schema, in order.
 SCHEMA: list[dict[str, str]] = [
     {"name": "id", "type": "INTEGER"},
     {"name": "b", "type": "BOOLEAN"},
@@ -30,173 +32,118 @@ SCHEMA: list[dict[str, str]] = [
     {"name": "f", "type": "FLOAT"},
     {"name": "s", "type": "STRING"},
 ]
-# 941942f _HEADER
 HEADER = "id,b,ts,d,n,f,s\n"
-# 941942f LOAD_CASES, verbatim
-BASELINE = (
-    HEADER
-    + '1,true,2024-01-02 03:04:05,2024-01-02,1.5,1.5,"quoted, with comma"\n'
-    + "2,false,2024-01-02 03:04:05.123456,2024-01-02,-0.000000001,-1.5,plain\n"
-)
-EMPTY_FIELDS = HEADER + '1,,,,,,\n2,true,2024-01-02,2024-01-02,1,1,""\n'
-BOOL_T = HEADER + "1,T,2024-01-02,2024-01-02,1,1,x\n"
-BOOL_1 = HEADER + "1,1,2024-01-02,2024-01-02,1,1,x\n"
-BOOL_YES = HEADER + "1,yes,2024-01-02,2024-01-02,1,1,x\n"
-BOOL_MIXED_CASE = HEADER + "1,False,2024-01-02,2024-01-02,1,1,x\n"
-TS_T_Z = HEADER + "1,true,2024-01-02T03:04:05Z,2024-01-02,1,1,x\n"
-TS_UTC_SUFFIX = HEADER + "1,true,2024-01-02 03:04:05.123456 UTC,2024-01-02,1,1,x\n"
-TS_OFFSET = HEADER + "1,true,2024-01-02 03:04:05+01:00,2024-01-02,1,1,x\n"
-TS_EPOCH = HEADER + "1,true,1704164645,2024-01-02,1,1,x\n"
-DATE_ONE_DIGIT = HEADER + "1,true,2024-01-02,2024-1-2,1,1,x\n"
-NUMERIC_EXPONENT = HEADER + "1,true,2024-01-02,2024-01-02,1e3,1,x\n"
-FLOAT_INF_NAN = (
-    HEADER + "1,true,2024-01-02,2024-01-02,1,-inf,x\n2,true,2024-01-02,2024-01-02,1,NaN,y\n"
-)
-BAD_VALUE = HEADER + "1,maybe,2024-01-02,2024-01-02,1,1,x\n"
+GOOD_ROW = "1,true,2024-01-02 03:04:05,2024-01-02,1,1,x\n"
+VALUES = {
+    "id": "1",
+    "b": "true",
+    "ts": "2024-01-02 03:04:05",
+    "d": "2024-01-02",
+    "n": "1",
+    "f": "1",
+    "s": "x",
+}
 
 
-def fixture(name: str) -> dict[str, Any]:
-    body: dict[str, Any] = json.loads((FIXTURES / name).read_text(encoding="utf-8"))
+def fixture(path: Path) -> dict[str, Any]:
+    body: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
     return body
 
 
-def recorded_errors(jobs_get: str) -> list[str]:
-    """The messages BigQuery returned for a failed load job, summary first."""
-    status = fixture(jobs_get)["body"]["status"]
-    return [error["message"] for error in status["errors"]]
+def case_fixture(case: str, kind: str) -> dict[str, Any]:
+    """The recorded `kind` (upload, jobs_get, query_results) of one load case, found by name."""
+    [path] = FIXTURES.glob(f"*_load_{case}_{kind}.json")
+    return fixture(path)
 
 
-def wire_value(value: str | None, kind: str) -> Any:
-    """A query-results cell as a Python value (the REST wire format is all strings)."""
-    if value is None:
-        return None
-    if kind == "INTEGER":
-        return int(value)
-    if kind == "BOOLEAN":
-        return value == "true"
-    if kind == "TIMESTAMP":  # epoch seconds, as a decimal string in exponent form
-        return datetime(1970, 1, 1, tzinfo=UTC) + timedelta(
-            microseconds=int(Decimal(value) * 10**6)
-        )
-    if kind == "DATE":
-        return date.fromisoformat(value)
-    if kind == "NUMERIC":
-        return Decimal(value)
-    if kind == "FLOAT":
-        return float(value)
-    return value
+def load_case_names() -> list[str]:
+    return sorted(
+        {
+            path.name.split("_load_", 1)[1].removesuffix("_upload.json")
+            for path in FIXTURES.glob("*_load_*_upload.json")
+        }
+    )
 
 
-def recorded_rows(query_results: str) -> list[tuple[Any, ...]]:
-    body = fixture(query_results)["body"]
-    kinds = [field["type"] for field in body["schema"]["fields"]]
-    return [
-        tuple(wire_value(cell["v"], kind) for cell, kind in zip(row["f"], kinds, strict=True))
-        for row in body.get("rows", [])
+LOAD_CASES = load_case_names()
+
+
+def data_row(column: str, text: str) -> str:
+    """A data line: the GOOD_ROW values with one column's text replaced."""
+    return ",".join(dict(VALUES, **{column: text}).values()) + "\n"
+
+
+def row_with(column: str, text: str) -> bytes:
+    return (HEADER + data_row(column, text)).encode()
+
+
+# --- every recorded load case ---------------------------------------------------------------------
+def test_the_recording_has_at_least_27_load_cases():
+    assert len(LOAD_CASES) >= 27
+
+
+@pytest.mark.parametrize("case", LOAD_CASES)
+def test_a_recorded_load_case_parses_as_the_recording_shows(case):
+    csv_text = case_fixture(case, "upload")["request"]["body"]
+    job = case_fixture(case, "jobs_get")["body"]
+    load = job["configuration"]["load"]
+    fields = load["schema"]["fields"]
+    skip = load.get("skipLeadingRows", 0)
+    errors = job["status"].get("errors")
+    if errors:
+        with pytest.raises(LoadError) as info:
+            parse_csv(csv_text.encode(), fields, skip)
+        assert info.value.messages == [error["message"] for error in errors]
+        return
+    rows = parse_csv(csv_text.encode(), fields, skip)
+    types = [warehouse_type_from_field(field) for field in fields]
+    encoded = [
+        [encode_value(value, kind) for value, kind in zip(row, types, strict=True)] for row in rows
     ]
+    recorded = case_fixture(case, "query_results")["body"]["rows"]
+    assert encoded == [[cell["v"] for cell in row["f"]] for row in recorded]
 
 
-# --- recorded outcomes: rows ---------------------------------------------------------------------
-def test_baseline_loads_the_recorded_rows():
-    # 941942f LOAD_CASES["baseline"]; fixtures 25 (query results of the loaded table).
-    assert parse_csv(BASELINE.encode(), SCHEMA, 1) == recorded_rows(
-        "25_load_baseline_query_results.json"
-    )
-
-
+# --- spellings no fixture records: unsupported, not guessed ---------------------------------------
 @pytest.mark.parametrize(
-    ("csv_text", "query_results"),
+    ("column", "text", "kind"),
     [
-        (TS_T_Z, "50_load_ts_t_z_query_results.json"),
-        (TS_UTC_SUFFIX, "55_load_ts_utc_suffix_query_results.json"),
-        (TS_OFFSET, "60_load_ts_offset_query_results.json"),
-        (TS_EPOCH, "65_load_ts_epoch_query_results.json"),
+        ("b", "f", "BOOL"),
+        ("b", "no", "BOOL"),
+        ("b", "0", "BOOL"),
+        ("b", "FALSE", "BOOL"),
+        ("b", "Yes", "BOOL"),
+        ("b", "t", "BOOL"),
+        ("f", "inf", "FLOAT64"),
+        ("f", "nan", "FLOAT64"),
+        ("f", "Infinity", "FLOAT64"),
+        ("f", "+1.5", "FLOAT64"),
+        ("f", "1e3", "FLOAT64"),
+        ("n", "-1e3", "NUMERIC"),
+        ("n", "1E3", "NUMERIC"),
+        ("d", "2024-01-2", "DATE"),
+        ("ts", "2024-01-02 03:04:05.12", "TIMESTAMP"),
+        ("ts", "2024-01-02T03:04:05.123", "TIMESTAMP"),
+        ("f", '"1.5"', "FLOAT64"),
+        ("d", '"2024-01-02"', "DATE"),
+        ("id", '""', "INT64"),
     ],
 )
-def test_timestamp_spellings_load_the_recorded_value(csv_text, query_results):
-    assert parse_csv(csv_text.encode(), SCHEMA, 1) == recorded_rows(query_results)
+def test_an_unrecorded_spelling_is_unsupported(column, text, kind):
+    with pytest.raises(CrucibleUnsupportedError, match=f"for {kind} column {column}"):
+        parse_csv(row_with(column, text), SCHEMA, 1)
 
 
-def test_offset_is_converted_to_utc():
-    # 03:04:05+01:00 is 02:04:05 UTC (fixture 60), not 03:04:05 UTC.
-    [row] = parse_csv(TS_OFFSET.encode(), SCHEMA, 1)
-    assert row[2] == datetime(2024, 1, 2, 2, 4, 5, tzinfo=UTC)
-
-
-def test_a_negative_offset_is_added():
-    [row] = parse_csv(
-        (HEADER + "1,true,2024-01-02 03:04:05-05:00,2024-01-02,1,1,x\n").encode(), SCHEMA, 1
-    )
-    assert row[2] == datetime(2024, 1, 2, 8, 4, 5, tzinfo=UTC)
-
-
-# --- recorded outcomes: LoadError messages -------------------------------------------------------
-@pytest.mark.parametrize(
-    ("csv_text", "jobs_get"),
-    [
-        (EMPTY_FIELDS, "28_load_empty_fields_jobs_get.json"),
-        (DATE_ONE_DIGIT, "68_load_date_one_digit_jobs_get.json"),
-        (NUMERIC_EXPONENT, "72_load_numeric_exponent_jobs_get.json"),
-        (FLOAT_INF_NAN, "76_load_float_inf_nan_jobs_get.json"),
-        (BAD_VALUE, "80_load_bad_value_jobs_get.json"),
-    ],
-)
-def test_rejected_loads_give_the_recorded_messages(csv_text, jobs_get):
-    with pytest.raises(LoadError) as info:
-        parse_csv(csv_text.encode(), SCHEMA, 1)
-    assert info.value.messages == recorded_errors(jobs_get)
-
-
-def test_the_summary_counts_every_data_row_and_the_rejected_ones():
-    # 28: two data rows, one rejected (line 3, byte offset 24). 76: two rejected rows.
-    with pytest.raises(LoadError) as info:
-        parse_csv(EMPTY_FIELDS.encode(), SCHEMA, 1)
-    assert info.value.messages[0].endswith("Rows: 2; errors: 1; max bad: 0; error percent: 0")
-    assert "line_number: 3 byte_offset_to_start_of_line: 24" in info.value.messages[1]
-
-
-# --- recorded outcomes: unsupported (accepted by BigQuery, value not recorded) -------------------
-@pytest.mark.parametrize(
-    ("csv_text", "value", "jobs_get"),
-    [
-        (BOOL_T, "T", "32_load_bool_t_jobs_get.json"),
-        (BOOL_1, "1", "36_load_bool_1_jobs_get.json"),
-        (BOOL_YES, "yes", "40_load_bool_yes_jobs_get.json"),
-        (BOOL_MIXED_CASE, "False", "44_load_bool_mixed_case_jobs_get.json"),
-    ],
-)
-def test_accepted_boolean_spellings_are_unsupported(csv_text, value, jobs_get):
-    # BigQuery accepted the spelling and only rejected the date-only timestamp after it (fixtures
-    # 32-44). The loaded boolean is not recorded, so the load is unsupported, not rejected.
-    assert any('column_name: "ts"' in message for message in recorded_errors(jobs_get))
-    with pytest.raises(CrucibleUnsupportedError, match=f"CSV value '{value}' for BOOL column b"):
-        parse_csv(csv_text.encode(), SCHEMA, 1)
-
-
-# --- rules: tokenizing ---------------------------------------------------------------------------
+# --- rules: the file ------------------------------------------------------------------------------
 def test_a_byte_order_mark_is_unsupported():
     with pytest.raises(CrucibleUnsupportedError, match="byte order mark"):
-        parse_csv(b"\xef\xbb\xbf" + BASELINE.encode(), SCHEMA, 1)
+        parse_csv(b"\xef\xbb\xbf" + HEADER.encode() + GOOD_ROW.encode(), SCHEMA, 1)
 
 
-def test_crlf_is_unsupported():
+def test_a_lone_carriage_return_is_unsupported():
+    csv_text = HEADER + GOOD_ROW + "2,true,2024-01-02 03:04:05,2024-01-02,1,1,y\r"
     with pytest.raises(CrucibleUnsupportedError, match="carriage return"):
-        parse_csv(BASELINE.replace("\n", "\r\n").encode(), SCHEMA, 1)
-
-
-def test_a_quote_inside_a_quoted_field_is_unsupported():
-    with pytest.raises(CrucibleUnsupportedError, match="escaped quote"):
-        parse_csv((HEADER + '1,true,2024-01-02,2024-01-02,1,1,"a""b"\n').encode(), SCHEMA, 1)
-
-
-def test_a_quote_inside_an_unquoted_field_is_unsupported():
-    with pytest.raises(CrucibleUnsupportedError, match="unquoted field"):
-        parse_csv((HEADER + '1,true,2024-01-02,2024-01-02,1,1,a"b\n').encode(), SCHEMA, 1)
-
-
-def test_text_after_a_closing_quote_is_unsupported():
-    with pytest.raises(CrucibleUnsupportedError, match="after a closing quote"):
-        parse_csv((HEADER + '1,true,2024-01-02,2024-01-02,1,1,"a"b\n').encode(), SCHEMA, 1)
+        parse_csv(csv_text.encode(), SCHEMA, 1)
 
 
 def test_a_blank_line_is_unsupported():
@@ -212,26 +159,45 @@ def test_a_wrong_column_count_is_unsupported():
 
 
 def test_a_file_without_a_final_newline_loads():
-    assert parse_csv((HEADER + "1,true,2024-01-02 03:04:05,2024-01-02,1,1,x").encode(), SCHEMA, 1)
+    assert parse_csv((HEADER + GOOD_ROW.rstrip("\n")).encode(), SCHEMA, 1)
 
 
 def test_skipping_leading_rows_is_by_count():
-    rows = parse_csv(("junk\n" + BASELINE).encode(), SCHEMA, 2)
-    assert len(rows) == 2
+    assert len(parse_csv(("junk\n" + HEADER + GOOD_ROW).encode(), SCHEMA, 2)) == 1
 
 
 def test_the_header_as_data_is_unsupported():
     # skip_leading_rows=0 reads the header as a row; "id" is not an INTEGER.
     with pytest.raises(CrucibleUnsupportedError, match="CSV value 'id' for INT64 column id"):
-        parse_csv(BASELINE.encode(), SCHEMA, 0)
+        parse_csv((HEADER + GOOD_ROW).encode(), SCHEMA, 0)
 
 
 def test_a_negative_skip_is_an_error():
     with pytest.raises(ValueError, match="skip_leading_rows"):
-        parse_csv(BASELINE.encode(), SCHEMA, -1)
+        parse_csv((HEADER + GOOD_ROW).encode(), SCHEMA, -1)
 
 
-# --- rules: values -------------------------------------------------------------------------------
+def test_a_quote_inside_an_unquoted_field_is_unsupported():
+    with pytest.raises(CrucibleUnsupportedError, match="unquoted field"):
+        parse_csv((HEADER + '1,true,2024-01-02,2024-01-02,1,1,a"b\n').encode(), SCHEMA, 1)
+
+
+def test_text_after_a_closing_quote_is_unsupported():
+    with pytest.raises(CrucibleUnsupportedError, match="after a closing quote"):
+        parse_csv((HEADER + '1,true,2024-01-02,2024-01-02,1,1,"a"b\n').encode(), SCHEMA, 1)
+
+
+def test_an_unclosed_quote_is_unsupported():
+    with pytest.raises(CrucibleUnsupportedError, match="without a close"):
+        parse_csv((HEADER + '1,true,2024-01-02,2024-01-02,1,1,"a\n').encode(), SCHEMA, 1)
+
+
+def test_a_field_that_is_not_utf_8_is_unsupported():
+    with pytest.raises(CrucibleUnsupportedError, match="not UTF-8"):
+        parse_csv(HEADER.encode() + b"1,true,2024-01-02,2024-01-02,1,1,\xff\n", SCHEMA, 1)
+
+
+# --- rules: values --------------------------------------------------------------------------------
 def test_an_unquoted_empty_field_is_null_for_every_type():
     schema = [
         {"name": "i", "type": "INTEGER"},
@@ -245,102 +211,77 @@ def test_an_unquoted_empty_field_is_null_for_every_type():
     assert parse_csv(b"i,b,ts,d,n,f,s\n,,,,,,\n", schema, 1) == [(None,) * 7]
 
 
-def test_a_quoted_empty_field_is_unsupported():
-    # A row with no rejected column reaches the quoted empty value, which is unsupported.
-    with pytest.raises(CrucibleUnsupportedError, match="quoted empty value for STRING column s"):
-        parse_csv((HEADER + '1,true,2024-01-02 03:04:05,2024-01-02,1,1,""\n').encode(), SCHEMA, 1)
-
-
-def test_a_quoted_value_for_a_non_string_column_is_unsupported():
-    with pytest.raises(CrucibleUnsupportedError, match="quoted value '1' for INT64 column id"):
-        parse_csv((HEADER + '"1",true,2024-01-02 03:04:05,2024-01-02,1,1,x\n').encode(), SCHEMA, 1)
-
-
-def test_an_integer_out_of_range_is_unsupported():
-    with pytest.raises(CrucibleUnsupportedError, match="out of INT64 range"):
-        parse_csv(
-            (HEADER + "9223372036854775808,true,2024-01-02 03:04:05,2024-01-02,1,1,x\n").encode(),
-            SCHEMA,
-            1,
-        )
-
-
-def test_the_largest_integer_loads():
+def test_offset_is_converted_to_utc():
+    # 03:04:05+01:00 is 02:04:05 UTC.
     [row] = parse_csv(
-        (HEADER + "9223372036854775807,true,2024-01-02 03:04:05,2024-01-02,1,1,x\n").encode(),
-        SCHEMA,
-        1,
+        (HEADER + "1,true,2024-01-02 03:04:05+01:00,2024-01-02,1,1,x\n").encode(), SCHEMA, 1
     )
-    assert row[0] == 2**63 - 1
+    assert row[2] == datetime(2024, 1, 2, 2, 4, 5, tzinfo=UTC)
 
 
-@pytest.mark.parametrize("numeric", ["1.0000000001", "1e3", "+1", "1."])
-def test_numeric_beyond_the_confirmed_spellings_is_unsupported(numeric):
-    with pytest.raises(CrucibleUnsupportedError, match="CSV value"):
-        parse_csv(
-            (HEADER + f"1,true,2024-01-02 03:04:05,2024-01-02,{numeric},1,x\n").encode(), SCHEMA, 1
-        )
-
-
-def test_numeric_with_nine_fraction_digits_loads_exactly():
+def test_a_negative_offset_is_added():
     [row] = parse_csv(
-        (HEADER + "1,true,2024-01-02 03:04:05,2024-01-02,-0.000000001,1,x\n").encode(), SCHEMA, 1
+        (HEADER + "1,true,2024-01-02 03:04:05-05:00,2024-01-02,1,1,x\n").encode(), SCHEMA, 1
     )
-    assert row[4] == Decimal("-0.000000001")
-
-
-@pytest.mark.parametrize("value", ["inf", "NaN", "1e3", "+1.5"])
-def test_float_spellings_beyond_the_confirmed_are_unsupported(value):
-    with pytest.raises(CrucibleUnsupportedError, match="CSV value"):
-        parse_csv(
-            (HEADER + f"1,true,2024-01-02 03:04:05,2024-01-02,1,{value},x\n").encode(), SCHEMA, 1
-        )
-
-
-def test_an_invalid_calendar_date_is_unsupported():
-    with pytest.raises(CrucibleUnsupportedError, match="CSV value '2024-02-30' for DATE column d"):
-        parse_csv((HEADER + "1,true,2024-01-02 03:04:05,2024-02-30,1,1,x\n").encode(), SCHEMA, 1)
-
-
-def test_a_timestamp_with_six_fraction_digits_only():
-    with pytest.raises(CrucibleUnsupportedError, match="for TIMESTAMP column ts"):
-        parse_csv(
-            (HEADER + "1,true,2024-01-02 03:04:05.123,2024-01-02,1,1,x\n").encode(), SCHEMA, 1
-        )
-
-
-def test_the_t_separator_needs_the_z_suffix():
-    with pytest.raises(CrucibleUnsupportedError, match="for TIMESTAMP column ts"):
-        parse_csv((HEADER + "1,true,2024-01-02T03:04:05,2024-01-02,1,1,x\n").encode(), SCHEMA, 1)
+    assert row[2] == datetime(2024, 1, 2, 8, 4, 5, tzinfo=UTC)
 
 
 def test_epoch_seconds_outside_the_datetime_range_are_unsupported():
     with pytest.raises(CrucibleUnsupportedError, match="for TIMESTAMP column ts"):
-        parse_csv(
-            (HEADER + "1,true,99999999999999999,2024-01-02,1,1,x\n").encode(),
-            SCHEMA,
-            1,
-        )
+        parse_csv(row_with("ts", "99999999999999999"), SCHEMA, 1)
 
 
-def test_a_rejected_boolean_stops_the_row_before_a_later_unsupported_value():
-    # 'maybe' is rejected in column b, so the bad date in column d is never read: LoadError.
+def test_an_integer_out_of_range_is_unsupported():
+    with pytest.raises(CrucibleUnsupportedError, match="out of INT64 range"):
+        parse_csv(row_with("id", "9223372036854775808"), SCHEMA, 1)
+
+
+def test_the_largest_integer_loads():
+    [row] = parse_csv(row_with("id", "9223372036854775807"), SCHEMA, 1)
+    assert row[0] == 2**63 - 1
+
+
+def test_numeric_with_nine_fraction_digits_loads_exactly():
+    [row] = parse_csv(row_with("n", "-0.000000001"), SCHEMA, 1)
+    assert row[4] == Decimal("-0.000000001")
+
+
+# --- rules: rejections (LoadError) ----------------------------------------------------------------
+def test_the_summary_counts_every_data_row_and_the_rejected_ones():
+    bad = "2,maybe,2024-01-02 03:04:05,2024-01-02,1,1,x\n"
+    with pytest.raises(LoadError) as info:
+        parse_csv((HEADER + GOOD_ROW + bad + GOOD_ROW).encode(), SCHEMA, 1)
+    assert info.value.messages[0].endswith("Rows: 3; errors: 1; max bad: 0; error percent: 0")
+    offset = len((HEADER + GOOD_ROW).encode())
+    assert f"line_number: 3 byte_offset_to_start_of_line: {offset} " in info.value.messages[1]
+    assert (
+        'column_index: 1 column_name: "b" column_type: BOOL value: "maybe"'
+        in (info.value.messages[1])
+    )
+
+
+def test_the_first_failing_column_wins_and_stops_the_row():
+    # 'maybe' is rejected in column b, so the bad date in column d is never read.
     with pytest.raises(LoadError) as info:
         parse_csv((HEADER + "1,maybe,2024-01-02 03:04:05,2024-02-30,1,1,x\n").encode(), SCHEMA, 1)
     assert 'column_index: 1 column_name: "b"' in info.value.messages[1]
 
 
+def test_a_rejected_value_stops_the_row_before_a_later_unsupported_value():
+    # 'maybe' is rejected in column b, so the unrecorded FLOAT64 'inf' in column f is never read.
+    with pytest.raises(LoadError) as info:
+        parse_csv((HEADER + "1,maybe,2024-01-02 03:04:05,2024-01-02,1,inf,x\n").encode(), SCHEMA, 1)
+    assert 'column_index: 1 column_name: "b"' in info.value.messages[1]
+
+
 def test_an_unsupported_value_in_any_row_beats_a_rejection_in_another():
-    # Row 2 is rejected ('maybe'); row 3 has an unsupported BOOL 'T'. The load is unsupported.
-    csv_text = (
-        HEADER
-        + "1,maybe,2024-01-02 03:04:05,2024-01-02,1,1,x\n2,T,2024-01-02 03:04:05,2024-01-02,1,1,x\n"
-    )
-    with pytest.raises(CrucibleUnsupportedError, match="CSV value 'T' for BOOL column b"):
+    # Row 2 is rejected ('maybe'); row 3 has the unrecorded BOOL 'f'. The load is unsupported.
+    csv_text = HEADER + data_row("b", "maybe") + data_row("b", "f")
+    with pytest.raises(CrucibleUnsupportedError, match="CSV value 'f' for BOOL column b"):
         parse_csv(csv_text.encode(), SCHEMA, 1)
 
 
-# --- rules: schema -------------------------------------------------------------------------------
+# --- rules: schema --------------------------------------------------------------------------------
 def test_a_repeated_field_is_unsupported():
     with pytest.raises(CrucibleUnsupportedError, match="CSV load into a ARRAY<STRING> column"):
         parse_csv(b"s\nx\n", [{"name": "s", "type": "STRING", "mode": "REPEATED"}], 1)

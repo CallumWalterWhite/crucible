@@ -1,0 +1,111 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/datasets/<dataset>/tables/all_types/data",
+    "params": {
+      "maxResults": "1",
+      "pageToken": "<page-token-4>"
+    },
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#tableDataList",
+    "etag": "<etag>",
+    "totalRows": "3",
+    "pageToken": "<page-token-5>",
+    "rows": [
+      {
+        "f": [
+          {
+            "v": "1"
+          },
+          {
+            "v": "42"
+          },
+          {
+            "v": "1.5"
+          },
+          {
+            "v": "123.456000001"
+          },
+          {
+            "v": "true"
+          },
+          {
+            "v": "x"
+          },
+          {
+            "v": "Af8="
+          },
+          {
+            "v": "2024-02-29"
+          },
+          {
+            "v": "2024-01-02T03:04:05.123456"
+          },
+          {
+            "v": "04:05:06.500000"
+          },
+          {
+            "v": "1704164645.123456"
+          },
+          {
+            "v": "{\"a\":[1,null]}"
+          },
+          {
+            "v": [
+              {
+                "v": "1"
+              },
+              {
+                "v": "2"
+              }
+            ]
+          },
+          {
+            "v": {
+              "f": [
+                {
+                  "v": "1"
+                },
+                {
+                  "v": [
+                    {
+                      "v": "a"
+                    },
+                    {
+                      "v": "b"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "v": [
+              {
+                "v": {
+                  "f": [
+                    {
+                      "v": "1"
+                    },
+                    {
+                      "v": "v"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "v": "0-0 1 0:0:0"
+          }
+        ]
+      }
+    ]
+  }
+}
