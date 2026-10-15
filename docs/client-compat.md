@@ -685,3 +685,22 @@ Snowflake `UNRESOLVED` items:
 - OCSP behaviour over `protocol=http`.
 
 Not audited: the vendored urllib3 copy and the async variants of the connector.
+
+## Resolved by recorded responses
+
+The four items left `UNRESOLVED` from client source alone were settled by real BigQuery responses
+recorded with `crucible corpus record-api` (fixtures in `tests/fixtures/bigquery_api/`, redacted).
+
+| Question | Answer | Fixture |
+|---|---|---|
+| Default `jobCreationMode` when the client sends none | A job is created: the `jobs.query` response has a `jobReference` (`jobId`, `location`) and a `queryId`. | `11_jobs_query.json` |
+| `jobs.query` with `JOB_CREATION_OPTIONAL` | No `jobReference` in the response; `queryId`, `jobComplete`, `totalRows`, `schema` and `rows` are present. | `12_jobs_query_job_creation_optional.json` |
+| `getQueryResults` on a failed job | HTTP 400 with the standard error body: `reason: invalidQuery`, `location: q`, `locationType: parameter`, `status: INVALID_ARGUMENT`, and the job's message (`division by zero: 1 / 0`). | `85_get_query_results_runtime_error.json` |
+| 409 bodies | `reason: duplicate`, `status: ALREADY_EXISTS`, message `Already Exists: Job <project>:<location>.<job>` (jobs.insert) or `Already Exists: Dataset <project>:<dataset>` (datasets.insert). | `88_jobs_insert_conflict.json`, `89_datasets_insert_conflict.json` |
+| CSV load spellings (TIMESTAMP) | Accepted: `2024-01-02T03:04:05Z`, `2024-01-02 03:04:05.123456 UTC`, `2024-01-02 03:04:05+01:00`, and integer epoch seconds `1704164645`. Rejected: a date-only value `2024-01-02` ("Could not parse '2024-01-02' as a timestamp. Required format is YYYY-MM-DD HH:MM[:SS[.SSSSSS]] or YYYY/MM/DD HH:MM[:SS[.SSSSSS]]"), although `CAST('2024-01-02' AS TIMESTAMP)` accepts it. | `46`–`65_load_ts_*`, `26_load_empty_fields_*` |
+| CSV load spellings (BOOL, DATE, NUMERIC, FLOAT64, empty fields) | `UNRESOLVED`: the first recording's cases for these also used a date-only TIMESTAMP, which failed every row. The cases are corrected; a re-run settles them. Until then Crucible raises unsupported for any load spelling not confirmed here. | — |
+
+Wire details the fixtures show: REST schemas use legacy type names (`INTEGER`, `FLOAT`, `BOOLEAN`,
+`RECORD`) with `mode` `NULLABLE`/`REPEATED`; row values are strings in `f`/`v` cells; TIMESTAMP is
+float seconds in scientific notation (`"1.704164645E9"`) unless `formatOptions.useInt64Timestamp`
+is set.

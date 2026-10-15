@@ -67,6 +67,7 @@ class Redactor:
     project: str
     dataset: str
     names: dict[str, str] = field(default_factory=dict[str, str])
+    words: dict[str, str] = field(default_factory=dict[str, str])
 
     def __post_init__(self) -> None:
         self.names[self.project] = "<project>"
@@ -86,6 +87,8 @@ class Redactor:
                 if isinstance(item, str):
                     if key == "jobId":
                         self.add(item, "job")
+                    elif key == "location" and "reason" not in obj:
+                        self.add_word(item, "<location>")
                     elif key in ("pageToken", "nextPageToken"):
                         self.add(item, "page-token")
                     elif key == "datasetId" and item.startswith("_"):
@@ -98,9 +101,17 @@ class Redactor:
             for item in obj:  # pyright: ignore[reportUnknownVariableType]
                 self.register(item)
 
+    def add_word(self, value: str, placeholder: str) -> None:
+        """A short value (a location such as US) replaced only as a whole word in text."""
+        self.words[value] = placeholder
+
     def text(self, value: str) -> str:
         for original in sorted(self.names, key=len, reverse=True):
             value = value.replace(original, self.names[original])
+        for word, placeholder in self.words.items():
+            value = re.sub(
+                rf"(?<![A-Za-z0-9_-]){re.escape(word)}(?![A-Za-z0-9_-])", placeholder, value
+            )
         value = _UPLOAD_ID.sub("upload_id=<upload-id>", value)
         return _EMAIL.sub("<email>", value)
 
@@ -512,27 +523,49 @@ LOAD_SCHEMA: list[dict[str, str]] = [
 ]
 
 # CSV load rules can differ from CAST rules: boolean spellings, timestamp forms, empty fields,
-# quoting. A baseline file, then one single-row file per uncertain spelling, so a rejected
-# spelling cannot hide what the others do.
+# quoting. A baseline file, then one single-row file per uncertain spelling. Every other field in a
+# case holds a value the baseline proved loads (the first recording used a date-only TIMESTAMP in
+# the other fields, which BigQuery rejects, so those cases measured nothing else).
 _HEADER = "id,b,ts,d,n,f,s\n"
+_TS = "2024-01-02 03:04:05"
+
+
+def _row(**changes: str) -> str:
+    values = {
+        "id": "1",
+        "b": "true",
+        "ts": _TS,
+        "d": "2024-01-02",
+        "n": "1.5",
+        "f": "1.5",
+        "s": "x",
+    }
+    values.update(changes)
+    return ",".join(values[k] for k in ("id", "b", "ts", "d", "n", "f", "s")) + "\n"
+
+
 LOAD_CASES: dict[str, str] = {
     "baseline": _HEADER
-    + '1,true,2024-01-02 03:04:05,2024-01-02,1.5,1.5,"quoted, with comma"\n'
-    + "2,false,2024-01-02 03:04:05.123456,2024-01-02,-0.000000001,-1.5,plain\n",
-    "empty_fields": _HEADER + '1,,,,,,\n2,true,2024-01-02,2024-01-02,1,1,""\n',
-    "bool_t": _HEADER + "1,T,2024-01-02,2024-01-02,1,1,x\n",
-    "bool_1": _HEADER + "1,1,2024-01-02,2024-01-02,1,1,x\n",
-    "bool_yes": _HEADER + "1,yes,2024-01-02,2024-01-02,1,1,x\n",
-    "bool_mixed_case": _HEADER + "1,False,2024-01-02,2024-01-02,1,1,x\n",
-    "ts_t_z": _HEADER + "1,true,2024-01-02T03:04:05Z,2024-01-02,1,1,x\n",
-    "ts_utc_suffix": _HEADER + "1,true,2024-01-02 03:04:05.123456 UTC,2024-01-02,1,1,x\n",
-    "ts_offset": _HEADER + "1,true,2024-01-02 03:04:05+01:00,2024-01-02,1,1,x\n",
-    "ts_epoch": _HEADER + "1,true,1704164645,2024-01-02,1,1,x\n",
-    "date_one_digit": _HEADER + "1,true,2024-01-02,2024-1-2,1,1,x\n",
-    "numeric_exponent": _HEADER + "1,true,2024-01-02,2024-01-02,1e3,1,x\n",
-    "float_inf_nan": _HEADER
-    + "1,true,2024-01-02,2024-01-02,1,-inf,x\n2,true,2024-01-02,2024-01-02,1,NaN,y\n",
-    "bad_value": _HEADER + "1,maybe,2024-01-02,2024-01-02,1,1,x\n",
+    + _row(s='"quoted, with comma"')
+    + _row(
+        id="2", b="false", ts="2024-01-02 03:04:05.123456", n="-0.000000001", f="-1.5", s="plain"
+    ),
+    "empty_fields": _HEADER + _row(b="", ts="", d="", n="", f="", s="") + _row(id="2", s='""'),
+    "bool_t": _HEADER + _row(b="T"),
+    "bool_1": _HEADER + _row(b="1"),
+    "bool_yes": _HEADER + _row(b="yes"),
+    "bool_mixed_case": _HEADER + _row(b="False"),
+    "ts_t_z": _HEADER + _row(ts="2024-01-02T03:04:05Z"),
+    "ts_utc_suffix": _HEADER + _row(ts="2024-01-02 03:04:05.123456 UTC"),
+    "ts_offset": _HEADER + _row(ts="2024-01-02 03:04:05+01:00"),
+    "ts_epoch": _HEADER + _row(ts="1704164645"),
+    "ts_date_only": _HEADER + _row(ts="2024-01-02"),
+    "ts_slashes": _HEADER + _row(ts="2024/01/02 03:04:05"),
+    "date_one_digit": _HEADER + _row(d="2024-1-2"),
+    "date_slashes": _HEADER + _row(d="2024/01/02"),
+    "numeric_exponent": _HEADER + _row(n="1e3"),
+    "float_inf_nan": _HEADER + _row(f="-inf") + _row(id="2", f="NaN"),
+    "bad_value": _HEADER + _row(b="maybe"),
 }
 
 

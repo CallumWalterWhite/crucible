@@ -328,3 +328,29 @@ def test_a_failing_dry_run_stops_before_anything_is_created(tmp_path: Path):
         Recorder(session, PROJECT, 1, tmp_path).run()
     assert len(session.calls) == 1  # only the free dry run
     assert list(tmp_path.iterdir()) == []
+
+
+def test_location_is_redacted_in_text_as_a_whole_word():
+    redactor = Redactor("p-1", "ds_1")
+    redactor.register({"jobReference": {"location": "US", "jobId": "j-1"}})
+    assert (
+        redactor.text("Already Exists: Job p-1:US.j-1")
+        == "Already Exists: Job <project>:<location>.<job-1>"
+    )
+    assert (
+        redactor.text("STATUS: was not found in location US")
+        == "STATUS: was not found in location <location>"
+    )
+
+
+def test_load_cases_change_one_field_each():
+    from crucible.corpus.record_api import LOAD_CASES
+
+    baseline = LOAD_CASES["baseline"].splitlines()[1].split(",")
+    for name, text in LOAD_CASES.items():
+        if name in ("baseline", "empty_fields", "float_inf_nan"):
+            continue
+        row = text.splitlines()[1].split(",")
+        assert sum(a != b for a, b in zip(row, baseline, strict=True)) <= 2, (
+            name
+        )  # field + quoted s
