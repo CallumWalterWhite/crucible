@@ -1,11 +1,15 @@
-description: A date-only string is read as midnight UTC. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, cast_string]
+description: A date-only string is read as midnight UTC. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions.
+  Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- cast_string
 query: SELECT CAST('2024-01-02' AS TIMESTAMP) AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: TIMESTAMP}
+  - name: v
+    type: TIMESTAMP
   rows:
-  - ['2024-01-02T00:00:00Z']
-verified: false
-recorded_at: null
+  - - '2024-01-02T00:00:00Z'
+verified: true
+recorded_at: '2026-10-15T11:13:42Z'

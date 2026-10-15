@@ -1,11 +1,16 @@
-description: A timestamp string with six fractional digits keeps microseconds. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, cast_string]
+description: A timestamp string with six fractional digits keeps microseconds. See
+  https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions.
+  Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- cast_string
 query: SELECT CAST('2024-01-02 03:04:05.123456' AS TIMESTAMP) AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: TIMESTAMP}
+  - name: v
+    type: TIMESTAMP
   rows:
-  - ['2024-01-02T03:04:05.123456Z']
-verified: false
-recorded_at: null
+  - - '2024-01-02T03:04:05.123456Z'
+verified: true
+recorded_at: '2026-10-15T11:13:44Z'

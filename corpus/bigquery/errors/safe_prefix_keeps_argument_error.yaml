@@ -1,8 +1,14 @@
-description: The SAFE. prefix does not suppress an error raised while evaluating its argument. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, errors]
+description: The SAFE. prefix does not suppress an error raised while evaluating its
+  argument. Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- errors
 query: SELECT SAFE.LOG(1 / 0) AS v
 ordered: false
 expected:
-  error: {kind: runtime, message_contains: division by zero}
-verified: false
-recorded_at: null
+  error:
+    kind: runtime
+    message: 'division by zero: 1 / 0'
+    message_contains: division by zero
+verified: true
+recorded_at: '2026-10-15T11:15:31Z'

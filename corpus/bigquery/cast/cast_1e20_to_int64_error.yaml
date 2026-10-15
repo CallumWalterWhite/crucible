@@ -10,6 +10,7 @@ ordered: false
 expected:
   error:
     kind: runtime
+    message: 'int64 out of range: 1e+20'
     message_contains: overflow
 verified: false
-recorded_at: null
+recorded_at: '2026-10-15T11:12:35Z'

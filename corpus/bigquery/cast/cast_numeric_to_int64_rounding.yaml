@@ -9,16 +9,7 @@ query: SELECT CAST(NUMERIC '2.5' AS INT64) AS a, CAST(NUMERIC '-2.5' AS INT64) A
   b, CAST(NUMERIC '1.4999999999' AS INT64) AS c
 ordered: false
 expected:
-  columns:
-  - name: a
-    type: INT64
-  - name: b
-    type: INT64
-  - name: c
-    type: INT64
-  rows:
-  - - 3
-    - -3
-    - 1
+  error:
+    message: 'Invalid NUMERIC literal: "1.4999999999" at [1:84]'
 verified: false
-recorded_at: null
+recorded_at: '2026-10-15T11:12:55Z'

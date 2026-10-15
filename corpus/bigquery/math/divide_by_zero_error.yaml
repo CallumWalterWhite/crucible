@@ -11,4 +11,4 @@ expected:
     message: 'division by zero: 1 / 0'
     message_contains: division by zero
 verified: true
-recorded_at: '2026-10-15T10:16:57Z'
+recorded_at: '2026-10-15T11:16:04Z'

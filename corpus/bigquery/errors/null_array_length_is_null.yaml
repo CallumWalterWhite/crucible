@@ -1,11 +1,15 @@
-description: ARRAY_LENGTH of a NULL array returns NULL inside the query. See https://cloud.google.com/bigquery/docs/reference/standard-sql/array_functions. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, errors]
+description: ARRAY_LENGTH of a NULL array returns NULL inside the query. See https://cloud.google.com/bigquery/docs/reference/standard-sql/array_functions.
+  Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- errors
 query: SELECT ARRAY_LENGTH(CAST(NULL AS ARRAY<INT64>)) AS n
 ordered: false
 expected:
   columns:
-  - {name: n, type: INT64}
+  - name: n
+    type: INT64
   rows:
-  - [null]
-verified: false
-recorded_at: null
+  - - null
+verified: true
+recorded_at: '2026-10-15T11:15:17Z'

@@ -1,11 +1,16 @@
-description: REGEXP_EXTRACT returns an empty STRING when the pattern matches the empty string. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, regexp, unconfirmed]
+description: REGEXP_EXTRACT returns an empty STRING when the pattern matches the empty
+  string. Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- regexp
+- unconfirmed
 query: SELECT REGEXP_EXTRACT('abc', 'x*') AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: STRING}
+  - name: v
+    type: STRING
   rows:
-  - ['']
-verified: false
-recorded_at: null
+  - - ''
+verified: true
+recorded_at: '2026-10-15T11:16:24Z'

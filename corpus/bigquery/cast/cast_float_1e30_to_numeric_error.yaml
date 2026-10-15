@@ -10,6 +10,7 @@ ordered: false
 expected:
   error:
     kind: runtime
+    message: 'numeric out of range: 1e+30'
     message_contains: overflow
 verified: false
-recorded_at: null
+recorded_at: '2026-10-15T11:12:39Z'

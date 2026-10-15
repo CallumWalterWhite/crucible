@@ -1,13 +1,17 @@
-description: A leading block comment containing JSON is ignored by the parser. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, statements]
+description: A leading block comment containing JSON is ignored by the parser. Expected
+  value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- statements
 query: '/* {"app": "dbt", "node_id": "model.x.y"} */
 
   SELECT 1 AS a'
 ordered: false
 expected:
   columns:
-  - {name: a, type: INT64}
+  - name: a
+    type: INT64
   rows:
-  - [1]
-verified: false
-recorded_at: null
+  - - 1
+verified: true
+recorded_at: '2026-10-15T11:17:01Z'

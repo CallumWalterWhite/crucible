@@ -11,6 +11,7 @@ ordered: false
 expected:
   error:
     kind: runtime
+    message: 'Bad double value:'
     message_contains: Could not cast
 verified: false
-recorded_at: null
+recorded_at: '2026-10-15T11:13:14Z'

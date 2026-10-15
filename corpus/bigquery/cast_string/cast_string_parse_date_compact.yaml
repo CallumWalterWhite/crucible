@@ -1,11 +1,15 @@
-description: PARSE_DATE reads a compact yyyymmdd string. See https://cloud.google.com/bigquery/docs/reference/standard-sql/date_functions. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, cast_string]
+description: PARSE_DATE reads a compact yyyymmdd string. See https://cloud.google.com/bigquery/docs/reference/standard-sql/date_functions.
+  Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- cast_string
 query: SELECT PARSE_DATE('%Y%m%d', '20240229') AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: DATE}
+  - name: v
+    type: DATE
   rows:
-  - ['2024-02-29']
-verified: false
-recorded_at: null
+  - - '2024-02-29'
+verified: true
+recorded_at: '2026-10-15T11:13:37Z'

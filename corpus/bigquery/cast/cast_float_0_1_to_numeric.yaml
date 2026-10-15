@@ -1,11 +1,15 @@
-description: CAST of the FLOAT64 literal 0.1 to NUMERIC gives 0.1. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, cast]
+description: CAST of the FLOAT64 literal 0.1 to NUMERIC gives 0.1. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions.
+  Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- cast
 query: SELECT CAST(0.1 AS NUMERIC) AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: NUMERIC}
+  - name: v
+    type: NUMERIC
   rows:
-  - ['0.1']
-verified: false
-recorded_at: null
+  - - '0.1'
+verified: true
+recorded_at: '2026-10-15T11:12:37Z'

@@ -1,12 +1,19 @@
-description: FORMAT substitutes an INT64 and a STRING column into a template. See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, string]
-setup: ['CREATE TABLE t (n INT64, s STRING)', 'INSERT INTO t VALUES (5, ''x'')']
+description: FORMAT substitutes an INT64 and a STRING column into a template. See
+  https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions.
+  Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- string
+setup:
+- CREATE TABLE t (n INT64, s STRING)
+- INSERT INTO t VALUES (5, 'x')
 query: SELECT FORMAT('%d-%s', n, s) AS v FROM t
 ordered: false
 expected:
   columns:
-  - {name: v, type: STRING}
+  - name: v
+    type: STRING
   rows:
-  - [5-x]
-verified: false
-recorded_at: null
+  - - 5-x
+verified: true
+recorded_at: '2026-10-15T11:17:40Z'

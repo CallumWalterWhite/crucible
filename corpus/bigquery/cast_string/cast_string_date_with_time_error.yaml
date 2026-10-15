@@ -11,6 +11,7 @@ ordered: false
 expected:
   error:
     kind: runtime
+    message: 'Invalid date: ''2024-01-02 03:04:05'''
     message_contains: Could not cast
 verified: false
-recorded_at: null
+recorded_at: '2026-10-15T11:13:09Z'

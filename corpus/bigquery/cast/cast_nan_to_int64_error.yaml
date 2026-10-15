@@ -10,6 +10,8 @@ ordered: false
 expected:
   error:
     kind: runtime
+    message: 'Illegal conversion of non-finite floating point number to an integer:
+      nan'
     message_contains: NaN
 verified: false
-recorded_at: null
+recorded_at: '2026-10-15T11:12:50Z'

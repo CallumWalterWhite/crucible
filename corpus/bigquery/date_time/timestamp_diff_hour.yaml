@@ -1,11 +1,16 @@
-description: TIMESTAMP_DIFF truncates 59 minutes to 0 hours. See https://cloud.google.com/bigquery/docs/reference/standard-sql/timestamp_functions. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, date_time]
-query: SELECT TIMESTAMP_DIFF(TIMESTAMP '2024-01-01 01:59:00+00', TIMESTAMP '2024-01-01 01:00:00+00', HOUR) AS v
+description: TIMESTAMP_DIFF truncates 59 minutes to 0 hours. See https://cloud.google.com/bigquery/docs/reference/standard-sql/timestamp_functions.
+  Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- date_time
+query: SELECT TIMESTAMP_DIFF(TIMESTAMP '2024-01-01 01:59:00+00', TIMESTAMP '2024-01-01
+  01:00:00+00', HOUR) AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: INT64}
+  - name: v
+    type: INT64
   rows:
-  - [0]
-verified: false
-recorded_at: null
+  - - 0
+verified: true
+recorded_at: '2026-10-15T11:14:45Z'

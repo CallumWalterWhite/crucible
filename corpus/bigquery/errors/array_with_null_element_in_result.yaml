@@ -1,8 +1,15 @@
-description: An array with a NULL element in the final result raises a runtime error. See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, errors]
+description: An array with a NULL element in the final result raises a runtime error.
+  See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types. Expected
+  value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- errors
 query: SELECT [1, NULL] AS v
 ordered: false
 expected:
-  error: {kind: runtime, message_contains: Array cannot have a null element}
-verified: false
-recorded_at: null
+  error:
+    kind: runtime
+    message: Array cannot have a null element; error in writing field v
+    message_contains: Array cannot have a null element
+verified: true
+recorded_at: '2026-10-15T11:14:50Z'

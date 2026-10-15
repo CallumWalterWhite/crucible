@@ -1,8 +1,14 @@
-description: MOD raises an error when the divisor is zero. See https://cloud.google.com/bigquery/docs/reference/standard-sql/mathematical_functions. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, errors]
+description: MOD raises an error when the divisor is zero. See https://cloud.google.com/bigquery/docs/reference/standard-sql/mathematical_functions.
+  Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- errors
 query: SELECT MOD(5, 0) AS v
 ordered: false
 expected:
-  error: {kind: runtime, message_contains: division by zero}
-verified: false
-recorded_at: null
+  error:
+    kind: runtime
+    message: 'division by zero: MOD(5, 0)'
+    message_contains: division by zero
+verified: true
+recorded_at: '2026-10-15T11:15:11Z'

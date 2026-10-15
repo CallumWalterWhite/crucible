@@ -1,12 +1,18 @@
-description: CREATE OR REPLACE TABLE with integer range partitioning by RANGE_BUCKET creates the table. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, statements]
-setup: ['CREATE OR REPLACE TABLE t PARTITION BY RANGE_BUCKET(n, GENERATE_ARRAY(0, 100, 10)) AS SELECT 15 AS n']
+description: CREATE OR REPLACE TABLE with integer range partitioning by RANGE_BUCKET
+  creates the table. Expected value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- statements
+setup:
+- CREATE OR REPLACE TABLE t PARTITION BY RANGE_BUCKET(n, GENERATE_ARRAY(0, 100, 10))
+  AS SELECT 15 AS n
 query: SELECT * FROM t
 ordered: false
 expected:
   columns:
-  - {name: n, type: INT64}
+  - name: n
+    type: INT64
   rows:
-  - [15]
-verified: false
-recorded_at: null
+  - - 15
+verified: true
+recorded_at: '2026-10-15T11:16:54Z'

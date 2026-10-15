@@ -11,6 +11,7 @@ ordered: false
 expected:
   error:
     kind: runtime
+    message: Out-of-range datetime field in parsing function
     message_contains: Could not parse
 verified: false
-recorded_at: null
+recorded_at: '2026-10-15T11:13:38Z'

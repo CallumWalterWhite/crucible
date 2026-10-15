@@ -1,11 +1,15 @@
-description: SAFE.PARSE_JSON of valid JSON text returns the parsed JSON value. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, errors]
+description: SAFE.PARSE_JSON of valid JSON text returns the parsed JSON value. Expected
+  value from the BigQuery documentation; not yet recorded.
+tags:
+- slice2
+- errors
 query: SELECT SAFE.PARSE_JSON('{"a":1}') AS v
 ordered: false
 expected:
   columns:
-  - {name: v, type: JSON}
+  - name: v
+    type: JSON
   rows:
-  - - {a: 1}
-verified: false
-recorded_at: null
+  - - a: 1
+verified: true
+recorded_at: '2026-10-15T11:15:29Z'

@@ -1,16 +1,34 @@
-description: In a join condition, an UNNEST alias takes precedence over a same-named column of a joined table. Expected value from the BigQuery documentation; not yet recorded.
-tags: [slice2, unnest]
-setup: ['CREATE TABLE items (id INT64, tags ARRAY<STRING>)', 'INSERT INTO items VALUES (1, [''x'', ''y'']), (2, [])', 'CREATE TABLE rank_table (tag STRING, r INT64)', 'INSERT INTO rank_table VALUES (''x'', 10)']
-query: SELECT i.id, tag, rk.r FROM items i LEFT JOIN UNNEST(i.tags) AS tag LEFT JOIN rank_table rk ON rk.tag = tag
+description: In a join condition, an UNNEST alias takes precedence over a same-named
+  column of a joined table. Expected value from the BigQuery documentation; not yet
+  recorded.
+tags:
+- slice2
+- unnest
+setup:
+- CREATE TABLE items (id INT64, tags ARRAY<STRING>)
+- INSERT INTO items VALUES (1, ['x', 'y']), (2, [])
+- CREATE TABLE rank_table (tag STRING, r INT64)
+- INSERT INTO rank_table VALUES ('x', 10)
+query: SELECT i.id, tag, rk.r FROM items i LEFT JOIN UNNEST(i.tags) AS tag LEFT JOIN
+  rank_table rk ON rk.tag = tag
 ordered: false
 expected:
   columns:
-  - {name: id, type: INT64}
-  - {name: tag, type: STRING}
-  - {name: r, type: INT64}
+  - name: id
+    type: INT64
+  - name: tag
+    type: STRING
+  - name: r
+    type: INT64
   rows:
-  - [1, x, 10]
-  - [1, y, null]
-  - [2, null, null]
-verified: false
-recorded_at: null
+  - - 1
+    - x
+    - 10
+  - - 1
+    - y
+    - null
+  - - 2
+    - null
+    - null
+verified: true
+recorded_at: '2026-10-15T11:18:21Z'
