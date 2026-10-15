@@ -254,7 +254,8 @@ def plan_alter(tree: exp.Alter, ctx: ExecContext) -> Plan:
                 f"ALTER TABLE {full} ADD COLUMN{if_not_exists} {qualified(action.name)} {storage}"
             )
         elif isinstance(action, exp.AlterSet):
-            for group in action.expressions:
+            # dbt sends `SET OPTIONS()` with no options; SQLGlot parses that as [None].
+            for group in (g for g in action.expressions if g is not None):
                 props = group.expressions if isinstance(group, exp.Properties) else [group]
                 options.update(_options(list(props)))
         else:

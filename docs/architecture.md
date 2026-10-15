@@ -150,7 +150,17 @@ the not-implemented error.
 | `tables.delete` | `DELETE .../datasets/{d}/tables/{t}` | `drop_relation` |
 | `routines.list` / `routines.get` | `GET .../routines[/{r}]` | dbt relation cache (empty) |
 | `datasets.list` / `datasets.get` | `GET /projects/{p}/datasets[/{d}]` | `list_schemas` |
+| `datasets.insert` / `datasets.delete` | `POST /projects/{p}/datasets`, `DELETE .../datasets/{d}` | `create_schema` / `drop_schema` |
+| `tables.insert` | `POST .../datasets/{d}/tables` | `create_table` with a schema (client tests) |
+| `jobs.cancel` | `POST /projects/{p}/jobs/{id}/cancel` | dbt on interrupt (jobs are already DONE) |
 | resumable upload load job | `POST /upload/bigquery/v2/projects/{p}/jobs?uploadType=resumable` + `PUT` | seeds (CSV, explicit schema, `WRITE_TRUNCATE`) |
+
+Responses follow the recorded fixtures in `tests/fixtures/bigquery_api/`.
+`tests/unit/test_bigquery_fixtures.py` replays the recording against Crucible and lists every
+remaining difference with its reason (jobs answer DONE at once, execution statistics and storage
+sizes are not emulated, INTERVAL result values are unsupported, ...). CSV load values follow only
+the spellings the fixtures confirm; any other spelling raises unsupported
+(`server/bigquery/load.py`).
 
 dbt also emits DDL and DML around compiled SELECTs, which the dialect handles as statements:
 `CREATE SCHEMA IF NOT EXISTS`, `CREATE OR REPLACE TABLE ... PARTITION BY ... CLUSTER BY ...

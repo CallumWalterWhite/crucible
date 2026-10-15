@@ -54,6 +54,11 @@ def build_parser() -> argparse.ArgumentParser:
     run = corpus_sub.add_parser("run", help="run cases against Crucible (no warehouse access)")
     run.add_argument("--dialect", choices=DIALECTS, required=True)
     run.add_argument("--path", help="case file or directory (default: corpus/<dialect>)")
+    run.add_argument(
+        "--wire",
+        metavar="URL",
+        help="run every case through the official client against a running Crucible server",
+    )
     record = corpus_sub.add_parser(
         "record", help="run cases against the REAL warehouse and write expected results"
     )

@@ -9,10 +9,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
 
-from crucible.corpus.case import find_cases
-from crucible.corpus.runner import run_cases
+from crucible.corpus.case import Case, find_cases
+from crucible.corpus.runner import Outcome, run_cases
 from crucible.dialects import get_dialect
+from crucible.dialects.base import Dialect
 from crucible.engine import CrucibleUnsupportedError
+
+# Crucible bills nothing; the recorder path sends a cap on every job, so any value works.
+WIRE_MAX_BYTES_BILLED = 1
 
 
 def main(args: argparse.Namespace) -> int:
@@ -33,7 +37,12 @@ def _run(args: argparse.Namespace) -> int:
     except (CrucibleUnsupportedError, ValueError) as exc:
         print(f"crucible corpus run: {exc}", file=sys.stderr)
         return 2
-    outcomes = run_cases(cases, dialect)
+    if getattr(args, "wire", None):
+        outcomes = _wire_outcomes(args, cases, dialect)
+        if outcomes is None:
+            return 2
+    else:
+        outcomes = run_cases(cases, dialect)
     for outcome in outcomes:
         if not outcome.passed:
             print(f"FAIL {outcome.case.path}: {outcome.detail}")
@@ -43,6 +52,31 @@ def _run(args: argparse.Namespace) -> int:
     unverified = len(cases) - verified
     print(f"{passed} passed, {failed} failed ({verified} verified, {unverified} unverified)")
     return 1 if failed else 0
+
+
+def _wire_outcomes(
+    args: argparse.Namespace, cases: list[Case], dialect: Dialect
+) -> list[Outcome] | None:
+    """Every case through google-cloud-bigquery against a running Crucible server."""
+    if args.dialect != "bigquery":
+        print("--wire is available for bigquery only", file=sys.stderr)
+        return None
+    try:
+        from google.api_core.client_options import ClientOptions
+        from google.auth.credentials import AnonymousCredentials
+        from google.cloud import bigquery
+
+        from crucible.corpus.record import BigQueryRecorder, wire_outcomes
+    except ImportError as exc:
+        extra = "pip install 'crucible-emulator[record-bigquery]'"
+        print(f"crucible corpus run --wire needs: {extra} ({exc})", file=sys.stderr)
+        return None
+    client = bigquery.Client(
+        project="crucible-wire",
+        credentials=AnonymousCredentials(),  # pyright: ignore[reportArgumentType]
+        client_options=ClientOptions(api_endpoint=args.wire),
+    )
+    return wire_outcomes(cases, BigQueryRecorder(client, dialect, WIRE_MAX_BYTES_BILLED))
 
 
 def _record(args: argparse.Namespace) -> int:

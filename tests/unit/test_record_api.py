@@ -196,109 +196,9 @@ def test_the_final_check_refuses_leaks():
     redactor.check('{"x": "<project>"}')
 
 
-# BigQuery's reserved keywords (Lexical structure and syntax, "Reserved keywords"). An unquoted
-# alias from this list is a syntax error in BigQuery; Crucible does not reject it yet (known
-# divergence, corpus case syntax/reserved_keyword_alias_error).
-RESERVED = set(
-    [
-        "ALL",
-        "AND",
-        "ANY",
-        "ARRAY",
-        "AS",
-        "ASC",
-        "ASSERT_ROWS_MODIFIED",
-        "AT",
-        "BETWEEN",
-        "BY",
-        "CASE",
-        "CAST",
-        "COLLATE",
-        "CONTAINS",
-        "CREATE",
-        "CROSS",
-        "CUBE",
-        "CURRENT",
-        "DEFAULT",
-        "DEFINE",
-        "DESC",
-        "DISTINCT",
-        "ELSE",
-        "END",
-        "ENUM",
-        "ESCAPE",
-        "EXCEPT",
-        "EXCLUDE",
-        "EXISTS",
-        "EXTRACT",
-        "FALSE",
-        "FETCH",
-        "FOLLOWING",
-        "FOR",
-        "FROM",
-        "FULL",
-        "GROUP",
-        "GROUPING",
-        "GROUPS",
-        "HASH",
-        "HAVING",
-        "IF",
-        "IGNORE",
-        "IN",
-        "INNER",
-        "INTERSECT",
-        "INTERVAL",
-        "INTO",
-        "IS",
-        "JOIN",
-        "LATERAL",
-        "LEFT",
-        "LIKE",
-        "LIMIT",
-        "LOOKUP",
-        "MERGE",
-        "NATURAL",
-        "NEW",
-        "NO",
-        "NOT",
-        "NULL",
-        "NULLS",
-        "OF",
-        "ON",
-        "OR",
-        "ORDER",
-        "OUTER",
-        "OVER",
-        "PARTITION",
-        "PRECEDING",
-        "PROTO",
-        "QUALIFY",
-        "RANGE",
-        "RECURSIVE",
-        "RESPECT",
-        "RIGHT",
-        "ROLLUP",
-        "ROWS",
-        "SELECT",
-        "SET",
-        "SOME",
-        "STRUCT",
-        "TABLESAMPLE",
-        "THEN",
-        "TO",
-        "TREAT",
-        "TRUE",
-        "UNBOUNDED",
-        "UNION",
-        "UNNEST",
-        "USING",
-        "WHEN",
-        "WHERE",
-        "WINDOW",
-        "WITH",
-        "WITHIN",
-    ]
-)
+# An unquoted reserved keyword as an alias is a syntax error in BigQuery (corpus case
+# syntax/reserved_keyword_alias_error); the recorder's own SQL must avoid them.
+from crucible.dialects.bigquery.keywords import RESERVED  # noqa: E402
 
 
 def test_recorder_sql_uses_no_reserved_keyword_as_a_name():
@@ -358,3 +258,11 @@ def test_load_cases_change_one_field_each():
             continue
         [row] = rows(text)
         assert sum(a != b for a, b in zip(row, plain, strict=True)) == 1, name
+
+
+def test_an_upload_fixture_holds_the_csv_it_sent(recorded):
+    from crucible.corpus.record_api import LOAD_CASES
+
+    _, directory, written = recorded
+    [upload] = [w for w in written if w.endswith("_load_baseline_upload.json")]
+    assert json.loads((directory / upload).read_text())["request"]["body"] == LOAD_CASES["baseline"]

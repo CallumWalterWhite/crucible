@@ -189,7 +189,9 @@ class Recorder:
             payload = response.text
         if expect is not None and status not in expect:
             raise RecordApiError(f"{name}: expected HTTP {expect}, got {status}")
-        self.save(name, method, url, params, body, status, dict(response.headers), payload)
+        # An upload's CSV is part of the fixture, so a replay can send the same bytes.
+        sent = body if data is None else data.decode("utf-8")
+        self.save(name, method, url, params, sent, status, dict(response.headers), payload)
         return payload, dict(response.headers)
 
     def save(

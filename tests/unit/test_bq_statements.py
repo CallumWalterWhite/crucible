@@ -157,6 +157,7 @@ def test_alter_table(bq):
     bq("ALTER TABLE t ADD COLUMN IF NOT EXISTS observed_at TIMESTAMP")
     bq("ALTER TABLE t ADD COLUMN IF NOT EXISTS observed_at TIMESTAMP")
     bq("ALTER TABLE t SET OPTIONS (description = 'y')")
+    bq("ALTER TABLE t SET OPTIONS()")  # dbt seeds send an empty option list
     assert values(bq("SELECT * FROM t")) == [[1, None]]
     with pytest.raises(CrucibleError) as info:
         bq("ALTER TABLE t ADD COLUMN observed_at TIMESTAMP")

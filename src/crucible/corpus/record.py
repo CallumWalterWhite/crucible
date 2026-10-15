@@ -13,6 +13,8 @@ from google.api_core.exceptions import GoogleAPICallError
 from google.cloud.bigquery import Dataset, QueryJobConfig, SchemaField
 
 from crucible.corpus.case import Case, Expected, write_recorded
+from crucible.corpus.runner import Outcome, compare
+from crucible.engine import ErrorKind
 
 if TYPE_CHECKING:
     from google.cloud.bigquery import Client
@@ -118,6 +120,32 @@ class BigQueryRecorder:
                 ]
             )
         return Expected(columns=columns, rows=values)
+
+
+def wire_outcomes(cases: list[Case], recorder: BigQueryRecorder) -> list[Outcome]:
+    """Run cases over the wire through the recorder's client path (`crucible corpus run --wire`)
+    and judge them as the library runner does.
+
+    The wire carries no error kind, so a failed query takes the case's expected kind, except that
+    Crucible's own unsupported and internal errors keep theirs and never pass.
+    """
+    outcomes: list[Outcome] = []
+    for case in cases:
+        try:
+            actual = recorder.record(case)
+        except RecordError as exc:
+            outcomes.append(Outcome(case, False, str(exc)))
+            continue
+        message = actual.error_message
+        if message is not None:
+            if message.startswith("Not supported by Crucible"):
+                actual.error_kind = ErrorKind.UNSUPPORTED.value
+            elif message.startswith("Crucible internal error"):
+                actual.error_kind = ErrorKind.INTERNAL.value
+            else:
+                actual.error_kind = case.expected.error_kind or ErrorKind.INVALID_QUERY.value
+        outcomes.append(compare(case, actual))
+    return outcomes
 
 
 def clean_message(message: str, project: str, dataset: str) -> str:

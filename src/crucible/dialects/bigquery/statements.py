@@ -10,6 +10,7 @@ from sqlglot.errors import ParseError
 from sqlglot.optimizer.annotate_types import annotate_types
 
 from crucible.dialects.bigquery import ddl, dml, errors, metadata, types
+from crucible.dialects.bigquery.keywords import RESERVED
 from crucible.dialects.bigquery.translate import (
     fix_annotation,
     outer_selects,
@@ -46,15 +47,64 @@ def split(sql: str) -> list[object]:
             ErrorKind.INVALID_QUERY, f"Syntax error: {message}", location=location
         ) from exc
     statements: list[object] = []
-    statements.extend(Statement(t) for t in trees if t is not None)
+    for tree in trees:
+        if tree is not None:
+            _check_reserved_aliases(tree, sql)
+            statements.append(Statement(tree))
     if not statements:
         raise errors.invalid("Syntax error: the request has no statement")
     return statements
 
 
+def _check_reserved_aliases(tree: exp.Expr, sql: str) -> None:
+    """SQLGlot accepts `SELECT 1 AS by`; BigQuery reports an unquoted reserved keyword used as a
+    name as a syntax error (recorded: "Syntax error: Unexpected keyword BY")."""
+    for node in tree.find_all(exp.Alias, exp.TableAlias):
+        identifier = node.args.get("alias") if isinstance(node, exp.Alias) else node.this
+        if not isinstance(identifier, exp.Identifier) or identifier.quoted:
+            continue
+        word = identifier.name.upper()
+        if word in RESERVED:
+            start = identifier.meta.get("start")
+            location = None
+            if isinstance(start, int):
+                line = sql.count("\n", 0, start) + 1
+                location = Location(line, start - (sql.rfind("\n", 0, start) + 1) + 1)
+            raise CrucibleError(
+                ErrorKind.INVALID_QUERY,
+                f"Syntax error: Unexpected keyword {word}",
+                location=location,
+            )
+
+
 def plan(statement: object, ctx: ExecContext) -> Plan:
     assert isinstance(statement, Statement)
-    tree = statement.tree.copy()
+    planned = _plan(statement.tree.copy(), ctx)
+    target = _target(statement.tree, ctx)
+    if target is None or not isinstance(planned, CommandPlan):
+        return planned
+    run = planned.run
+
+    def with_target(c: ExecContext) -> Result:
+        # The server reports it as the job's destination table (jobs.get configuration).
+        result = run(c)
+        result.info["target"] = (target.project, target.dataset, target.table)
+        return result
+
+    return CommandPlan(with_target, planned.statement_type)
+
+
+def _target(tree: exp.Expr, ctx: ExecContext) -> metadata.Name | None:
+    """The table a CREATE TABLE / CREATE VIEW / INSERT / MERGE writes."""
+    creates = isinstance(tree, exp.Create) and (tree.kind or "").upper() in ("TABLE", "VIEW")
+    if not creates and not isinstance(tree, exp.Insert | exp.Merge):
+        return None
+    target = tree.this
+    table = target.this if isinstance(target, exp.Schema) else target
+    return metadata.name_of(table, ctx) if isinstance(table, exp.Table) else None
+
+
+def _plan(tree: exp.Expr, ctx: ExecContext) -> Plan:
     if isinstance(tree, exp.Query):
         return run_sql(translate_query(tree, ctx).sql, "SELECT", ctx)
     if isinstance(tree, exp.Create):
