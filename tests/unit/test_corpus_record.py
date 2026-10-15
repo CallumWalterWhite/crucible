@@ -420,3 +420,24 @@ def test_record_unverified_only_skips_verified_cases(
     args = record_args(confirmed=True, path=str(tmp_path / "corpus"), unverified_only=True)
     assert corpus_cli.main(args) == 0
     assert capsys.readouterr().out.startswith("Recording 1 cases")
+
+
+def test_record_unverified_only_says_when_nothing_is_left(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
+):
+    done = make_case(tmp_path, name="done")
+    done.path.write_text(
+        done.path.read_text(encoding="utf-8")
+        .replace("verified: false", "verified: true")
+        .replace("recorded_at: null", "recorded_at: '2026-01-01T00:00:00Z'"),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(corpus_cli, "get_dialect", lambda _name: PassthroughDialect())
+    monkeypatch.setenv("BIGQUERY_PROJECT", "local-project")
+    from google.cloud import bigquery
+
+    monkeypatch.setattr(bigquery, "Client", ForbiddenClient)
+
+    args = record_args(confirmed=True, path=str(tmp_path / "corpus"), unverified_only=True)
+    assert corpus_cli.main(args) == 0
+    assert capsys.readouterr().out.strip() == "no unverified cases to record"

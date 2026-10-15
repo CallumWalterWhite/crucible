@@ -113,6 +113,9 @@ def _record(args: argparse.Namespace) -> int:
         return 2
     if getattr(args, "unverified_only", False):
         cases = [c for c in cases if not c.verified]
+        if not cases:
+            print("no unverified cases to record")
+            return 0
     jobs = sum(len(c.setup) + 1 for c in cases)
     print(
         f"Recording {len(cases)} cases ({jobs} jobs) against project {project} "
