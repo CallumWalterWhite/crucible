@@ -775,12 +775,15 @@ class BigQueryServer:
             return error_response(
                 400, "invalid", "Crucible needs a Content-Range header", "INVALID_ARGUMENT"
             )
-        start, _, total = match.groups()
+        start, end, total = match.groups()
         chunk = await request.body()
         if start is not None:
-            if int(start) != len(upload.data):
+            if int(start) != len(upload.data) or int(end) - int(start) + 1 != len(chunk):
                 return error_response(
-                    400, "invalid", "Content-Range does not continue the upload", "INVALID_ARGUMENT"
+                    400,
+                    "invalid",
+                    "Content-Range does not match the upload so far and this chunk",
+                    "INVALID_ARGUMENT",
                 )
             upload.data.extend(chunk)
         if total == "*" or int(total) != len(upload.data):
