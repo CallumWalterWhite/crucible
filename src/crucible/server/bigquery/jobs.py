@@ -39,7 +39,15 @@ ANONYMOUS_DATASET = "_crucible_anonymous"
 PAGE_TOKEN_PREFIX = "crucible-page-"  # noqa: S105 - a page token, not a credential
 # Query configuration keys that change nothing in an emulator: they are echoed, not applied.
 _IGNORED_QUERY_KEYS = frozenset(
-    {"query", "useLegacySql", "defaultDataset", "maximumBytesBilled", "priority", "labels"}
+    {
+        "query",
+        "useLegacySql",
+        "defaultDataset",
+        "maximumBytesBilled",
+        "priority",
+        "labels",
+        "useQueryCache",  # Crucible has no query cache: every answer is a fresh one
+    }
 )
 _IGNORED_LOAD_KEYS = frozenset({"destinationTable", "schema", "sourceFormat", "skipLeadingRows"})
 

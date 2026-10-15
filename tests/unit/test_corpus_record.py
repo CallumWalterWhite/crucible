@@ -142,6 +142,7 @@ def test_dataset_is_created_then_deleted_and_every_job_is_capped(tmp_path: Path)
     for _, config in client.jobs:
         assert config.maximum_bytes_billed == LIMIT
         assert config.use_legacy_sql is False
+        assert config.use_query_cache is False
         assert dataset_of(config) == dataset
 
 

@@ -239,6 +239,8 @@ class Recorder:
                 "useLegacySql": False,
                 "maximumBytesBilled": str(self.max_bytes_billed),
                 "defaultDataset": {"projectId": self.project, "datasetId": self.dataset},
+                # A cached answer is not a fresh query's answer (statistics differ).
+                "useQueryCache": False,
                 **extra,
             }
         }

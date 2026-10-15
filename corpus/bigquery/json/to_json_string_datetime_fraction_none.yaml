@@ -1,0 +1,16 @@
+description: TO_JSON_STRING of DATETIME with fraction 'none'. One recorded example (.5 -> .500) is not
+  generalised; Crucible raises unsupported until this one is recorded (expected value is a guess).
+tags:
+- phase4
+- json
+- known-divergence
+query: SELECT TO_JSON_STRING(STRUCT(DATETIME '2024-03-04 05:06:07' AS dt)) AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: STRING
+  rows:
+  - - '{"dt":"2024-03-04T05:06:07"}'
+verified: false
+recorded_at: null
