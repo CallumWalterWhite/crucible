@@ -1,5 +1,4 @@
 description: The / operator raises an error when a row's divisor is zero. See https://cloud.google.com/bigquery/docs/reference/standard-sql/mathematical_functions.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - slice2
 - errors

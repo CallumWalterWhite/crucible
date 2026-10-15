@@ -1,6 +1,5 @@
 description: An array with a NULL element in the final result raises a runtime error.
-  See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types. Expected
-  value from the BigQuery documentation; not yet recorded.
+  See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types.
 tags:
 - slice2
 - errors

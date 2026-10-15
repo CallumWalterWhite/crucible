@@ -1,5 +1,4 @@
-description: ALTER TABLE SET OPTIONS leaves the table queryable with its data. Expected
-  value from the BigQuery documentation; not yet recorded.
+description: ALTER TABLE SET OPTIONS leaves the table queryable with its data.
 tags:
 - slice2
 - statements

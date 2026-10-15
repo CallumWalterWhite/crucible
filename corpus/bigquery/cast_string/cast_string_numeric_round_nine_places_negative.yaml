@@ -1,6 +1,5 @@
 description: A negative value with more than nine fractional digits rounds half away
   from zero. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - slice2
 - cast_string

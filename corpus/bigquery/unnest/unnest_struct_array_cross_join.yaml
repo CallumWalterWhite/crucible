@@ -1,5 +1,5 @@
 description: A cross join with UNNEST of an array of STRUCT keeps rows where the value
-  is positive. Expected value from the BigQuery documentation; not yet recorded.
+  is positive.
 tags:
 - slice2
 - unnest

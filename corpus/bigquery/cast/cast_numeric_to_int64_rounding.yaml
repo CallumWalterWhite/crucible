@@ -1,15 +1,16 @@
-description: CAST of NUMERIC to INT64 rounds halfway values away from zero. Expected
-  value from the BigQuery documentation; not yet recorded.
+description: A NUMERIC literal with more than nine decimal places (NUMERIC '1.4999999999')
+  is an analysis error; a CAST of the same text rounds instead. Message from BigQuery's
+  recorded error.
 tags:
 - slice2
 - cast
-- unconfirmed
-- known-divergence
 query: SELECT CAST(NUMERIC '2.5' AS INT64) AS a, CAST(NUMERIC '-2.5' AS INT64) AS
   b, CAST(NUMERIC '1.4999999999' AS INT64) AS c
 ordered: false
 expected:
   error:
+    kind: invalid_query
+    message_contains: Invalid NUMERIC literal
     message: 'Invalid NUMERIC literal: "1.4999999999" at [1:84]'
 verified: false
 recorded_at: '2026-10-15T11:12:55Z'

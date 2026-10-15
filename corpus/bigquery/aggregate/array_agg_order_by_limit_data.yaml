@@ -1,6 +1,5 @@
 description: ARRAY_AGG with ORDER BY DESC and LIMIT keeps the first n ordered values.
   See https://cloud.google.com/bigquery/docs/reference/standard-sql/aggregate_functions.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - slice2
 - aggregate

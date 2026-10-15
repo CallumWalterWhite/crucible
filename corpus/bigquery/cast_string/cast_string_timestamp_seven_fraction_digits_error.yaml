@@ -3,14 +3,12 @@ description: More than six subsecond digits is a runtime error. See https://clou
 tags:
 - slice2
 - cast_string
-- unconfirmed
-- known-divergence
 query: SELECT CAST('2024-01-02 03:04:05.1234567' AS TIMESTAMP) AS v
 ordered: false
 expected:
   error:
     kind: runtime
+    message_contains: Invalid timestamp
     message: 'Invalid timestamp: ''2024-01-02 03:04:05.1234567'''
-    message_contains: Could not cast
 verified: false
 recorded_at: '2026-10-15T11:13:54Z'

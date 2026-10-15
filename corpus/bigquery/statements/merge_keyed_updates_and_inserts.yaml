@@ -1,5 +1,4 @@
 description: MERGE updates matched keys and inserts unmatched source rows. See https://cloud.google.com/bigquery/docs/reference/standard-sql/dml-syntax.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - slice2
 - statements

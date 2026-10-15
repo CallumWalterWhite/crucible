@@ -4,13 +4,12 @@ description: CAST of a FLOAT64 value outside the NUMERIC range raises an overflo
 tags:
 - slice2
 - cast
-- known-divergence
 query: SELECT CAST(1e30 AS NUMERIC) AS v
 ordered: false
 expected:
   error:
     kind: runtime
+    message_contains: numeric out of range
     message: 'numeric out of range: 1e+30'
-    message_contains: overflow
 verified: false
 recorded_at: '2026-10-15T11:12:39Z'

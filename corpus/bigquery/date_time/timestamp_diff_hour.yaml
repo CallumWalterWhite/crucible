@@ -1,5 +1,4 @@
 description: TIMESTAMP_DIFF truncates 59 minutes to 0 hours. See https://cloud.google.com/bigquery/docs/reference/standard-sql/timestamp_functions.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - slice2
 - date_time

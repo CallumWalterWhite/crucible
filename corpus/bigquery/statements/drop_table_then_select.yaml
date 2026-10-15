@@ -1,5 +1,4 @@
-description: Selecting a dropped table raises a not-found error. Expected value from
-  the BigQuery documentation; not yet recorded.
+description: Selecting a dropped table raises a not-found error.
 tags:
 - slice2
 - statements

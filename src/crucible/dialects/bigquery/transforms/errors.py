@@ -35,10 +35,9 @@ from crucible.engine import CrucibleError, CrucibleUnsupportedError, ErrorKind
 if TYPE_CHECKING:
     from crucible.dialects.bigquery.transforms import TransformContext
 
-# BigQuery STRING -> INT64 (Conversion rules, "Casting"): optional sign, then digits or 0x hex.
-# Whitespace handling is not documented: such values raise unsupported until a recording settles it.
+# BigQuery STRING -> INT64 (Conversion rules, "Casting"): optional sign, then digits or 0x hex;
+# surrounding whitespace is ignored (recorded).
 INT64_TEXT = r"^[+-]?([0-9]+|0[xX][0-9a-fA-F]+)$"
-INT64_TEXT_WITH_SPACE = r"^\s*[+-]?([0-9]+|0[xX][0-9a-fA-F]+)\s*$"
 # Canonical formats for STRING -> DATE / DATETIME / TIMESTAMP casts (Conversion functions, "CAST
 # AS DATE" etc.): date YYYY-[M]M-[D]D; time [H]H:[M]M:[S]S[.F] with up to 6 fractional digits;
 # TIMESTAMP may add a zone: Z, +HH[:MM], or a space and a zone name.
@@ -67,24 +66,27 @@ def _zero_check(node: exp.Binary, operator: str) -> exp.Expr:
     return check(zero, failure, node)
 
 
+def _trimmed(value: exp.Expr) -> exp.Expr:
+    return exp.Anonymous(this="trim", expressions=[value.copy()])
+
+
 def _cast_string_to_int64(node: exp.Cast) -> exp.Expr:
-    """Parse sign and magnitude separately: DuckDB cannot cast a negative hex string, and BigQuery
-    accepts -0x8000000000000000 (INT64's minimum), whose magnitude does not fit INT64."""
+    """Sign and magnitude are parsed separately: DuckDB cannot cast a negative hex string, and
+    BigQuery accepts -0x8000000000000000 (INT64's minimum), whose magnitude does not fit INT64.
+    Surrounding whitespace is ignored (recorded: ' 7 ' is 7)."""
     value = node.this
+    text = _trimmed(value)
     safe = isinstance(node, exp.TryCast)
-    plain = exp.RegexpLike(this=value.copy(), expression=exp.Literal.string(INT64_TEXT))
-    spaced = exp.RegexpLike(this=value.copy(), expression=exp.Literal.string(INT64_TEXT_WITH_SPACE))
+    plain = exp.RegexpLike(this=text.copy(), expression=exp.Literal.string(INT64_TEXT))
     bad: exp.Expr = exp.Null() if safe else raise_runtime("Bad int64 value: ", value.copy())
 
-    digits = exp.Anonymous(this="ltrim", expressions=[value.copy(), exp.Literal.string("+-")])
+    digits = exp.Anonymous(this="ltrim", expressions=[text.copy(), exp.Literal.string("+-")])
     is_hex = exp.RegexpLike(this=digits.copy(), expression=exp.Literal.string("^0[xX]"))
     magnitude = exp.Case(
         ifs=[exp.If(this=is_hex, true=duck_cast(duck_cast(digits.copy(), "UBIGINT"), "HUGEINT"))],
         default=duck_cast(digits, "HUGEINT"),
     )
-    negative = exp.Anonymous(
-        this="starts_with", expressions=[value.copy(), exp.Literal.string("-")]
-    )
+    negative = exp.Anonymous(this="starts_with", expressions=[text.copy(), exp.Literal.string("-")])
     signed = exp.Case(
         ifs=[exp.If(this=negative, true=exp.Neg(this=magnitude.copy()))], default=magnitude
     )
@@ -95,15 +97,98 @@ def _cast_string_to_int64(node: exp.Cast) -> exp.Expr:
         this=signed, low=exp.Literal.number(-(2**63)), high=exp.Literal.number(2**63 - 1)
     )
     cast = check(exp.Not(this=exp.Paren(this=in_range)), bad.copy(), cast)
+    return check(exp.Not(this=exp.Paren(this=plain)), bad, cast)
+
+
+# Recorded: decimal and exponent forms, surrounding spaces, inf, -inf, NaN and hex integers are
+# accepted; anything else is "Bad double value: <s>". Other spellings of inf/nan are unrecorded.
+FLOAT64_TEXT = r"^[+-]?([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][+-]?[0-9]+)?$"
+FLOAT64_SPECIAL = r"^([+-]?inf|NaN|nan)$"  # nan: accepted in the recorded NaN-to-INT64 case
+FLOAT64_SPECIAL_ANY = r"(?i)^[+-]?(inf|infinity|nan)$"
+HEX_TEXT = r"^[+-]?0[xX][0-9a-fA-F]+$"
+
+
+def _cast_string_to_float64(node: exp.Cast) -> exp.Expr:
+    value = node.this
+    text = _trimmed(value)
+    safe = isinstance(node, exp.TryCast)
+    bad: exp.Expr = exp.Null() if safe else raise_runtime("Bad double value: ", value.copy())
+
+    def matches(pattern: str) -> exp.Expr:
+        return exp.RegexpLike(this=text.copy(), expression=exp.Literal.string(pattern))
+
+    digits = exp.Anonymous(this="ltrim", expressions=[text.copy(), exp.Literal.string("+-")])
+    hex_value = duck_cast(duck_cast(digits, "UBIGINT"), "DOUBLE")
+    negative = exp.Anonymous(this="starts_with", expressions=[text.copy(), exp.Literal.string("-")])
+    signed_hex = exp.Case(
+        ifs=[exp.If(this=negative, true=exp.Neg(this=hex_value.copy()))], default=hex_value
+    )
+    cast = typed(node.__class__(this=text.copy(), to=node.args["to"].copy()), "FLOAT64")
+    cast.meta["crucible_checked"] = True
+    case = exp.Case(
+        ifs=[
+            exp.If(
+                this=exp.Or(this=matches(FLOAT64_TEXT), expression=matches(FLOAT64_SPECIAL)),
+                true=cast,
+            ),
+            exp.If(this=matches(HEX_TEXT), true=signed_hex),
+            exp.If(
+                this=matches(FLOAT64_SPECIAL_ANY),
+                true=raise_unsupported("CAST of this spelling of inf or NaN to FLOAT64"),
+            ),
+            exp.If(this=exp.Is(this=value.copy(), expression=exp.Null()), true=exp.Null()),
+        ],
+        default=bad,
+    )
+    return typed(case, "FLOAT64")
+
+
+NUMERIC_TEXT = r"^[+-]?([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][+-]?[0-9]+)?$"
+NUMERIC_LIMIT = 10**29  # NUMERIC holds 29 integer digits
+
+
+def _cast_string_to_numeric(node: exp.Cast) -> exp.Expr:
+    """Recorded: '1.5', '1e3' and 9-place rounding are accepted; NaN and out-of-range values are
+    "Invalid NUMERIC value: <s>". Surrounding whitespace is unrecorded and raises unsupported."""
+    value = node.this
+    safe = isinstance(node, exp.TryCast)
+    bad: exp.Expr = exp.Null() if safe else raise_runtime("Invalid NUMERIC value: ", value.copy())
+    plain = exp.RegexpLike(this=value.copy(), expression=exp.Literal.string(NUMERIC_TEXT))
+    spaced = exp.RegexpLike(this=_trimmed(value), expression=exp.Literal.string(NUMERIC_TEXT))
+    magnitude = exp.Abs(this=duck_cast(value.copy(), "DOUBLE"))
+    too_big = exp.GTE(this=magnitude, expression=exp.Literal.number(NUMERIC_LIMIT))
+    node.meta["crucible_checked"] = True
     return check(
         exp.Not(this=exp.Paren(this=plain)),
         check(
             spaced,
-            raise_unsupported("CAST of a string with surrounding whitespace to INT64"),
+            raise_unsupported("CAST of a string with surrounding whitespace to NUMERIC"),
             bad,
         ),
-        cast,
+        check(too_big, bad.copy(), node),
     )
+
+
+def _numeric_literal(node: exp.Cast) -> None:
+    """A NUMERIC literal (NUMERIC '1.5') with more than 9 decimal places or out of range is an
+    analysis error in BigQuery (recorded), while CAST('...' AS NUMERIC) rounds. SQLGlot 30.22 builds
+    the typed literal as a Cast without the `format` and `safe` args an explicit CAST carries."""
+    from decimal import Decimal, InvalidOperation
+
+    text = node.this.this
+    try:
+        number = Decimal(text.strip())
+    except InvalidOperation:
+        number = None
+    exponent = number.as_tuple().exponent if number is not None and number.is_finite() else None
+    if (
+        number is None
+        or not number.is_finite()
+        or not isinstance(exponent, int)
+        or exponent < -9
+        or abs(number) >= NUMERIC_LIMIT
+    ):
+        raise CrucibleError(ErrorKind.INVALID_QUERY, f'Invalid NUMERIC literal: "{text}"')
 
 
 def _cast_string_to_temporal(node: exp.Cast, kind: exp.DType) -> exp.Expr:
@@ -116,21 +201,49 @@ def _cast_string_to_temporal(node: exp.Cast, kind: exp.DType) -> exp.Expr:
     spaced = exp.RegexpLike(this=trimmed, expression=exp.Literal.string(pattern))
     bad: exp.Expr = exp.Null() if safe else raise_runtime(f"Invalid {name}: '", value.copy(), "'")
     node.meta["crucible_checked"] = True
-    return check(
-        exp.Not(this=exp.Paren(this=plain)),
-        check(
-            spaced,
-            raise_unsupported(f"CAST of a string with surrounding whitespace to {name.upper()}"),
-            bad,
-        ),
-        node,
+    # Recorded: a DATE string with surrounding whitespace is invalid; DATETIME/TIMESTAMP unrecorded.
+    whitespace: exp.Expr = (
+        bad.copy()
+        if kind == T.DATE
+        else raise_unsupported(f"CAST of a string with surrounding whitespace to {name.upper()}")
     )
+    return check(exp.Not(this=exp.Paren(this=plain)), check(spaced, whitespace, bad), node)
 
 
 def _cast_float_to_int64(node: exp.Cast) -> exp.Expr:
-    rounded = typed(exp.Round(this=node.this.copy()), "FLOAT64")
-    out = node.__class__(this=rounded, to=node.args["to"].copy())
-    return typed(out, "INT64")
+    """Round half away from zero (DuckDB's cast rounds half to even); recorded errors for
+    non-finite values and values outside INT64."""
+    value = node.this
+    rounded = typed(exp.Round(this=value.copy()), "FLOAT64")
+    out = typed(node.__class__(this=rounded.copy(), to=node.args["to"].copy()), "INT64")
+    if isinstance(node, exp.TryCast):
+        return out
+    finite = exp.Anonymous(this="isfinite", expressions=[value.copy()])
+    in_range = exp.Between(
+        this=rounded, low=exp.Literal.number(-(2**63)), high=exp.Literal.number(2**63 - 1)
+    )
+    return check(
+        exp.Not(this=exp.Paren(this=finite)),
+        raise_runtime(
+            "Illegal conversion of non-finite floating point number to an integer: ", value.copy()
+        ),
+        check(
+            exp.Not(this=exp.Paren(this=in_range)),
+            raise_runtime("int64 out of range: ", value.copy()),
+            out,
+        ),
+    )
+
+
+def _cast_float_to_numeric(node: exp.Cast) -> exp.Expr:
+    """Recorded: CAST(1e30 AS NUMERIC) is "numeric out of range: 1e+30"."""
+    if isinstance(node, exp.TryCast):
+        return node
+    node.meta["crucible_checked"] = True
+    too_big = exp.GTE(
+        this=exp.Abs(this=node.this.copy()), expression=exp.Literal.number(NUMERIC_LIMIT)
+    )
+    return check(too_big, raise_runtime("numeric out of range: ", node.this.copy()), node)
 
 
 def _offset_check(node: exp.Bracket) -> exp.Expr:
@@ -180,6 +293,25 @@ def transform(tree: exp.Expr, ctx: TransformContext) -> exp.Expr:
             and _is(node.this, T.TEXT, T.VARCHAR)
         ):
             return _cast_string_to_temporal(node, node.to.this)
+        if (
+            isinstance(node, exp.Cast)
+            and node.to.this == T.DECIMAL
+            and isinstance(node.this, exp.Literal)
+            and node.this.is_string
+            and "format" not in node.args
+        ):
+            _numeric_literal(node)
+        if (
+            isinstance(node, exp.Cast)
+            and node.to.this == T.DOUBLE
+            and _is(node.this, T.TEXT, T.VARCHAR)
+        ):
+            return _cast_string_to_float64(node)
+        if isinstance(node, exp.Cast) and node.to.this == T.DECIMAL:
+            if _is(node.this, T.TEXT, T.VARCHAR):
+                return _cast_string_to_numeric(node)
+            if _is(node.this, T.DOUBLE, T.FLOAT):
+                return _cast_float_to_numeric(node)
         if isinstance(node, exp.Cast) and _is(node.to, T.BIGINT, T.INT):
             if _is(node.this, T.TEXT, T.VARCHAR):
                 return _cast_string_to_int64(node)

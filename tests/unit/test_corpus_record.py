@@ -386,3 +386,15 @@ def test_clean_message_keeps_bigquery_message_and_hides_project():
         "Not found: Table <project>:<dataset>.t was not found in location US"
     )
     assert clean_message("division by zero: 1 / 0", "p", "d") == "division by zero: 1 / 0"
+
+
+def test_clean_message_drops_the_request_prefix():
+    from crucible.corpus.record import clean_message
+
+    raw = (
+        "GET https://bigquery.googleapis.com/bigquery/v2/projects/p/queries/abc?maxResults=0: "
+        "UPDATE/MERGE must match at most one source row for each target row"
+    )
+    assert clean_message(raw, "p", "d") == (
+        "UPDATE/MERGE must match at most one source row for each target row"
+    )

@@ -1,5 +1,4 @@
 description: A NULL ARRAY is returned as an empty array in the query result. See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - slice2
 - errors

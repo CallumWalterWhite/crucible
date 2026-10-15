@@ -1,5 +1,4 @@
 description: A string in exponent form is a valid floating point literal. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - slice2
 - cast_string

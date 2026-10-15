@@ -1,5 +1,4 @@
-description: The SAFE. prefix turns an error inside the function into NULL. Expected
-  value from the BigQuery documentation; not yet recorded.
+description: The SAFE. prefix turns an error inside the function into NULL.
 tags:
 - slice2
 - errors

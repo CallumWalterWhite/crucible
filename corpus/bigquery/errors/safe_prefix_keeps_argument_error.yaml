@@ -1,5 +1,5 @@
 description: The SAFE. prefix does not suppress an error raised while evaluating its
-  argument. Expected value from the BigQuery documentation; not yet recorded.
+  argument.
 tags:
 - slice2
 - errors

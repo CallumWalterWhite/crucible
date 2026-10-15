@@ -1,6 +1,5 @@
 description: CREATE OR REPLACE TABLE with PARTITION BY, CLUSTER BY and OPTIONS creates
-  the table with its selected columns. Expected value from the BigQuery documentation;
-  not yet recorded.
+  the table with its selected columns.
 tags:
 - slice2
 - statements

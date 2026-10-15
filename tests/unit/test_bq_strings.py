@@ -122,7 +122,7 @@ def test_null_in_gives_null_out(bq):
     ("sql", "construct"),
     [
         ("SELECT UPPER('ß') AS v", "UPPER of a character with a multi-character case mapping"),
-        ("SELECT LOWER('İ') AS v", "LOWER of a character with a multi-character case mapping"),
+        ("SELECT LOWER('ΣΑΣ') AS v", "LOWER of a capital sigma"),
         ("SELECT INITCAP('ß') AS v", "INITCAP of a character with a multi-character case mapping"),
     ],
 )
@@ -148,3 +148,8 @@ def test_one_special_row_refuses_the_whole_column(bq):
 def test_farm_fingerprint_is_unsupported_at_plan_time(bq):
     with pytest.raises(CrucibleUnsupportedError, match="FARM_FINGERPRINT"):
         bq("SELECT FARM_FINGERPRINT('a') AS v")
+
+
+def test_lower_uses_full_case_mapping_for_dotted_capital_i(bq):
+    # Recorded: LOWER('İ') is 'i' followed by U+0307 COMBINING DOT ABOVE.
+    assert values(bq("SELECT LOWER('İ') AS v")) == [["i\u0307"]]

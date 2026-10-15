@@ -1,6 +1,5 @@
 description: A tz-database zone name in the string is used for the conversion. See
   https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - slice2
 - cast_string

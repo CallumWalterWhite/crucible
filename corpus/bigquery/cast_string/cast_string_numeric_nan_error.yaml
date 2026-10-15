@@ -4,14 +4,12 @@ description: NaN is not a NUMERIC literal and is a runtime error (best reading).
 tags:
 - slice2
 - cast_string
-- unconfirmed
-- known-divergence
 query: SELECT CAST('NaN' AS NUMERIC) AS v
 ordered: false
 expected:
   error:
     kind: runtime
+    message_contains: Invalid NUMERIC value
     message: 'Invalid NUMERIC value: NaN'
-    message_contains: Could not cast
 verified: false
 recorded_at: '2026-10-15T11:13:31Z'

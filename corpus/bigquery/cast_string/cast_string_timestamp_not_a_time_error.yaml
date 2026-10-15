@@ -3,14 +3,12 @@ description: A string that is not a timestamp is a runtime error. See https://cl
 tags:
 - slice2
 - cast_string
-- unconfirmed
-- known-divergence
 query: SELECT CAST('not a time' AS TIMESTAMP) AS v
 ordered: false
 expected:
   error:
     kind: runtime
+    message_contains: Invalid timestamp
     message: 'Invalid timestamp: ''not a time'''
-    message_contains: Could not cast
 verified: false
 recorded_at: '2026-10-15T11:13:47Z'

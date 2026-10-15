@@ -1,6 +1,5 @@
 description: CAST of a negative hexadecimal STRING to INT64 gives the negated value.
   See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - slice2
 - errors

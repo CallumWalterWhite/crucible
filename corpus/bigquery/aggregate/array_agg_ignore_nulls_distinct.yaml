@@ -1,6 +1,5 @@
 description: ARRAY_AGG DISTINCT IGNORE NULLS ORDER BY returns the distinct non-NULL
   values in order. See https://cloud.google.com/bigquery/docs/reference/standard-sql/aggregate_functions.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - slice2
 - aggregate

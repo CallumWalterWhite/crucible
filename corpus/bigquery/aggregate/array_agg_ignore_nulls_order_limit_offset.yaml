@@ -1,6 +1,5 @@
 description: ARRAY_AGG IGNORE NULLS with ORDER BY and LIMIT, then SAFE_OFFSET, returns
   NULL for a group with no non-NULL values. See https://cloud.google.com/bigquery/docs/reference/standard-sql/aggregate_functions.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - slice2
 - aggregate

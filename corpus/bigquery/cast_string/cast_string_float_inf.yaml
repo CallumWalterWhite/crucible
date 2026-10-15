@@ -1,5 +1,4 @@
 description: The string inf casts to Infinity. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - slice2
 - cast_string

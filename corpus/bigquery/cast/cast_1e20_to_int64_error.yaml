@@ -3,14 +3,12 @@ description: CAST of a FLOAT64 value outside the INT64 range raises an overflow 
 tags:
 - slice2
 - cast
-- unconfirmed
-- known-divergence
 query: SELECT CAST(1e20 AS INT64) AS v
 ordered: false
 expected:
   error:
     kind: runtime
+    message_contains: int64 out of range
     message: 'int64 out of range: 1e+20'
-    message_contains: overflow
 verified: false
 recorded_at: '2026-10-15T11:12:35Z'

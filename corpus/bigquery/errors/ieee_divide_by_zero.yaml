@@ -1,6 +1,5 @@
 description: IEEE_DIVIDE of a non-zero number by zero returns Infinity without an
   error. See https://cloud.google.com/bigquery/docs/reference/standard-sql/mathematical_functions.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - slice2
 - errors

@@ -1,5 +1,4 @@
 description: A numeric UTC offset in the string is applied to give UTC. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - slice2
 - cast_string

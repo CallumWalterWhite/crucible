@@ -1,6 +1,5 @@
 description: SAFE_DIVIDE returns NULL for a zero divisor and the quotient otherwise.
   See https://cloud.google.com/bigquery/docs/reference/standard-sql/mathematical_functions.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - slice2
 - errors

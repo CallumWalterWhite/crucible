@@ -1,5 +1,5 @@
 description: ALTER TABLE ADD COLUMN IF NOT EXISTS is idempotent and leaves the new
-  column NULL. Expected value from the BigQuery documentation; not yet recorded.
+  column NULL.
 tags:
 - slice2
 - statements

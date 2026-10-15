@@ -4,14 +4,12 @@ description: A decimal comma is not a floating point literal and is a runtime er
 tags:
 - slice2
 - cast_string
-- unconfirmed
-- known-divergence
 query: SELECT CAST('1,5' AS FLOAT64) AS v
 ordered: false
 expected:
   error:
     kind: runtime
+    message_contains: Bad double value
     message: 'Bad double value: 1,5'
-    message_contains: Could not cast
 verified: false
 recorded_at: '2026-10-15T11:13:11Z'

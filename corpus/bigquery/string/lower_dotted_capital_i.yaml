@@ -1,10 +1,7 @@
 description: LOWER of capital dotted I gives i followed by a combining dot above.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - slice2
 - string
-- unconfirmed
-- known-divergence
 query: SELECT LOWER('İ') AS v
 ordered: false
 expected:

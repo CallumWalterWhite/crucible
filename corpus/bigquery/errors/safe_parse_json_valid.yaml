@@ -1,5 +1,4 @@
-description: SAFE.PARSE_JSON of valid JSON text returns the parsed JSON value. Expected
-  value from the BigQuery documentation; not yet recorded.
+description: SAFE.PARSE_JSON of valid JSON text returns the parsed JSON value.
 tags:
 - slice2
 - errors

@@ -8,7 +8,7 @@ ordered: false
 expected:
   error:
     kind: runtime
+    message_contains: Integer Overflow
     message: Integer Overflow
-    message_contains: overflow
 verified: false
 recorded_at: '2026-10-15T11:15:10Z'

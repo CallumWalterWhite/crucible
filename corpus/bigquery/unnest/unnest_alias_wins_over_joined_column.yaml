@@ -1,6 +1,5 @@
 description: In a join condition, an UNNEST alias takes precedence over a same-named
-  column of a joined table. Expected value from the BigQuery documentation; not yet
-  recorded.
+  column of a joined table.
 tags:
 - slice2
 - unnest

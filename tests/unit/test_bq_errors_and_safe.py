@@ -65,9 +65,55 @@ def test_string_to_int64_rejects_the_rest(bq, text):
     assert values(bq(f"SELECT SAFE_CAST('{text}' AS INT64) AS v")) == [[None]]
 
 
-def test_string_with_whitespace_to_int64_is_unsupported_until_recorded(bq):
+def test_string_to_int64_ignores_surrounding_whitespace(bq):
+    # Recorded: CAST(' 7 ' AS INT64) is 7.
+    assert values(bq("SELECT CAST(' 7 ' AS INT64) AS v")) == [[7]]
+
+
+@pytest.mark.parametrize(
+    ("sql", "expected"),
+    [
+        ("SELECT CAST(' 1.5 ' AS FLOAT64) AS v", 1.5),
+        ("SELECT CAST('0x10' AS FLOAT64) AS v", 16.0),
+        ("SELECT CAST('-0x10' AS FLOAT64) AS v", -16.0),
+        ("SELECT CAST('inf' AS FLOAT64) AS v", "Infinity"),
+        ("SELECT CAST('nan' AS FLOAT64) AS v", "NaN"),
+        ("SELECT CAST('1e3' AS NUMERIC) AS v", "1000"),
+        ("SELECT CAST('1.0000000005' AS NUMERIC) AS v", "1.000000001"),
+    ],
+)
+def test_recorded_string_casts(bq, sql, expected):
+    assert values(bq(sql)) == [[expected]]
+
+
+@pytest.mark.parametrize(
+    ("sql", "message"),
+    [
+        ("SELECT CAST('1,5' AS FLOAT64) AS v", "Bad double value: 1,5"),
+        ("SELECT CAST('NaN' AS NUMERIC) AS v", "Invalid NUMERIC value: NaN"),
+        ("SELECT CAST('1' || REPEAT('0', 29) AS NUMERIC) AS v", "Invalid NUMERIC value"),
+        ("SELECT CAST(1e20 AS INT64) AS v", "int64 out of range: 1e+20"),
+        ("SELECT CAST(CAST('nan' AS FLOAT64) AS INT64) AS v", "Illegal conversion of non-finite"),
+        ("SELECT CAST(1e30 AS NUMERIC) AS v", "numeric out of range: 1e+30"),
+        ("SELECT CAST(' 2024-01-02' AS DATE) AS v", "Invalid date: ' 2024-01-02'"),
+        ("SELECT PARSE_DATE('%Y-%m-%d', '2024-02-30') AS v", "Out-of-range datetime field"),
+    ],
+)
+def test_recorded_runtime_messages(bq, sql, message):
+    assert message in raises(bq, sql)
+
+
+def test_numeric_literal_with_ten_decimals_is_an_analysis_error(bq):
+    assert 'Invalid NUMERIC literal: "1.4999999999"' in raises(
+        bq, "SELECT NUMERIC '1.4999999999' AS v", ErrorKind.INVALID_QUERY
+    )
+    # A CAST of the same text rounds (recorded).
+    assert values(bq("SELECT CAST('1.4999999999' AS NUMERIC) AS v")) == [["1.5"]]
+
+
+def test_unrecorded_float_spellings_are_unsupported(bq):
     with pytest.raises(CrucibleUnsupportedError):
-        bq("SELECT CAST(' 7 ' AS INT64) AS v")
+        bq("SELECT CAST('Infinity' AS FLOAT64) AS v")
 
 
 def test_float_to_int64_rounds_half_away_from_zero(bq):
@@ -112,7 +158,7 @@ def test_offset_of_null_array_or_index_is_null(bq):
 
 # --- overflow -----------------------------------------------------------------------------------
 def test_int64_overflow_uses_bigquery_wording(bq):
-    assert "integer overflow" in raises(bq, "SELECT 3000000000 * 4000000000 AS v")
+    assert "Integer Overflow" in raises(bq, "SELECT 3000000000 * 4000000000 AS v")
     bq("CREATE TABLE t (a INT64)")
     bq("INSERT INTO t VALUES (9223372036854775807), (1)")
     assert "integer overflow" in raises(bq, "SELECT SUM(a) AS s FROM t")

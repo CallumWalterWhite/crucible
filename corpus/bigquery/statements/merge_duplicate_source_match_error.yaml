@@ -1,6 +1,5 @@
 description: MERGE raises a runtime error when a target row matches more than one
   source row. See https://cloud.google.com/bigquery/docs/reference/standard-sql/dml-syntax.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - slice2
 - statements
@@ -15,8 +14,7 @@ ordered: false
 expected:
   error:
     kind: runtime
-    message: 'GET https://bigquery.googleapis.com/bigquery/v2/projects/<project>/queries/48d3e7a5-9439-4475-a244-27cd6638bc0f?maxResults=0&location=US&prettyPrint=false:
-      UPDATE/MERGE must match at most one source row for each target row'
+    message: UPDATE/MERGE must match at most one source row for each target row
     message_contains: must match at most one source row
 verified: true
 recorded_at: '2026-10-15T11:17:09Z'

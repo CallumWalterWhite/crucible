@@ -3,15 +3,14 @@ description: CAST of NaN to INT64 raises a runtime error. Expected value from th
 tags:
 - slice2
 - cast
-- unconfirmed
-- known-divergence
 query: SELECT CAST(CAST('nan' AS FLOAT64) AS INT64) AS v
 ordered: false
 expected:
   error:
     kind: runtime
+    message_contains: Illegal conversion of non-finite floating point number to an
+      integer
     message: 'Illegal conversion of non-finite floating point number to an integer:
       nan'
-    message_contains: NaN
 verified: false
 recorded_at: '2026-10-15T11:12:50Z'

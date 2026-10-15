@@ -1,5 +1,4 @@
 description: PARSE_DATE reads a compact yyyymmdd string. See https://cloud.google.com/bigquery/docs/reference/standard-sql/date_functions.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - slice2
 - cast_string

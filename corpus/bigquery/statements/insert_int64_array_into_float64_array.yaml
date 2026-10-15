@@ -1,10 +1,8 @@
 description: Whether an ARRAY<INT64> value can be inserted into an ARRAY<FLOAT64>
-  column (element-wise coercion is not documented). Expected value from the BigQuery
-  documentation; not yet recorded.
+  column (element-wise coercion is not documented).
 tags:
 - slice2
 - statements
-- unconfirmed
 setup:
 - CREATE TABLE t (a ARRAY<FLOAT64>)
 query: INSERT INTO t (a) VALUES ([1, 2])

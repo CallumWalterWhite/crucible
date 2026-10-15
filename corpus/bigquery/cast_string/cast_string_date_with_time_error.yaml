@@ -4,14 +4,12 @@ description: A string with a time part is not a DATE literal and is a runtime er
 tags:
 - slice2
 - cast_string
-- unconfirmed
-- known-divergence
 query: SELECT CAST('2024-01-02 03:04:05' AS DATE) AS v
 ordered: false
 expected:
   error:
     kind: runtime
+    message_contains: Invalid date
     message: 'Invalid date: ''2024-01-02 03:04:05'''
-    message_contains: Could not cast
 verified: false
 recorded_at: '2026-10-15T11:13:09Z'

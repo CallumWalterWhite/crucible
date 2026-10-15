@@ -128,6 +128,8 @@ def clean_message(message: str, project: str, dataset: str) -> str:
     are public and the project id is the recorder's, not part of the behaviour.
     """
     primary = message.split("; reason: ", 1)[0].split("\n\nLocation:", 1)[0].strip()
+    # Errors raised while polling are prefixed with the request: "GET https://...: <message>".
+    primary = re.sub(r"^(GET|POST|PUT|PATCH|DELETE) https?://\S+: ", "", primary)
     for name, placeholder in ((project, "<project>"), (dataset, "<dataset>")):
         # Whole names only: a project id is letters, digits and hyphens; a dataset adds underscores.
         primary = re.sub(rf"(?<![\w-]){re.escape(name)}(?![\w-])", placeholder, primary)

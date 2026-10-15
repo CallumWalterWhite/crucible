@@ -1,5 +1,4 @@
 description: One-digit month, day, hour, minute and second are accepted. See https://cloud.google.com/bigquery/docs/reference/standard-sql/lexical.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - slice2
 - cast_string

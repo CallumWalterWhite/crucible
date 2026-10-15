@@ -1,5 +1,5 @@
 description: UNNEST of an array of STRUCT with an alias exposes the struct fields
-  as x.m and x.v. Expected value from the BigQuery documentation; not yet recorded.
+  as x.m and x.v.
 tags:
 - slice2
 - unnest

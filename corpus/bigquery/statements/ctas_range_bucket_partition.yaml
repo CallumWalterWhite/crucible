@@ -1,5 +1,5 @@
 description: CREATE OR REPLACE TABLE with integer range partitioning by RANGE_BUCKET
-  creates the table. Expected value from the BigQuery documentation; not yet recorded.
+  creates the table.
 tags:
 - slice2
 - statements

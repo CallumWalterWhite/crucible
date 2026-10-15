@@ -99,11 +99,19 @@ def test_isoweek_null_is_null(bq):
     assert values(bq("SELECT EXTRACT(ISOWEEK FROM CAST(NULL AS DATE)) AS v")) == [[None]]
 
 
-# --- EXTRACT(WEEK): not translated -----------------------------------------------------------
-@pytest.mark.parametrize("part", ["WEEK", "WEEK(MONDAY)"])
-def test_week_extraction_is_unsupported(bq, part):
-    with pytest.raises(CrucibleUnsupportedError, match="EXTRACT\\(WEEK\\)"):
-        bq(f"SELECT EXTRACT({part} FROM DATE '2024-01-07') AS v")
+# --- EXTRACT(WEEK): Sunday-start weeks, days before the first Sunday are week 0 ----------------
+@pytest.mark.parametrize(
+    ("day", "week"),
+    [("2024-01-07", 1), ("2024-01-06", 0), ("2023-01-01", 1), ("2024-12-31", 52), (None, None)],
+)
+def test_week_starts_on_sunday(bq, day, week):
+    value = f"DATE '{day}'" if day else "CAST(NULL AS DATE)"
+    assert values(bq(f"SELECT EXTRACT(WEEK FROM {value}) AS v")) == [[week]]
+
+
+def test_week_with_a_weekday_is_unsupported(bq):
+    with pytest.raises(CrucibleUnsupportedError, match="WEEK\\(<weekday>\\)"):
+        bq("SELECT EXTRACT(WEEK(MONDAY) FROM DATE '2024-01-07') AS v")
 
 
 # --- FORMAT_DATE / FORMAT_DATETIME / FORMAT_TIMESTAMP: `%-` elements are refused -----------------
