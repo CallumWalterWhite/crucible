@@ -1,0 +1,125 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/datasets/<dataset>/tables/all_types",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#table",
+    "etag": "<etag>",
+    "id": "<project>:<dataset>.all_types",
+    "selfLink": "<self-link>",
+    "tableReference": {
+      "projectId": "<project>",
+      "datasetId": "<dataset>",
+      "tableId": "all_types"
+    },
+    "schema": {
+      "fields": [
+        {
+          "name": "id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "i",
+          "type": "INTEGER"
+        },
+        {
+          "name": "f",
+          "type": "FLOAT"
+        },
+        {
+          "name": "n",
+          "type": "NUMERIC"
+        },
+        {
+          "name": "b",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "s",
+          "type": "STRING"
+        },
+        {
+          "name": "bt",
+          "type": "BYTES"
+        },
+        {
+          "name": "d",
+          "type": "DATE"
+        },
+        {
+          "name": "dt",
+          "type": "DATETIME"
+        },
+        {
+          "name": "t",
+          "type": "TIME"
+        },
+        {
+          "name": "ts",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "j",
+          "type": "JSON"
+        },
+        {
+          "name": "arr",
+          "type": "INTEGER",
+          "mode": "REPEATED"
+        },
+        {
+          "name": "st",
+          "type": "RECORD",
+          "fields": [
+            {
+              "name": "x",
+              "type": "INTEGER"
+            },
+            {
+              "name": "y",
+              "type": "STRING",
+              "mode": "REPEATED"
+            }
+          ]
+        },
+        {
+          "name": "arr_st",
+          "type": "RECORD",
+          "mode": "REPEATED",
+          "fields": [
+            {
+              "name": "k",
+              "type": "INTEGER"
+            },
+            {
+              "name": "w",
+              "type": "STRING"
+            }
+          ]
+        },
+        {
+          "name": "iv",
+          "type": "INTERVAL"
+        }
+      ]
+    },
+    "numBytes": "257",
+    "numLongTermBytes": "0",
+    "numRows": "3",
+    "creationTime": "<time>",
+    "expirationTime": "<time>",
+    "lastModifiedTime": "<time>",
+    "type": "TABLE",
+    "location": "<location>",
+    "numTotalLogicalBytes": "257",
+    "numActiveLogicalBytes": "257",
+    "numLongTermLogicalBytes": "0"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/datasets/<dataset>/routines",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {}
+}

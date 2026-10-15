@@ -1,0 +1,137 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/queries/<job-2>",
+    "params": {
+      "maxResults": "0",
+      "timeoutMs": "10000"
+    },
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#getQueryResultsResponse",
+    "etag": "<etag>",
+    "schema": {
+      "fields": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "i",
+          "type": "INTEGER",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "f",
+          "type": "FLOAT",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "n",
+          "type": "NUMERIC",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "b",
+          "type": "BOOLEAN",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "s",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "bt",
+          "type": "BYTES",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "d",
+          "type": "DATE",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "dt",
+          "type": "DATETIME",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "t",
+          "type": "TIME",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "ts",
+          "type": "TIMESTAMP",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "j",
+          "type": "JSON",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "arr",
+          "type": "INTEGER",
+          "mode": "REPEATED"
+        },
+        {
+          "name": "st",
+          "type": "RECORD",
+          "mode": "NULLABLE",
+          "fields": [
+            {
+              "name": "x",
+              "type": "INTEGER",
+              "mode": "NULLABLE"
+            },
+            {
+              "name": "y",
+              "type": "STRING",
+              "mode": "REPEATED"
+            }
+          ]
+        },
+        {
+          "name": "arr_st",
+          "type": "RECORD",
+          "mode": "REPEATED",
+          "fields": [
+            {
+              "name": "k",
+              "type": "INTEGER",
+              "mode": "NULLABLE"
+            },
+            {
+              "name": "w",
+              "type": "STRING",
+              "mode": "NULLABLE"
+            }
+          ]
+        },
+        {
+          "name": "iv",
+          "type": "INTERVAL",
+          "mode": "NULLABLE"
+        }
+      ]
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-2>",
+      "location": "<location>"
+    },
+    "totalRows": "3",
+    "pageToken": "<page-token-3>",
+    "totalBytesProcessed": "0",
+    "jobComplete": true,
+    "cacheHit": false
+  }
+}

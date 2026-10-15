@@ -1,0 +1,33 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/datasets",
+    "params": {
+      "filter": "labels.crucible-corpus:1"
+    },
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#datasetList",
+    "etag": "<etag>",
+    "datasets": [
+      {
+        "kind": "bigquery#dataset",
+        "id": "<project>:<dataset>",
+        "datasetReference": {
+          "datasetId": "<dataset>",
+          "projectId": "<project>"
+        },
+        "labels": {
+          "crucible-corpus": "1"
+        },
+        "location": "<location>",
+        "type": "DEFAULT"
+      }
+    ]
+  }
+}

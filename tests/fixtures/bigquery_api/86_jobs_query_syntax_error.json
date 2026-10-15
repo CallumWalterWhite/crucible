@@ -1,0 +1,36 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/queries",
+    "params": {},
+    "body": {
+      "query": "SELEC 1",
+      "useLegacySql": false,
+      "maximumBytesBilled": "104857600",
+      "defaultDataset": {
+        "projectId": "<project>",
+        "datasetId": "<dataset>"
+      }
+    }
+  },
+  "status": 400,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "error": {
+      "code": 400,
+      "message": "Syntax error: Unexpected identifier \"SELEC\" at [1:1]",
+      "errors": [
+        {
+          "message": "Syntax error: Unexpected identifier \"SELEC\" at [1:1]",
+          "domain": "global",
+          "reason": "invalidQuery",
+          "location": "q",
+          "locationType": "parameter"
+        }
+      ],
+      "status": "INVALID_ARGUMENT"
+    }
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/jobs",
+    "params": {},
+    "body": {
+      "jobReference": {
+        "projectId": "<project>",
+        "jobId": "<job-4>"
+      },
+      "configuration": {
+        "query": {
+          "query": "INSERT INTO all_types (id, s) VALUES (10, 'a'), (11, 'b')",
+          "useLegacySql": false,
+          "maximumBytesBilled": "104857600",
+          "defaultDataset": {
+            "projectId": "<project>",
+            "datasetId": "<dataset>"
+          }
+        }
+      }
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:US.<job-4>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "query": {
+        "query": "INSERT INTO all_types (id, s) VALUES (10, 'a'), (11, 'b')",
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "all_types"
+        },
+        "defaultDataset": {
+          "datasetId": "<dataset>",
+          "projectId": "<project>"
+        },
+        "priority": "INTERACTIVE",
+        "maximumBytesBilled": "104857600",
+        "useLegacySql": false
+      },
+      "jobType": "QUERY"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-4>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "query": {
+        "statementType": "INSERT"
+      }
+    },
+    "status": {
+      "state": "RUNNING"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

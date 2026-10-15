@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "DELETE",
+    "path": "/projects/<project>/datasets/<dataset>/tables/all_types",
+    "params": {},
+    "body": null
+  },
+  "status": 204,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": null
+}

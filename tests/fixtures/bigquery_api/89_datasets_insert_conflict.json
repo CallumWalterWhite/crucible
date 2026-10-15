@@ -1,0 +1,31 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/datasets",
+    "params": {},
+    "body": {
+      "datasetReference": {
+        "projectId": "<project>",
+        "datasetId": "<dataset>"
+      }
+    }
+  },
+  "status": 409,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "error": {
+      "code": 409,
+      "message": "Already Exists: Dataset <project>:<dataset>",
+      "errors": [
+        {
+          "message": "Already Exists: Dataset <project>:<dataset>",
+          "domain": "global",
+          "reason": "duplicate"
+        }
+      ],
+      "status": "ALREADY_EXISTS"
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/datasets/<dataset>/tables",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#tableList",
+    "etag": "<etag>",
+    "tables": [
+      {
+        "kind": "bigquery#table",
+        "id": "<project>:<dataset>.all_types",
+        "tableReference": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "all_types"
+        },
+        "type": "TABLE",
+        "creationTime": "<time>",
+        "expirationTime": "<time>"
+      }
+    ],
+    "totalItems": 1
+  }
+}

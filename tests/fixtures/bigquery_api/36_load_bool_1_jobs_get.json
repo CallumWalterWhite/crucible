@@ -1,0 +1,97 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/jobs/<job-11>",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:US.<job-11>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "load": {
+        "schema": {
+          "fields": [
+            {
+              "name": "id",
+              "type": "INTEGER"
+            },
+            {
+              "name": "b",
+              "type": "BOOLEAN"
+            },
+            {
+              "name": "ts",
+              "type": "TIMESTAMP"
+            },
+            {
+              "name": "d",
+              "type": "DATE"
+            },
+            {
+              "name": "n",
+              "type": "NUMERIC"
+            },
+            {
+              "name": "f",
+              "type": "FLOAT"
+            },
+            {
+              "name": "s",
+              "type": "STRING"
+            }
+          ]
+        },
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "load_bool_1"
+        },
+        "writeDisposition": "WRITE_TRUNCATE",
+        "skipLeadingRows": 1,
+        "sourceFormat": "CSV"
+      },
+      "jobType": "LOAD"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-11>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "endTime": "<time>",
+      "totalSlotMs": "<duration>",
+      "reservation_id": "<reservation>"
+    },
+    "status": {
+      "errorResult": {
+        "reason": "invalid",
+        "message": "Error while reading data, error message: CSV processing encountered too many errors, giving up. Rows: 1; errors: 1; max bad: 0; error percent: 0"
+      },
+      "errors": [
+        {
+          "reason": "invalid",
+          "message": "Error while reading data, error message: CSV processing encountered too many errors, giving up. Rows: 1; errors: 1; max bad: 0; error percent: 0"
+        },
+        {
+          "reason": "invalid",
+          "message": "Error while reading data, error message: Could not parse '2024-01-02' as a timestamp. Required format is YYYY-MM-DD HH:MM[:SS[.SSSSSS]] or YYYY/MM/DD HH:MM[:SS[.SSSSSS]]; line_number: 2 byte_offset_to_start_of_line: 16 column_index: 2 column_name: \"ts\" column_type: TIMESTAMP value: \"2024-01-02\""
+        }
+      ],
+      "state": "DONE"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

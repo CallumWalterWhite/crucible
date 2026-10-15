@@ -1,0 +1,393 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/jobs/<job-1>",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:US.<job-1>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "query": {
+        "query": "CREATE TABLE all_types AS \nSELECT 1 AS id, CAST(42 AS INT64) AS i, 1.5 AS f, NUMERIC '123.456000001' AS n, TRUE AS b,\n  'x' AS s, b'\\x01\\xff' AS bt, DATE '2024-02-29' AS d,\n  DATETIME '2024-01-02 03:04:05.123456' AS dt, TIME '04:05:06.5' AS t,\n  TIMESTAMP '2024-01-02 03:04:05.123456+00' AS ts, JSON '{\"a\": [1, null]}' AS j,\n  [1, 2] AS arr, STRUCT(1 AS x, ['a', 'b'] AS y) AS st, [STRUCT(1 AS k, 'v' AS w)] AS arr_st,\n  INTERVAL 1 DAY AS iv\nUNION ALL\nSELECT 2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,\n  CAST([] AS ARRAY<INT64>), CAST(NULL AS STRUCT<x INT64, y ARRAY<STRING>>),\n  CAST([] AS ARRAY<STRUCT<k INT64, w STRING>>), NULL\nUNION ALL\nSELECT 3, -9223372036854775808, CAST('nan' AS FLOAT64), NUMERIC '-0.000000001', FALSE, '',\n  b'', DATE '0001-01-01', DATETIME '9999-12-31 23:59:59.999999', TIME '00:00:00',\n  TIMESTAMP '1970-01-01 00:00:00+00', JSON 'null', [-1],\n  STRUCT(CAST(NULL AS INT64) AS x, CAST([] AS ARRAY<STRING>) AS y),\n  CAST([] AS ARRAY<STRUCT<k INT64, w STRING>>), INTERVAL -3 MONTH\n",
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "all_types"
+        },
+        "defaultDataset": {
+          "datasetId": "<dataset>",
+          "projectId": "<project>"
+        },
+        "priority": "INTERACTIVE",
+        "maximumBytesBilled": "104857600",
+        "useLegacySql": false
+      },
+      "jobType": "QUERY"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-1>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "endTime": "<time>",
+      "totalBytesProcessed": "0",
+      "query": {
+        "queryPlan": [
+          {
+            "name": "S00: Input",
+            "id": "0",
+            "startMs": "<time>",
+            "endMs": "<time>",
+            "waitRatioAvg": 0.3058823529411765,
+            "waitMsAvg": "26",
+            "waitRatioMax": 0.3058823529411765,
+            "waitMsMax": "26",
+            "readRatioAvg": 0,
+            "readMsAvg": "0",
+            "readRatioMax": 0,
+            "readMsMax": "0",
+            "computeRatioAvg": 0.09411764705882353,
+            "computeMsAvg": "8",
+            "computeRatioMax": 0.09411764705882353,
+            "computeMsMax": "8",
+            "writeRatioAvg": 0.07058823529411765,
+            "writeMsAvg": "6",
+            "writeRatioMax": 0.07058823529411765,
+            "writeMsMax": "6",
+            "shuffleOutputBytes": "377",
+            "shuffleOutputBytesSpilled": "0",
+            "recordsRead": "0",
+            "recordsWritten": "3",
+            "parallelInputs": "1",
+            "completedParallelInputs": "1",
+            "status": "COMPLETE",
+            "steps": [
+              {
+                "kind": "COMPUTE",
+                "substeps": [
+                  "$1 := MAKE_STRUCT($26, $25, $24)",
+                  "$2 := MAKE_STRUCT($29, $28, $27)"
+                ]
+              },
+              {
+                "kind": "COMPUTE",
+                "substeps": [
+                  "$30 := 42",
+                  "$31 := 1.5",
+                  "$32 := NUMERIC<...>",
+                  "$33 := 'x'",
+                  "$34 := BYTES<...>",
+                  "$35 := 19782",
+                  "$36 := 2024-01-02 03:04:05.123456",
+                  "$37 := 04:05:06.500",
+                  "$38 := 1704164645.123456000",
+                  "$39 := UNKNOWN_TYPE<...>",
+                  "$40 := ARRAY<...>",
+                  "$41 := INTERVAL<...>",
+                  "$42 := ARRAY<...>",
+                  "$43 := ARRAY<...>",
+                  "$44 := ARRAY<...>",
+                  "$45 := 1"
+                ]
+              },
+              {
+                "kind": "COMPUTE",
+                "substeps": [
+                  "$50 := NULL",
+                  "$51 := NULL",
+                  "$52 := NULL",
+                  "$53 := NULL",
+                  "$54 := NULL",
+                  "$55 := NULL",
+                  "$56 := NULL",
+                  "$57 := NULL",
+                  "$58 := NULL",
+                  "$59 := NULL",
+                  "$60 := 2",
+                  "$61 := ARRAY<...>",
+                  "$62 := ARRAY<...>",
+                  "$63 := ARRAY<...>",
+                  "$64 := NULL",
+                  "$65 := NULL"
+                ]
+              },
+              {
+                "kind": "COMPUTE",
+                "substeps": [
+                  "$70 := 3",
+                  "$71 := -9223372036854775808",
+                  "$72 := nan",
+                  "$73 := NUMERIC<...>",
+                  "$74 := 0",
+                  "$75 := ''",
+                  "$76 := BYTES<...>",
+                  "$77 := -719162",
+                  "$78 := 9999-12-31 23:59:59.999999",
+                  "$79 := 00:00:00",
+                  "$80 := 0.000000000",
+                  "$81 := UNKNOWN_TYPE<...>",
+                  "$82 := ARRAY<...>",
+                  "$83 := INTERVAL<...>",
+                  "$84 := ARRAY<...>",
+                  "$85 := ARRAY<...>"
+                ]
+              },
+              {
+                "kind": "WRITE",
+                "substeps": [
+                  "$1, $2, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23",
+                  "TO __stage00_output"
+                ]
+              }
+            ],
+            "slotMs": "<duration>",
+            "computeMode": "BIGQUERY"
+          },
+          {
+            "name": "S01: Coalesce",
+            "id": "1",
+            "startMs": "<time>",
+            "endMs": "<time>",
+            "inputStages": [
+              "0"
+            ],
+            "waitRatioAvg": 0.4470588235294118,
+            "waitMsAvg": "38",
+            "waitRatioMax": 0.788235294117647,
+            "waitMsMax": "67",
+            "readRatioAvg": 0,
+            "readMsAvg": "0",
+            "readRatioMax": 0,
+            "readMsMax": "0",
+            "computeRatioAvg": 0.10588235294117647,
+            "computeMsAvg": "9",
+            "computeRatioMax": 0.17647058823529413,
+            "computeMsMax": "15",
+            "writeRatioAvg": 0.16470588235294117,
+            "writeMsAvg": "14",
+            "writeRatioMax": 0.2235294117647059,
+            "writeMsMax": "19",
+            "shuffleOutputBytes": "377",
+            "shuffleOutputBytesSpilled": "0",
+            "recordsRead": "3",
+            "recordsWritten": "3",
+            "parallelInputs": "50",
+            "completedParallelInputs": "50",
+            "status": "COMPLETE",
+            "steps": [
+              {
+                "kind": "READ",
+                "substeps": [
+                  "FROM __stage00_output"
+                ]
+              }
+            ],
+            "slotMs": "<duration>",
+            "computeMode": "BIGQUERY"
+          },
+          {
+            "name": "S02: Output",
+            "id": "2",
+            "startMs": "<time>",
+            "endMs": "<time>",
+            "inputStages": [
+              "1"
+            ],
+            "waitRatioAvg": 1,
+            "waitMsAvg": "85",
+            "waitRatioMax": 1,
+            "waitMsMax": "85",
+            "readRatioAvg": 0,
+            "readMsAvg": "0",
+            "readRatioMax": 0,
+            "readMsMax": "0",
+            "computeRatioAvg": 0.27058823529411763,
+            "computeMsAvg": "23",
+            "computeRatioMax": 0.27058823529411763,
+            "computeMsMax": "23",
+            "writeRatioAvg": 0.7764705882352941,
+            "writeMsAvg": "66",
+            "writeRatioMax": 0.7764705882352941,
+            "writeMsMax": "66",
+            "shuffleOutputBytes": "0",
+            "shuffleOutputBytesSpilled": "0",
+            "recordsRead": "3",
+            "recordsWritten": "3",
+            "parallelInputs": "1",
+            "completedParallelInputs": "1",
+            "status": "COMPLETE",
+            "steps": [
+              {
+                "kind": "READ",
+                "substeps": [
+                  "$1, $2, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23",
+                  "FROM __stage01_output"
+                ]
+              },
+              {
+                "kind": "EXPORT",
+                "substeps": [
+                  "$10:id, $11:i, $12:f, $13:n, $14:b, $15:s, $16:bt, $17:d, $18:dt, $19:t, $20:ts, $21:j, $22:arr, $2:st, $1:arr_st, $23:iv",
+                  "TO <dataset>.all_types"
+                ]
+              },
+              {
+                "kind": "WRITE",
+                "substeps": [
+                  "$1, $2, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23",
+                  "TO __stage02_output"
+                ]
+              }
+            ],
+            "slotMs": "<duration>",
+            "computeMode": "BIGQUERY"
+          }
+        ],
+        "estimatedBytesProcessed": "0",
+        "timeline": [
+          {
+            "elapsedMs": "<duration>",
+            "totalSlotMs": "<duration>",
+            "pendingUnits": "0",
+            "completedUnits": "0",
+            "activeUnits": "0",
+            "estimatedRunnableUnits": "0"
+          },
+          {
+            "elapsedMs": "<duration>",
+            "totalSlotMs": "<duration>",
+            "pendingUnits": "0",
+            "completedUnits": "52",
+            "estimatedRunnableUnits": "0"
+          }
+        ],
+        "totalPartitionsProcessed": "0",
+        "totalBytesProcessed": "0",
+        "totalBytesBilled": "0",
+        "billingTier": 0,
+        "totalSlotMs": "<duration>",
+        "cacheHit": false,
+        "schema": {
+          "fields": [
+            {
+              "name": "id",
+              "type": "INTEGER"
+            },
+            {
+              "name": "i",
+              "type": "INTEGER"
+            },
+            {
+              "name": "f",
+              "type": "FLOAT"
+            },
+            {
+              "name": "n",
+              "type": "NUMERIC"
+            },
+            {
+              "name": "b",
+              "type": "BOOLEAN"
+            },
+            {
+              "name": "s",
+              "type": "STRING"
+            },
+            {
+              "name": "bt",
+              "type": "BYTES"
+            },
+            {
+              "name": "d",
+              "type": "DATE"
+            },
+            {
+              "name": "dt",
+              "type": "DATETIME"
+            },
+            {
+              "name": "t",
+              "type": "TIME"
+            },
+            {
+              "name": "ts",
+              "type": "TIMESTAMP"
+            },
+            {
+              "name": "j",
+              "type": "JSON"
+            },
+            {
+              "name": "arr",
+              "type": "INTEGER",
+              "mode": "REPEATED"
+            },
+            {
+              "name": "st",
+              "type": "RECORD",
+              "fields": [
+                {
+                  "name": "x",
+                  "type": "INTEGER"
+                },
+                {
+                  "name": "y",
+                  "type": "STRING",
+                  "mode": "REPEATED"
+                }
+              ]
+            },
+            {
+              "name": "arr_st",
+              "type": "RECORD",
+              "mode": "REPEATED",
+              "fields": [
+                {
+                  "name": "k",
+                  "type": "INTEGER"
+                },
+                {
+                  "name": "w",
+                  "type": "STRING"
+                }
+              ]
+            },
+            {
+              "name": "iv",
+              "type": "INTERVAL"
+            }
+          ]
+        },
+        "statementType": "CREATE_TABLE_AS_SELECT",
+        "ddlOperationPerformed": "CREATE",
+        "ddlTargetTable": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "all_types"
+        },
+        "transferredBytes": "0"
+      },
+      "totalSlotMs": "<duration>",
+      "finalExecutionDurationMs": "<duration>"
+    },
+    "status": {
+      "state": "DONE"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

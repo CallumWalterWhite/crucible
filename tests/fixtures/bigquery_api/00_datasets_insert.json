@@ -1,0 +1,57 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/datasets",
+    "params": {},
+    "body": {
+      "datasetReference": {
+        "projectId": "<project>",
+        "datasetId": "<dataset>"
+      },
+      "defaultTableExpirationMs": "3600000",
+      "labels": {
+        "crucible-corpus": "1"
+      }
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#dataset",
+    "etag": "<etag>",
+    "id": "<project>:<dataset>",
+    "selfLink": "<self-link>",
+    "datasetReference": {
+      "datasetId": "<dataset>",
+      "projectId": "<project>"
+    },
+    "defaultTableExpirationMs": "3600000",
+    "labels": {
+      "crucible-corpus": "1"
+    },
+    "access": [
+      {
+        "role": "WRITER",
+        "specialGroup": "projectWriters"
+      },
+      {
+        "role": "OWNER",
+        "specialGroup": "projectOwners"
+      },
+      {
+        "role": "OWNER",
+        "userByEmail": "<email>"
+      },
+      {
+        "role": "READER",
+        "specialGroup": "projectReaders"
+      }
+    ],
+    "creationTime": "<time>",
+    "lastModifiedTime": "<time>",
+    "location": "<location>",
+    "type": "DEFAULT"
+  }
+}

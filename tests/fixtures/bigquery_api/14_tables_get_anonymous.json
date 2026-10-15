@@ -1,0 +1,142 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/datasets/<anon-dataset-1>/tables/<anon-table-1>",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#table",
+    "etag": "<etag>",
+    "id": "<project>:<anon-dataset-1>.<anon-table-1>",
+    "selfLink": "<self-link>",
+    "tableReference": {
+      "projectId": "<project>",
+      "datasetId": "<anon-dataset-1>",
+      "tableId": "<anon-table-1>"
+    },
+    "schema": {
+      "fields": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "i",
+          "type": "INTEGER",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "f",
+          "type": "FLOAT",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "n",
+          "type": "NUMERIC",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "b",
+          "type": "BOOLEAN",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "s",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "bt",
+          "type": "BYTES",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "d",
+          "type": "DATE",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "dt",
+          "type": "DATETIME",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "t",
+          "type": "TIME",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "ts",
+          "type": "TIMESTAMP",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "j",
+          "type": "JSON",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "arr",
+          "type": "INTEGER",
+          "mode": "REPEATED"
+        },
+        {
+          "name": "st",
+          "type": "RECORD",
+          "mode": "NULLABLE",
+          "fields": [
+            {
+              "name": "x",
+              "type": "INTEGER",
+              "mode": "NULLABLE"
+            },
+            {
+              "name": "y",
+              "type": "STRING",
+              "mode": "REPEATED"
+            }
+          ]
+        },
+        {
+          "name": "arr_st",
+          "type": "RECORD",
+          "mode": "REPEATED",
+          "fields": [
+            {
+              "name": "k",
+              "type": "INTEGER",
+              "mode": "NULLABLE"
+            },
+            {
+              "name": "w",
+              "type": "STRING",
+              "mode": "NULLABLE"
+            }
+          ]
+        },
+        {
+          "name": "iv",
+          "type": "INTERVAL",
+          "mode": "NULLABLE"
+        }
+      ]
+    },
+    "numBytes": "0",
+    "numLongTermBytes": "0",
+    "numRows": "3",
+    "creationTime": "<time>",
+    "expirationTime": "<time>",
+    "lastModifiedTime": "<time>",
+    "type": "TABLE",
+    "location": "<location>",
+    "numTotalLogicalBytes": "0",
+    "numActiveLogicalBytes": "0",
+    "numLongTermLogicalBytes": "0"
+  }
+}

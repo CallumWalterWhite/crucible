@@ -1,0 +1,342 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/queries/<job-2>",
+    "params": {
+      "formatOptions.useInt64Timestamp": "true"
+    },
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#getQueryResultsResponse",
+    "etag": "<etag>",
+    "schema": {
+      "fields": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "i",
+          "type": "INTEGER",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "f",
+          "type": "FLOAT",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "n",
+          "type": "NUMERIC",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "b",
+          "type": "BOOLEAN",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "s",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "bt",
+          "type": "BYTES",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "d",
+          "type": "DATE",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "dt",
+          "type": "DATETIME",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "t",
+          "type": "TIME",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "ts",
+          "type": "TIMESTAMP",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "j",
+          "type": "JSON",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "arr",
+          "type": "INTEGER",
+          "mode": "REPEATED"
+        },
+        {
+          "name": "st",
+          "type": "RECORD",
+          "mode": "NULLABLE",
+          "fields": [
+            {
+              "name": "x",
+              "type": "INTEGER",
+              "mode": "NULLABLE"
+            },
+            {
+              "name": "y",
+              "type": "STRING",
+              "mode": "REPEATED"
+            }
+          ]
+        },
+        {
+          "name": "arr_st",
+          "type": "RECORD",
+          "mode": "REPEATED",
+          "fields": [
+            {
+              "name": "k",
+              "type": "INTEGER",
+              "mode": "NULLABLE"
+            },
+            {
+              "name": "w",
+              "type": "STRING",
+              "mode": "NULLABLE"
+            }
+          ]
+        },
+        {
+          "name": "iv",
+          "type": "INTERVAL",
+          "mode": "NULLABLE"
+        }
+      ]
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-2>",
+      "location": "<location>"
+    },
+    "totalRows": "3",
+    "rows": [
+      {
+        "f": [
+          {
+            "v": "1"
+          },
+          {
+            "v": "42"
+          },
+          {
+            "v": "1.5"
+          },
+          {
+            "v": "123.456000001"
+          },
+          {
+            "v": "true"
+          },
+          {
+            "v": "x"
+          },
+          {
+            "v": "Af8="
+          },
+          {
+            "v": "2024-02-29"
+          },
+          {
+            "v": "2024-01-02T03:04:05.123456"
+          },
+          {
+            "v": "04:05:06.500000"
+          },
+          {
+            "v": "1704164645123456"
+          },
+          {
+            "v": "{\"a\":[1,null]}"
+          },
+          {
+            "v": [
+              {
+                "v": "1"
+              },
+              {
+                "v": "2"
+              }
+            ]
+          },
+          {
+            "v": {
+              "f": [
+                {
+                  "v": "1"
+                },
+                {
+                  "v": [
+                    {
+                      "v": "a"
+                    },
+                    {
+                      "v": "b"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "v": [
+              {
+                "v": {
+                  "f": [
+                    {
+                      "v": "1"
+                    },
+                    {
+                      "v": "v"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "v": "0-0 1 0:0:0"
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "2"
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": []
+          },
+          {
+            "v": null
+          },
+          {
+            "v": []
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "3"
+          },
+          {
+            "v": "-9223372036854775808"
+          },
+          {
+            "v": "NaN"
+          },
+          {
+            "v": "-0.000000001"
+          },
+          {
+            "v": "false"
+          },
+          {
+            "v": ""
+          },
+          {
+            "v": ""
+          },
+          {
+            "v": "0001-01-01"
+          },
+          {
+            "v": "9999-12-31T23:59:59.999999"
+          },
+          {
+            "v": "00:00:00"
+          },
+          {
+            "v": "0"
+          },
+          {
+            "v": "null"
+          },
+          {
+            "v": [
+              {
+                "v": "-1"
+              }
+            ]
+          },
+          {
+            "v": {
+              "f": [
+                {
+                  "v": null
+                },
+                {
+                  "v": []
+                }
+              ]
+            }
+          },
+          {
+            "v": []
+          },
+          {
+            "v": "-0-3 0 0:0:0"
+          }
+        ]
+      }
+    ],
+    "totalBytesProcessed": "0",
+    "jobComplete": true,
+    "cacheHit": false
+  }
+}

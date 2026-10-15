@@ -1,0 +1,26 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/datasets/<dataset>/tables/no_such_table",
+    "params": {},
+    "body": null
+  },
+  "status": 404,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "error": {
+      "code": 404,
+      "message": "Not found: Table <project>:<dataset>.no_such_table",
+      "errors": [
+        {
+          "message": "Not found: Table <project>:<dataset>.no_such_table",
+          "domain": "global",
+          "reason": "notFound"
+        }
+      ],
+      "status": "NOT_FOUND"
+    }
+  }
+}

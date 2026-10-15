@@ -1,0 +1,72 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/jobs",
+    "params": {},
+    "body": {
+      "jobReference": {
+        "projectId": "<project>",
+        "jobId": "<job-1>"
+      },
+      "configuration": {
+        "query": {
+          "query": "CREATE TABLE all_types AS \nSELECT 1 AS id, CAST(42 AS INT64) AS i, 1.5 AS f, NUMERIC '123.456000001' AS n, TRUE AS b,\n  'x' AS s, b'\\x01\\xff' AS bt, DATE '2024-02-29' AS d,\n  DATETIME '2024-01-02 03:04:05.123456' AS dt, TIME '04:05:06.5' AS t,\n  TIMESTAMP '2024-01-02 03:04:05.123456+00' AS ts, JSON '{\"a\": [1, null]}' AS j,\n  [1, 2] AS arr, STRUCT(1 AS x, ['a', 'b'] AS y) AS st, [STRUCT(1 AS k, 'v' AS w)] AS arr_st,\n  INTERVAL 1 DAY AS iv\nUNION ALL\nSELECT 2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,\n  CAST([] AS ARRAY<INT64>), CAST(NULL AS STRUCT<x INT64, y ARRAY<STRING>>),\n  CAST([] AS ARRAY<STRUCT<k INT64, w STRING>>), NULL\nUNION ALL\nSELECT 3, -9223372036854775808, CAST('nan' AS FLOAT64), NUMERIC '-0.000000001', FALSE, '',\n  b'', DATE '0001-01-01', DATETIME '9999-12-31 23:59:59.999999', TIME '00:00:00',\n  TIMESTAMP '1970-01-01 00:00:00+00', JSON 'null', [-1],\n  STRUCT(CAST(NULL AS INT64) AS x, CAST([] AS ARRAY<STRING>) AS y),\n  CAST([] AS ARRAY<STRUCT<k INT64, w STRING>>), INTERVAL -3 MONTH\n",
+          "useLegacySql": false,
+          "maximumBytesBilled": "104857600",
+          "defaultDataset": {
+            "projectId": "<project>",
+            "datasetId": "<dataset>"
+          }
+        }
+      }
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:US.<job-1>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "query": {
+        "query": "CREATE TABLE all_types AS \nSELECT 1 AS id, CAST(42 AS INT64) AS i, 1.5 AS f, NUMERIC '123.456000001' AS n, TRUE AS b,\n  'x' AS s, b'\\x01\\xff' AS bt, DATE '2024-02-29' AS d,\n  DATETIME '2024-01-02 03:04:05.123456' AS dt, TIME '04:05:06.5' AS t,\n  TIMESTAMP '2024-01-02 03:04:05.123456+00' AS ts, JSON '{\"a\": [1, null]}' AS j,\n  [1, 2] AS arr, STRUCT(1 AS x, ['a', 'b'] AS y) AS st, [STRUCT(1 AS k, 'v' AS w)] AS arr_st,\n  INTERVAL 1 DAY AS iv\nUNION ALL\nSELECT 2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,\n  CAST([] AS ARRAY<INT64>), CAST(NULL AS STRUCT<x INT64, y ARRAY<STRING>>),\n  CAST([] AS ARRAY<STRUCT<k INT64, w STRING>>), NULL\nUNION ALL\nSELECT 3, -9223372036854775808, CAST('nan' AS FLOAT64), NUMERIC '-0.000000001', FALSE, '',\n  b'', DATE '0001-01-01', DATETIME '9999-12-31 23:59:59.999999', TIME '00:00:00',\n  TIMESTAMP '1970-01-01 00:00:00+00', JSON 'null', [-1],\n  STRUCT(CAST(NULL AS INT64) AS x, CAST([] AS ARRAY<STRING>) AS y),\n  CAST([] AS ARRAY<STRUCT<k INT64, w STRING>>), INTERVAL -3 MONTH\n",
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "all_types"
+        },
+        "defaultDataset": {
+          "datasetId": "<dataset>",
+          "projectId": "<project>"
+        },
+        "priority": "INTERACTIVE",
+        "maximumBytesBilled": "104857600",
+        "useLegacySql": false
+      },
+      "jobType": "QUERY"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-1>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "query": {
+        "statementType": "CREATE_TABLE_AS_SELECT"
+      }
+    },
+    "status": {
+      "state": "RUNNING"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

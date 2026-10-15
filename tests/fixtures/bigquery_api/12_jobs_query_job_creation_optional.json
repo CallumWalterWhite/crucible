@@ -1,0 +1,62 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/queries",
+    "params": {},
+    "body": {
+      "query": "SELECT 1 AS a, 'x' AS b",
+      "useLegacySql": false,
+      "maximumBytesBilled": "104857600",
+      "defaultDataset": {
+        "projectId": "<project>",
+        "datasetId": "<dataset>"
+      },
+      "jobCreationMode": "JOB_CREATION_OPTIONAL"
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#queryResponse",
+    "schema": {
+      "fields": [
+        {
+          "name": "a",
+          "type": "INTEGER",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "b",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        }
+      ]
+    },
+    "totalRows": "1",
+    "rows": [
+      {
+        "f": [
+          {
+            "v": "1"
+          },
+          {
+            "v": "x"
+          }
+        ]
+      }
+    ],
+    "totalBytesProcessed": "0",
+    "jobComplete": true,
+    "cacheHit": false,
+    "queryId": "<query-id>",
+    "totalBytesBilled": "0",
+    "totalSlotMs": "<duration>",
+    "location": "<location>",
+    "creationTime": "<time>",
+    "startTime": "<time>",
+    "endTime": "<time>",
+    "statementType": "SELECT"
+  }
+}
