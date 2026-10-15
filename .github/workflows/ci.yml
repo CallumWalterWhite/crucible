@@ -147,8 +147,8 @@ jobs:
           uv run --with "$CLIENT_SPEC" pytest -m clients tests/clients -k "$DIALECT"
           rc=$?
           set -e
-          # TODO(phase-3/4): remove once suites exist
-          if [ "$rc" -ne 0 ] && [ "$rc" -ne 5 ]; then exit "$rc"; fi
+          # Exit 5 (no tests collected) is accepted only for snowflake, whose suites come later.
+          if [ "$rc" -ne 0 ] && { [ "$rc" -ne 5 ] || [ "$DIALECT" = bigquery ]; }; then exit "$rc"; fi
 
   dbt:
     needs: docker
@@ -210,5 +210,5 @@ jobs:
           uv run --with "$ADAPTER_SPEC" pytest -m dbt tests/dbt -k "$DIALECT"
           rc=$?
           set -e
-          # TODO(phase-3/4): remove once suites exist
-          if [ "$rc" -ne 0 ] && [ "$rc" -ne 5 ]; then exit "$rc"; fi
+          # Exit 5 (no tests collected) is accepted only for snowflake, whose suites come later.
+          if [ "$rc" -ne 0 ] && { [ "$rc" -ne 5 ] || [ "$DIALECT" = bigquery ]; }; then exit "$rc"; fi

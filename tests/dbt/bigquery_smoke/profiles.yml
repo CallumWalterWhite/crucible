@@ -1,0 +1,14 @@
+# Used only by tests/dbt/test_dbt_bigquery.py, which points every run at CRUCIBLE_URL.
+# The endpoint is not in this file: google-cloud-bigquery reads BIGQUERY_EMULATOR_HOST when a Client is
+# built without an api_endpoint, in both dbt-bigquery 1.9 (which has no api_endpoint field) and 1.12.
+bigquery_smoke:
+  target: crucible
+  outputs:
+    crucible:
+      type: bigquery
+      method: oauth-secrets
+      token: dummy-token
+      project: crucible-test
+      dataset: smoke
+      location: US
+      threads: 8

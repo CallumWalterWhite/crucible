@@ -1,0 +1,9 @@
+name: bigquery_smoke
+version: "1.0.0"
+config-version: 2
+
+profile: bigquery_smoke
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]

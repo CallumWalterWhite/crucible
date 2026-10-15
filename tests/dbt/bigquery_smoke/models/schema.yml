@@ -1,0 +1,42 @@
+version: 2
+
+seeds:
+  - name: customers
+    columns:
+      - name: customer_id
+        data_tests:
+          - unique
+          - not_null
+      - name: tier
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["gold", "silver", "bronze"]
+
+models:
+  - name: vip_customers
+    columns:
+      - name: customer_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('customers')
+                field: customer_id
+  - name: customer_signups
+    columns:
+      - name: customer_id
+        data_tests:
+          - unique
+          - not_null
+
+unit_tests:
+  - name: vip_customers_keeps_only_vips
+    model: vip_customers
+    given:
+      - input: ref('customers')
+        rows:
+          - {customer_id: 1, name: Ada, credit_limit: 1500.0, is_vip: true}
+          - {customer_id: 2, name: Grace, credit_limit: 900.5, is_vip: false}
+    expect:
+      rows:
+        - {customer_id: 1, name: Ada, credit_limit: 1500.0}

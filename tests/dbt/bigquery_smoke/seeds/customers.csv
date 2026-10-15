@@ -1,0 +1,7 @@
+customer_id,name,signup_date,credit_limit,is_vip,tier
+1,Ada Lovelace,2024-01-02,1500.00,true,gold
+2,Grace Hopper,2024-02-29,900.50,false,silver
+3,Alan Turing,2024-03-05,2500.00,true,gold
+4,Edsger Dijkstra,2023-12-31,0.00,false,bronze
+5,Barbara Liskov,2024-04-01,1200.75,true,silver
+6,Donald Knuth,2024-05-20,300.00,false,bronze
