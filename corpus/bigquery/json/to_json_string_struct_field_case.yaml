@@ -1,0 +1,21 @@
+description: TO_JSON_STRING keeps STRUCT field names as written, in values and in STRUCT<...>
+  types (JSON built from aliased fields, keys like Item_Code). Crucible used to lowercase them.
+  Expected value from the documented TO_JSON_STRING semantics; a recording verifies it.
+tags:
+- phase3
+- json
+query: |-
+  SELECT TO_JSON_STRING(STRUCT('a' AS Item_Code, 1 AS qty)) AS v,
+    TO_JSON_STRING(STRUCT<Ab INT64>(2)) AS w
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: STRING
+  - name: w
+    type: STRING
+  rows:
+  - - '{"Item_Code":"a","qty":1}'
+    - '{"Ab":2}'
+verified: false
+recorded_at: null

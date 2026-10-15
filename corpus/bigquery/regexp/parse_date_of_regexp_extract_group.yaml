@@ -1,0 +1,19 @@
+description: PARSE_DATE over REGEXP_EXTRACT with one capturing group parses the group, not the
+  whole match (a month key inside JSON text); SQLGlot's DuckDB generation of PARSE_DATE used to
+  drop the group. Expected value from the documented semantics
+  of both functions; a recording verifies it.
+tags:
+- phase3
+- regexp
+- date_time
+query: |-
+  SELECT PARSE_DATE('%Y-%m', REGEXP_EXTRACT('{"2024-07": 40}', r'"(\d{4}-\d{2})"')) AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: DATE
+  rows:
+  - - '2024-07-01'
+verified: false
+recorded_at: null

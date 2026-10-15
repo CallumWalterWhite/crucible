@@ -44,6 +44,19 @@ class BigQueryToDuckDB(DuckDB):
                 sql = f"LIST_SLICE({sql}, 1, {self.sql(limit)})"
             return sql
 
+        def strtodate_sql(self, expression: exp.StrToDate) -> str:
+            """PARSE_DATE -> CAST(STRPTIME(...) AS DATE), built as a tree.
+
+            SQLGlot 30.22 passes the generated STRPTIME text to exp.cast, which re-parses it in the
+            default dialect: REGEXP_EXTRACT(x, p, 1) comes back with 1 as a position, and the
+            capture group is lost (PARSE_DATE('%Y-%m', REGEXP_EXTRACT(...)) parsed the whole match).
+            TODO(upstream): SQLGlot PR draft in .local/upstream/.
+            """
+            value, formatted_time = self._strptime_default_year(expression)
+            name = "TRY_STRPTIME" if expression.args.get("safe") else "STRPTIME"
+            call = exp.Anonymous(this=name, expressions=[value, formatted_time])
+            return self.sql(exp.Cast(this=call, to=exp.DataType(this=exp.DType.DATE)))
+
 
 _DIALECT = BigQueryToDuckDB()
 

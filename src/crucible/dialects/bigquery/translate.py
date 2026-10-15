@@ -72,6 +72,31 @@ def _tag_names(select: exp.Select) -> None:
             projection.this.meta[_NAME] = name
 
 
+def _struct_field_names(query: exp.Expr) -> list[tuple[exp.Identifier, str]]:
+    """STRUCT field names as written: in STRUCT(...) values and STRUCT<...> types. qualify
+    lowercases them; BigQuery keeps their case in results and in TO_JSON_STRING keys."""
+    found: list[tuple[exp.Identifier, str]] = []
+    for struct in query.find_all(exp.Struct):
+        for field in struct.expressions:
+            if isinstance(field, exp.PropertyEQ) and isinstance(field.this, exp.Identifier):
+                found.append((field.this, field.this.name))
+            elif isinstance(field, exp.Alias) and isinstance(
+                field.args.get("alias"), exp.Identifier
+            ):
+                found.append((field.args["alias"], field.alias))
+    for data_type in query.find_all(exp.DataType):
+        if data_type.this == exp.DType.STRUCT:
+            for field in data_type.expressions:
+                if isinstance(field, exp.ColumnDef) and isinstance(field.this, exp.Identifier):
+                    found.append((field.this, field.name))
+    return found
+
+
+def _restore_struct_field_names(found: list[tuple[exp.Identifier, str]]) -> None:
+    for identifier, name in found:
+        identifier.set("this", name)
+
+
 def _output_names(select: exp.Select, stored: dict[str, str]) -> list[str]:
     """BigQuery's output names: as written, stored names for SELECT *, f0_, f1_ ... if anonymous."""
     names: list[str] = []
@@ -114,10 +139,12 @@ def prepare(query: exp.Expr, ctx: ExecContext) -> Prepared:
     _tag_names(first)
     infos = metadata.qualify_names(query, ctx)
     schema = schema_for(infos)
+    struct_names = _struct_field_names(query)
     try:
         query = qualify(query, schema=schema, dialect="bigquery", validate_qualify_columns=True)
     except OptimizeError as exc:
         raise _qualify_error(exc) from exc
+    _restore_struct_field_names(struct_names)
     query = annotate_types(query, schema=schema, dialect="bigquery")
     fix_annotation(query)
 
