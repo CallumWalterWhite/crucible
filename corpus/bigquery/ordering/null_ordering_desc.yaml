@@ -1,5 +1,4 @@
-description: ORDER BY descending sorts NULL last. Expected value from the BigQuery
-  documentation; not yet recorded.
+description: ORDER BY descending sorts NULL last.
 tags:
 - probe
 - ordering

@@ -1,5 +1,4 @@
-description: A decimal literal is FLOAT64, and COALESCE keeps FLOAT64. Expected value
-  from the BigQuery documentation; not yet recorded.
+description: A decimal literal is FLOAT64, and COALESCE keeps FLOAT64.
 tags:
 - backbone
 - types

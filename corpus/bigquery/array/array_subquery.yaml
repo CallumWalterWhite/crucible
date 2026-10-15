@@ -1,5 +1,5 @@
 description: ARRAY over a subquery collects its rows into an array, in the subquery
-  ORDER BY order. Expected value from the BigQuery documentation; not yet recorded.
+  ORDER BY order.
 tags:
 - probe
 - array

@@ -1,5 +1,4 @@
-description: SUBSTR with a negative position counts from the end of the string. Expected
-  value from the BigQuery documentation; not yet recorded.
+description: SUBSTR with a negative position counts from the end of the string.
 tags:
 - probe
 - string

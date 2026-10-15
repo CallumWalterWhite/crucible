@@ -1,5 +1,4 @@
-description: SAFE_CAST returns NULL when a STRING cannot be converted to INT64. Expected
-  value from the BigQuery documentation; not yet recorded.
+description: SAFE_CAST returns NULL when a STRING cannot be converted to INT64.
 tags:
 - probe
 - cast

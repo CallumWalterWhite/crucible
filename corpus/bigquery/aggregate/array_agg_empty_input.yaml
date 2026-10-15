@@ -1,8 +1,9 @@
-description: ARRAY_AGG over zero rows returns NULL, not an empty array. Expected value
-  from the BigQuery documentation; not yet recorded.
+description: ARRAY_AGG over no rows yields NULL, and BigQuery returns a NULL array
+  in a query result as an empty array.
 tags:
 - probe
 - aggregate
+- known-divergence
 query: SELECT ARRAY_AGG(x) AS v FROM UNNEST(CAST([] AS ARRAY<INT64>)) AS x
 ordered: false
 expected:

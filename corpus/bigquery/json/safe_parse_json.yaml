@@ -1,5 +1,5 @@
 description: SAFE.PARSE_JSON returns NULL instead of an error when the input is not
-  valid JSON. Expected value from the BigQuery documentation; not yet recorded.
+  valid JSON.
 tags:
 - probe
 - json

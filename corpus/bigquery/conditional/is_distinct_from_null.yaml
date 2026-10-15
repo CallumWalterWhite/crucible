@@ -1,5 +1,5 @@
 description: IS DISTINCT FROM treats NULL as a comparable value, so NULL and 1 are
-  distinct. Expected value from the BigQuery documentation; not yet recorded.
+  distinct.
 tags:
 - probe
 - conditional

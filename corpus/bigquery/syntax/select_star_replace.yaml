@@ -1,5 +1,5 @@
 description: SELECT * REPLACE substitutes an expression for the named column and keeps
-  its name. Expected value from the BigQuery documentation; not yet recorded.
+  its name.
 tags:
 - probe
 - syntax

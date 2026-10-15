@@ -1,5 +1,4 @@
-description: ABS of an INT64 returns an INT64. Expected value from the BigQuery documentation;
-  not yet recorded.
+description: ABS of an INT64 returns an INT64.
 tags:
 - probe
 - math

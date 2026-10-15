@@ -1,5 +1,4 @@
-description: ARRAY_TO_STRING skips NULL elements when no null_text is given. Expected
-  value from the BigQuery documentation; not yet recorded.
+description: ARRAY_TO_STRING skips NULL elements when no null_text is given.
 tags:
 - probe
 - array

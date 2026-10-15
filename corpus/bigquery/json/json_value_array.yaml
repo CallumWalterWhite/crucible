@@ -1,5 +1,5 @@
 description: JSON_VALUE_ARRAY returns the scalar elements of a JSON array as unquoted
-  strings. Expected value from the BigQuery documentation; not yet recorded.
+  strings.
 tags:
 - probe
 - json

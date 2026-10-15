@@ -1,5 +1,4 @@
-description: SELECT * EXCEPT omits the listed columns. Expected value from the BigQuery
-  documentation; not yet recorded.
+description: SELECT * EXCEPT omits the listed columns.
 tags:
 - probe
 - syntax

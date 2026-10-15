@@ -1,5 +1,4 @@
 description: SUM of INT64 values beyond the INT64 range raises an overflow error.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - backbone
 - aggregate

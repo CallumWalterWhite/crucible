@@ -1,5 +1,4 @@
 description: Inserting an INT64 value into a FLOAT64 column stores it as FLOAT64.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - backbone
 - dml

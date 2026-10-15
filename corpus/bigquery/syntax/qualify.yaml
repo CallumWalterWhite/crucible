@@ -1,5 +1,4 @@
-description: QUALIFY filters rows on the result of a window function. Expected value
-  from the BigQuery documentation; not yet recorded.
+description: QUALIFY filters rows on the result of a window function.
 tags:
 - probe
 - syntax

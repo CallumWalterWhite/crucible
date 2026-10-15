@@ -1,5 +1,5 @@
 description: DATE applied to a TIMESTAMP returns the date in UTC when no time zone
-  is given. Expected value from the BigQuery documentation; not yet recorded.
+  is given.
 tags:
 - probe
 - date_time

@@ -1,5 +1,5 @@
 description: TRIM with a second argument removes only the listed characters from both
-  ends. Expected value from the BigQuery documentation; not yet recorded.
+  ends.
 tags:
 - probe
 - string

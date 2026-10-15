@@ -1,5 +1,4 @@
-description: REGEXP_REPLACE replaces every match of the pattern. Expected value from
-  the BigQuery documentation; not yet recorded.
+description: REGEXP_REPLACE replaces every match of the pattern.
 tags:
 - probe
 - regexp

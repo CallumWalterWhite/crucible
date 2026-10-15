@@ -1,5 +1,5 @@
 description: UNNEST of an array of STRUCT without an alias exposes the struct fields
-  as columns. Expected value from the BigQuery documentation; not yet recorded.
+  as columns.
 tags:
 - probe
 - syntax

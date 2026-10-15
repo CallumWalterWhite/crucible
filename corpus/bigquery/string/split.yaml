@@ -1,5 +1,4 @@
-description: SPLIT keeps the empty fields between consecutive delimiters. Expected
-  value from the BigQuery documentation; not yet recorded.
+description: SPLIT keeps the empty fields between consecutive delimiters.
 tags:
 - probe
 - string

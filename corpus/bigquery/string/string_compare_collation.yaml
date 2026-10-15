@@ -1,5 +1,5 @@
 description: String comparison orders by Unicode code point, so uppercase letters
-  sort before lowercase. Expected value from the BigQuery documentation; not yet recorded.
+  sort before lowercase.
 tags:
 - probe
 - string

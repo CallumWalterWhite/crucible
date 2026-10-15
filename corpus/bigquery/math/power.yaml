@@ -1,9 +1,7 @@
-description: POWER returns a FLOAT64 result. Expected value from the BigQuery documentation;
-  not yet recorded.
+description: POWER returns a FLOAT64 result.
 tags:
 - probe
 - math
-- type-unconfirmed
 query: SELECT POWER(2, 3) AS v
 ordered: false
 expected:

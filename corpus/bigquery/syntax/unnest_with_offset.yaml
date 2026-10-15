@@ -1,5 +1,5 @@
 description: UNNEST WITH OFFSET returns a zero-based element position alongside each
-  value. Expected value from the BigQuery documentation; not yet recorded.
+  value.
 tags:
 - probe
 - syntax

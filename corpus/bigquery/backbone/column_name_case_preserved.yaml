@@ -1,12 +1,8 @@
-description: A column reference is case-insensitive, and an alias keeps its written
-  case. Column names are case-insensitive, and the result name of an unaliased reference
-  is the stored name (best reading; the docs do not state it). Expected value from
-  the BigQuery documentation; not yet recorded.
+description: An unaliased column reference keeps the case it is written with in the
+  result name; an alias keeps its written case.
 tags:
 - backbone
 - names
-- name-unconfirmed
-- known-divergence
 setup:
 - CREATE TABLE t (MixedCase INT64)
 - INSERT INTO t VALUES (7)

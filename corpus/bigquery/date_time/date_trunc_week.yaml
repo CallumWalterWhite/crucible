@@ -1,9 +1,8 @@
 description: DATE_TRUNC to WEEK returns the preceding Sunday, because BigQuery weeks
-  start on Sunday. Expected value from the BigQuery documentation; not yet recorded.
+  start on Sunday.
 tags:
 - probe
 - date_time
-- type-unconfirmed
 query: SELECT DATE_TRUNC(DATE '2024-03-06', WEEK) AS v
 ordered: false
 expected:

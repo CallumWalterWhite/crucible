@@ -1,5 +1,4 @@
-description: SAFE_CAST converts a valid numeric STRING to FLOAT64. Expected value
-  from the BigQuery documentation; not yet recorded.
+description: SAFE_CAST converts a valid numeric STRING to FLOAT64.
 tags:
 - probe
 - cast

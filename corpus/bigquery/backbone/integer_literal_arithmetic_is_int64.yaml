@@ -1,5 +1,5 @@
 description: Integer arithmetic on INT64 literals returns INT64 and does not overflow
-  at 2^31. Expected value from the BigQuery documentation; not yet recorded.
+  at 2^31.
 tags:
 - backbone
 - arithmetic

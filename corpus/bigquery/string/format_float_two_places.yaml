@@ -1,5 +1,4 @@
-description: FORMAT with %.2f renders a FLOAT64 with two decimal places. Expected
-  value from the BigQuery documentation; not yet recorded.
+description: FORMAT with %.2f renders a FLOAT64 with two decimal places.
 tags:
 - probe
 - string

@@ -1,5 +1,4 @@
 description: SUBSTR returns a substring from a 1-based position with a given length.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - probe
 - string

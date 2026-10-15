@@ -1,5 +1,4 @@
-description: DATE(year, month, day) constructs a DATE from integer parts. Expected
-  value from the BigQuery documentation; not yet recorded.
+description: DATE(year, month, day) constructs a DATE from integer parts.
 tags:
 - probe
 - date_time

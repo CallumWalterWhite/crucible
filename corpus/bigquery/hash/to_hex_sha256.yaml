@@ -1,5 +1,5 @@
 description: TO_HEX of the BYTES result of SHA256 returns the 64-character lowercase
-  hexadecimal digest. Expected value from the BigQuery documentation; not yet recorded.
+  hexadecimal digest.
 tags:
 - probe
 - hash

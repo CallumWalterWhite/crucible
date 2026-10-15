@@ -1,5 +1,5 @@
 description: ROUND rounds halves away from zero and returns FLOAT64 for a FLOAT64
-  input. Expected value from the BigQuery documentation; not yet recorded.
+  input.
 tags:
 - probe
 - math

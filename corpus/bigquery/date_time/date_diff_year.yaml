@@ -1,6 +1,5 @@
 description: DATE_DIFF with YEAR counts the year boundaries crossed, so 31 December
-  and 1 January differ by one year. Expected value from the BigQuery documentation;
-  not yet recorded.
+  and 1 January differ by one year.
 tags:
 - probe
 - date_time

@@ -1,6 +1,5 @@
 description: INITCAP uppercases the first letter of each word, where words are separated
-  by non-letters such as spaces and hyphens. Expected value from the BigQuery documentation;
-  not yet recorded.
+  by non-letters such as spaces and hyphens.
 tags:
 - probe
 - string

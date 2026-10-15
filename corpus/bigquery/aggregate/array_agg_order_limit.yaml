@@ -1,5 +1,5 @@
 description: ARRAY_AGG accepts ORDER BY and LIMIT inside the call, and its result
-  can be subscripted. Expected value from the BigQuery documentation; not yet recorded.
+  can be subscripted.
 tags:
 - probe
 - aggregate

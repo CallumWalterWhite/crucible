@@ -1,5 +1,5 @@
 description: ROUND of a NUMERIC value to two places keeps NUMERIC precision and rounds
-  halves away from zero. Expected value from the BigQuery documentation; not yet recorded.
+  halves away from zero.
 tags:
 - probe
 - math

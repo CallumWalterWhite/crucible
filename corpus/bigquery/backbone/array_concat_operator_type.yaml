@@ -1,5 +1,4 @@
-description: The || operator concatenates two arrays and keeps ARRAY<INT64>. Expected
-  value from the BigQuery documentation; not yet recorded.
+description: The || operator concatenates two arrays and keeps ARRAY<INT64>.
 tags:
 - backbone
 - array

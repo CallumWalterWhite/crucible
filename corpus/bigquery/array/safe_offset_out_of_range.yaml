@@ -1,5 +1,5 @@
 description: An array subscript with SAFE_OFFSET returns NULL when the index is out
-  of range. Expected value from the BigQuery documentation; not yet recorded.
+  of range.
 tags:
 - probe
 - array

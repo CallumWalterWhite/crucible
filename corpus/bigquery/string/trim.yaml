@@ -1,5 +1,4 @@
-description: TRIM removes leading and trailing whitespace. Expected value from the
-  BigQuery documentation; not yet recorded.
+description: TRIM removes leading and trailing whitespace.
 tags:
 - probe
 - string

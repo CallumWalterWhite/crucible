@@ -1,5 +1,5 @@
 description: LAST_VALUE IGNORE NULLS skips NULL rows when choosing the value in the
-  frame. Expected value from the BigQuery documentation; not yet recorded.
+  frame.
 tags:
 - probe
 - window

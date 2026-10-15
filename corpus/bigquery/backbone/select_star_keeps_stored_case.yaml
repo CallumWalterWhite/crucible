@@ -1,5 +1,4 @@
-description: SELECT * reports the column name as stored in the table. Expected value
-  from the BigQuery documentation; not yet recorded.
+description: SELECT * reports the column name as stored in the table.
 tags:
 - backbone
 - names

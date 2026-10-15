@@ -1,5 +1,4 @@
-description: NULLIF returns NULL when its two arguments are equal. Expected value
-  from the BigQuery documentation; not yet recorded.
+description: NULLIF returns NULL when its two arguments are equal.
 tags:
 - probe
 - conditional

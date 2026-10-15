@@ -1,9 +1,7 @@
-description: SAFE_DIVIDE returns NULL when the divisor is zero. Expected value from
-  the BigQuery documentation; not yet recorded.
+description: SAFE_DIVIDE returns NULL when the divisor is zero.
 tags:
 - probe
 - math
-- type-unconfirmed
 query: SELECT SAFE_DIVIDE(1, 0) AS v
 ordered: false
 expected:

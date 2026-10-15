@@ -1,5 +1,4 @@
-description: STARTS_WITH returns TRUE when the string begins with the prefix. Expected
-  value from the BigQuery documentation; not yet recorded.
+description: STARTS_WITH returns TRUE when the string begins with the prefix.
 tags:
 - probe
 - string

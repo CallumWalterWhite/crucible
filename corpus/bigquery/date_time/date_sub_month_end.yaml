@@ -1,5 +1,5 @@
 description: DATE_SUB clamps the day to the last day of the month when the result
-  month is shorter. Expected value from the BigQuery documentation; not yet recorded.
+  month is shorter.
 tags:
 - probe
 - date_time

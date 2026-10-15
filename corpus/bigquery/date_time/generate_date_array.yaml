@@ -1,10 +1,8 @@
-description: GENERATE_DATE_ARRAY computes each element as the start date plus a multiple
-  of the interval, clamped to month end where needed. Expected value from the BigQuery
-  documentation; not yet recorded.
+description: GENERATE_DATE_ARRAY with a month step adds the interval to the previous
+  element, so a month-end start drifts (Jan 30, Feb 29, Mar 29).
 tags:
 - probe
 - date_time
-- known-divergence
 query: SELECT GENERATE_DATE_ARRAY(DATE '2024-01-30', DATE '2024-04-01', INTERVAL 1
   MONTH) AS v
 ordered: false

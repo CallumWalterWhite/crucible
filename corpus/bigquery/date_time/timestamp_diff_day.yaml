@@ -1,5 +1,5 @@
 description: TIMESTAMP_DIFF with DAY truncates the elapsed time, so 12 hours is 0
-  days. Expected value from the BigQuery documentation; not yet recorded.
+  days.
 tags:
 - probe
 - date_time

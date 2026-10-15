@@ -1,6 +1,6 @@
 description: CREATE TABLE AS SELECT keeps the type of each selected expression. A
   table created with CTAS keeps the INT64, FLOAT64 and NUMERIC types of its select
-  list. Expected value from the BigQuery documentation; not yet recorded.
+  list.
 tags:
 - backbone
 - ddl

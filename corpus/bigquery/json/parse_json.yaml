@@ -1,5 +1,5 @@
 description: TO_JSON_STRING of PARSE_JSON returns the compact JSON text of an object,
-  with no spaces. Expected value from the BigQuery documentation; not yet recorded.
+  with no spaces.
 tags:
 - probe
 - json

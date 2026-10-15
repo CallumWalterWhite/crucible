@@ -1,5 +1,4 @@
-description: IN UNNEST tests membership in the elements of an array. Expected value
-  from the BigQuery documentation; not yet recorded.
+description: IN UNNEST tests membership in the elements of an array.
 tags:
 - probe
 - syntax

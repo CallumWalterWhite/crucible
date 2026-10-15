@@ -1,5 +1,4 @@
-description: IF treats a NULL condition as false and returns the else branch. Expected
-  value from the BigQuery documentation; not yet recorded.
+description: IF treats a NULL condition as false and returns the else branch.
 tags:
 - probe
 - conditional

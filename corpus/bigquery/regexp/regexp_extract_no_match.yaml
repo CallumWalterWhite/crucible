@@ -1,5 +1,4 @@
-description: REGEXP_EXTRACT returns NULL when the pattern does not match. Expected
-  value from the BigQuery documentation; not yet recorded.
+description: REGEXP_EXTRACT returns NULL when the pattern does not match.
 tags:
 - probe
 - regexp

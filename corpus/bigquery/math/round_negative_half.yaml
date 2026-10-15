@@ -1,5 +1,4 @@
-description: ROUND rounds negative halves away from zero. Expected value from the
-  BigQuery documentation; not yet recorded.
+description: ROUND rounds negative halves away from zero.
 tags:
 - probe
 - math

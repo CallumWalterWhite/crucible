@@ -1,5 +1,5 @@
 description: JSON_VALUE returns NULL when the value at the JSON path is an object,
-  not a scalar. Expected value from the BigQuery documentation; not yet recorded.
+  not a scalar.
 tags:
 - probe
 - json

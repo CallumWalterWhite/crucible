@@ -1,5 +1,4 @@
-description: ARRAY_AGG IGNORE NULLS drops NULL inputs before aggregating. Expected
-  value from the BigQuery documentation; not yet recorded.
+description: ARRAY_AGG IGNORE NULLS drops NULL inputs before aggregating.
 tags:
 - probe
 - aggregate

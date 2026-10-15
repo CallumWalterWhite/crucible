@@ -1,5 +1,4 @@
-description: ARRAY_TO_STRING substitutes null_text for NULL elements. Expected value
-  from the BigQuery documentation; not yet recorded.
+description: ARRAY_TO_STRING substitutes null_text for NULL elements.
 tags:
 - probe
 - array

@@ -1,5 +1,4 @@
-description: ORDER BY ascending sorts NULL first. Expected value from the BigQuery
-  documentation; not yet recorded.
+description: ORDER BY ascending sorts NULL first.
 tags:
 - probe
 - ordering

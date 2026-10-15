@@ -1,5 +1,4 @@
-description: A NUMERIC literal keeps all nine fractional digits. Expected value from
-  the BigQuery documentation; not yet recorded.
+description: A NUMERIC literal keeps all nine fractional digits.
 tags:
 - backbone
 - types

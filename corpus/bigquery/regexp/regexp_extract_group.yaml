@@ -1,5 +1,5 @@
 description: REGEXP_EXTRACT with a capturing group returns the captured text, not
-  the whole match. Expected value from the BigQuery documentation; not yet recorded.
+  the whole match.
 tags:
 - probe
 - regexp

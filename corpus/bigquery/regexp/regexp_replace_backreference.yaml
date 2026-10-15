@@ -1,5 +1,4 @@
 description: REGEXP_REPLACE supports \1 backreferences in the replacement string.
-  Expected value from the BigQuery documentation; not yet recorded.
 tags:
 - probe
 - regexp

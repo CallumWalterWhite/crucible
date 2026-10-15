@@ -1,5 +1,4 @@
-description: ANY_VALUE returns the value from some row in the group. Expected value
-  from the BigQuery documentation; not yet recorded.
+description: ANY_VALUE returns the value from some row in the group.
 tags:
 - probe
 - aggregate

@@ -1,5 +1,4 @@
-description: ARRAY_CONCAT joins the arrays in order. Expected value from the BigQuery
-  documentation; not yet recorded.
+description: ARRAY_CONCAT joins the arrays in order.
 tags:
 - probe
 - array

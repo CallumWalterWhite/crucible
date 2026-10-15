@@ -1,9 +1,7 @@
-description: The / operator on INT64 operands returns a FLOAT64 result. Expected value
-  from the BigQuery documentation; not yet recorded.
+description: The / operator on INT64 operands returns a FLOAT64 result.
 tags:
 - probe
 - math
-- type-unconfirmed
 query: SELECT 5 / 2 AS v
 ordered: false
 expected:

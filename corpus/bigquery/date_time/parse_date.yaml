@@ -1,9 +1,7 @@
-description: PARSE_DATE parses a compact yyyymmdd STRING into a DATE. Expected value
-  from the BigQuery documentation; not yet recorded.
+description: PARSE_DATE parses a compact yyyymmdd STRING into a DATE.
 tags:
 - probe
 - date_time
-- type-unconfirmed
 query: SELECT PARSE_DATE('%Y%m%d', '20240305') AS v
 ordered: false
 expected:

@@ -1,5 +1,4 @@
-description: LAG returns the previous row's value, or NULL for the first row. Expected
-  value from the BigQuery documentation; not yet recorded.
+description: LAG returns the previous row's value, or NULL for the first row.
 tags:
 - probe
 - window

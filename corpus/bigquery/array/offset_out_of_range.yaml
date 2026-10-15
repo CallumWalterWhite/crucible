@@ -1,7 +1,6 @@
 description: An array subscript with OFFSET raises an error when the index is out
   of range. The message_contains value is the message from BigQuery's runtime error
-  text; not yet recorded. Expected value from the BigQuery documentation; not yet
-  recorded.
+  text; not yet recorded.
 tags:
 - probe
 - array

@@ -1,9 +1,7 @@
-description: DATE_TRUNC to MONTH returns the first day of the month. Expected value
-  from the BigQuery documentation; not yet recorded.
+description: DATE_TRUNC to MONTH returns the first day of the month.
 tags:
 - probe
 - date_time
-- type-unconfirmed
 query: SELECT DATE_TRUNC(DATE '2024-03-05', MONTH) AS v
 ordered: false
 expected:

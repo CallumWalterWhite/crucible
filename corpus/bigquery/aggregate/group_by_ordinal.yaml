@@ -1,5 +1,4 @@
-description: GROUP BY with an ordinal groups by the select-list position. Expected
-  value from the BigQuery documentation; not yet recorded.
+description: GROUP BY with an ordinal groups by the select-list position.
 tags:
 - probe
 - aggregate

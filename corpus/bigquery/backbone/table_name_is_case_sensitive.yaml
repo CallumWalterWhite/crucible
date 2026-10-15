@@ -1,5 +1,5 @@
 description: Table names are case-sensitive, so a different-case reference is not
-  found. Expected value from the BigQuery documentation; not yet recorded.
+  found.
 tags:
 - backbone
 - names

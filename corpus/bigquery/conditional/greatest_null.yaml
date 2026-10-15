@@ -1,5 +1,4 @@
-description: GREATEST returns NULL when any argument is NULL. Expected value from
-  the BigQuery documentation; not yet recorded.
+description: GREATEST returns NULL when any argument is NULL.
 tags:
 - probe
 - conditional

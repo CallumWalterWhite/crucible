@@ -1,5 +1,4 @@
-description: FORMAT_DATE formats a DATE with a year and month pattern. Expected value
-  from the BigQuery documentation; not yet recorded.
+description: FORMAT_DATE formats a DATE with a year and month pattern.
 tags:
 - probe
 - date_time

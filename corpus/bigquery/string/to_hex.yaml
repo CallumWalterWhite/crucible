@@ -1,5 +1,4 @@
-description: TO_HEX encodes BYTES as a lowercase hexadecimal STRING. Expected value
-  from the BigQuery documentation; not yet recorded.
+description: TO_HEX encodes BYTES as a lowercase hexadecimal STRING.
 tags:
 - probe
 - string

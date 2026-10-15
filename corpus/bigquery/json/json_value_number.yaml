@@ -1,5 +1,5 @@
 description: JSON_VALUE returns a JSON number as its text form, keeping the trailing
-  zero. Expected value from the BigQuery documentation; not yet recorded.
+  zero.
 tags:
 - probe
 - json
