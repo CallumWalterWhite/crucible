@@ -194,3 +194,137 @@ def test_the_final_check_refuses_leaks():
         with pytest.raises(RecordApiError):
             redactor.check(leak)
     redactor.check('{"x": "<project>"}')
+
+
+# BigQuery's reserved keywords (Lexical structure and syntax, "Reserved keywords"). An unquoted
+# alias from this list is a syntax error in BigQuery; Crucible does not reject it yet (known
+# divergence, corpus case syntax/reserved_keyword_alias_error).
+RESERVED = set(
+    [
+        "ALL",
+        "AND",
+        "ANY",
+        "ARRAY",
+        "AS",
+        "ASC",
+        "ASSERT_ROWS_MODIFIED",
+        "AT",
+        "BETWEEN",
+        "BY",
+        "CASE",
+        "CAST",
+        "COLLATE",
+        "CONTAINS",
+        "CREATE",
+        "CROSS",
+        "CUBE",
+        "CURRENT",
+        "DEFAULT",
+        "DEFINE",
+        "DESC",
+        "DISTINCT",
+        "ELSE",
+        "END",
+        "ENUM",
+        "ESCAPE",
+        "EXCEPT",
+        "EXCLUDE",
+        "EXISTS",
+        "EXTRACT",
+        "FALSE",
+        "FETCH",
+        "FOLLOWING",
+        "FOR",
+        "FROM",
+        "FULL",
+        "GROUP",
+        "GROUPING",
+        "GROUPS",
+        "HASH",
+        "HAVING",
+        "IF",
+        "IGNORE",
+        "IN",
+        "INNER",
+        "INTERSECT",
+        "INTERVAL",
+        "INTO",
+        "IS",
+        "JOIN",
+        "LATERAL",
+        "LEFT",
+        "LIKE",
+        "LIMIT",
+        "LOOKUP",
+        "MERGE",
+        "NATURAL",
+        "NEW",
+        "NO",
+        "NOT",
+        "NULL",
+        "NULLS",
+        "OF",
+        "ON",
+        "OR",
+        "ORDER",
+        "OUTER",
+        "OVER",
+        "PARTITION",
+        "PRECEDING",
+        "PROTO",
+        "QUALIFY",
+        "RANGE",
+        "RECURSIVE",
+        "RESPECT",
+        "RIGHT",
+        "ROLLUP",
+        "ROWS",
+        "SELECT",
+        "SET",
+        "SOME",
+        "STRUCT",
+        "TABLESAMPLE",
+        "THEN",
+        "TO",
+        "TREAT",
+        "TRUE",
+        "UNBOUNDED",
+        "UNION",
+        "UNNEST",
+        "USING",
+        "WHEN",
+        "WHERE",
+        "WINDOW",
+        "WITH",
+        "WITHIN",
+    ]
+)
+
+
+def test_recorder_sql_uses_no_reserved_keyword_as_a_name():
+    import re
+
+    from crucible.corpus.record_api import ALL_TYPES_SQL, LOAD_SCHEMA
+
+    # An alias is `AS name` followed by a comma or line end (not `AS ARRAY<...>` in a CAST).
+    aliases = re.findall(r"\bAS\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?=,|$)", ALL_TYPES_SQL, re.MULTILINE)
+    assert "bt" in aliases
+    names = {a.upper() for a in aliases} | {f["name"].upper() for f in LOAD_SCHEMA}
+    assert not names & RESERVED
+
+
+def test_a_failing_dry_run_stops_before_anything_is_created(tmp_path: Path):
+    class DryRunFails(FakeSession):
+        def request(self, method: str, url: str, **kwargs: Any) -> FakeResponse:
+            self.calls.append((method, url))
+            if (kwargs.get("json") or {}).get("dryRun"):
+                return FakeResponse(
+                    400, {"error": {"message": "Syntax error: Unexpected keyword BY"}}
+                )
+            return super().request(method, url, **kwargs)
+
+    session = DryRunFails()
+    with pytest.raises(RecordApiError, match="dry run"):
+        Recorder(session, PROJECT, 1, tmp_path).run()
+    assert len(session.calls) == 1  # only the free dry run
+    assert list(tmp_path.iterdir()) == []

@@ -1,0 +1,9 @@
+description: An unquoted reserved keyword cannot be a column alias (it must be backticked). Message
+  from BigQuery's error during the first record-api run; a recording verifies the case.
+tags: [slice2, syntax, known-divergence]
+query: SELECT 1 AS by
+ordered: false
+expected:
+  error: {kind: invalid_query, message_contains: "Syntax error: Unexpected keyword BY"}
+verified: false
+recorded_at: null

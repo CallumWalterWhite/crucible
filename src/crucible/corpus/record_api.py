@@ -269,9 +269,26 @@ class Recorder:
             self.redactor.add(table["tableId"], "anon-table")
 
     # --- the fixed set of calls --------------------------------------------------------------
+    def preflight(self) -> None:
+        """A dry run of the all-types query: free; fails before anything is created or billed."""
+        response = self.session.request(
+            "POST",
+            f"{API}/projects/{self.project}/queries",
+            json={"query": ALL_TYPES_SQL, "useLegacySql": False, "dryRun": True},
+            timeout=120,
+        )
+        if int(response.status_code) != 200:
+            message = response.json().get("error", {}).get("message", response.text)
+            raise RecordApiError(
+                f"dry run of the all-types query failed: {self.redactor.text(str(message))}"
+            )
+
     def run(self) -> None:
         p, d = self.project, self.dataset
         datasets = f"{API}/projects/{p}/datasets"
+        self.preflight()
+        for stale in self.out_dir.glob("[0-9][0-9]_*.json"):
+            stale.unlink()  # regenerated as a set: a partial run must not mix with an older one
         self.call(
             "datasets_insert",
             "POST",
@@ -467,7 +484,7 @@ class Recorder:
 # Every ADR 0014 type, NULLs, nested STRUCT/ARRAY and NUMERIC edge values; three rows for paging.
 ALL_TYPES_SQL = """
 SELECT 1 AS id, CAST(42 AS INT64) AS i, 1.5 AS f, NUMERIC '123.456000001' AS n, TRUE AS b,
-  'x' AS s, b'\\x01\\xff' AS by, DATE '2024-02-29' AS d,
+  'x' AS s, b'\\x01\\xff' AS bt, DATE '2024-02-29' AS d,
   DATETIME '2024-01-02 03:04:05.123456' AS dt, TIME '04:05:06.5' AS t,
   TIMESTAMP '2024-01-02 03:04:05.123456+00' AS ts, JSON '{"a": [1, null]}' AS j,
   [1, 2] AS arr, STRUCT(1 AS x, ['a', 'b'] AS y) AS st, [STRUCT(1 AS k, 'v' AS w)] AS arr_st,
