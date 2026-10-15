@@ -55,9 +55,17 @@ def _pairs(obj: Any):
             yield from _pairs(value)
 
 
+# One private term per line, git-ignored: real project ids and numbers stay out of the repository.
+PRIVATE_TERMS_FILE = ROOT / ".local" / "private_terms.txt"
+
+
 def _private_terms() -> list[str]:
     raw = os.environ.get("CRUCIBLE_PRIVATE_TERMS", "")
-    return [t.strip() for t in raw.split(",") if t.strip()]
+    terms = [t.strip() for t in raw.split(",") if t.strip()]
+    if PRIVATE_TERMS_FILE.is_file():
+        lines = PRIVATE_TERMS_FILE.read_text(encoding="utf-8").splitlines()
+        terms += [t.strip() for t in lines if t.strip() and not t.startswith("#")]
+    return terms
 
 
 def problems(text: str) -> list[str]:
