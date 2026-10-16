@@ -20,7 +20,7 @@ Every snippet below is planned. None of them work until Phase 6.
 Run the BigQuery emulator on port 9050, bound to the loopback interface only:
 
 ```sh
-docker run --rm -p 127.0.0.1:9050:9050 ghcr.io/OWNER/crucible-emulator:latest serve --dialect bigquery
+docker run --rm -p 127.0.0.1:9050:9050 ghcr.io/callumwalterwhite/crucible-emulator:latest serve --dialect bigquery
 ```
 
 Python client (planned):
