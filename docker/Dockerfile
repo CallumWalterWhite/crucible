@@ -1,7 +1,7 @@
 # Build context is the repository root:
 #   docker build -f docker/Dockerfile .
 
-FROM python:3.12-slim AS builder
+FROM python:3.14-slim AS builder
 COPY --from=ghcr.io/astral-sh/uv:0.13.1 /uv /uvx /usr/local/bin/
 
 WORKDIR /build
@@ -15,7 +15,7 @@ RUN uv build --wheel --out-dir /dist \
  && uv pip install --python /opt/venv/bin/python --no-deps /dist/*.whl
 
 
-FROM python:3.12-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 # uid 10001 is fixed so that volume ownership can be set from outside the container.
 RUN groupadd --system --gid 10001 crucible \
