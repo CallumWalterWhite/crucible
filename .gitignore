@@ -8,3 +8,4 @@ dist/
 .claude/scheduled_tasks.lock
 # google-github-actions/auth credential files
 gha-creds-*.json
+.claude/

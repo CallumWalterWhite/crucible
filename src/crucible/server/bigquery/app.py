@@ -7,6 +7,7 @@ remaining difference with its reason. Any bearer token is accepted and never rea
 
 from __future__ import annotations
 
+import asyncio
 import re
 import uuid
 from collections.abc import Awaitable, Callable
@@ -103,6 +104,7 @@ Handler = Callable[[Request], Awaitable[Response]]
 class Upload:
     job: Job
     data: bytearray
+    task: asyncio.Task[Job] | None = None
 
 
 def _etag() -> str:
@@ -281,7 +283,7 @@ class BigQueryServer:
             self.store.add(job)
         except CrucibleError as exc:
             return http_error(exc)
-        await run_in_threadpool(self.runner.run_query, job)
+        job = await run_in_threadpool(self.runner.run_query, job)
         return JSONResponse(self.job_resource(job, self._base(request)))
 
     async def jobs_get(self, request: Request) -> Response:
@@ -341,6 +343,16 @@ class BigQueryServer:
         params = request.query_params
         try:
             job = self.store.get(request.path_params["project"], request.path_params["job"])
+            if not job.done:
+                # REST reference, jobs.getQueryResults: jobComplete=false omits schema and rows.
+                return JSONResponse(
+                    {
+                        "kind": "bigquery#getQueryResultsResponse",
+                        "etag": _etag(),
+                        "jobReference": self._reference(job),
+                        "jobComplete": False,
+                    }
+                )
             if job.error is not None:
                 assert job.error_kind is not None
                 return job_error_response(job.error, job.error_kind)
@@ -391,7 +403,7 @@ class BigQueryServer:
             self.store.add(job)
         except CrucibleError as exc:
             return http_error(exc, query_parameter=True)
-        await run_in_threadpool(self.runner.run_query, job)
+        job = await run_in_threadpool(self.runner.run_query, job)
         if job.error is not None:
             assert job.error_kind is not None
             return job_error_response(job.error, job.error_kind)
@@ -861,32 +873,39 @@ class BigQueryServer:
         """One PUT of the resumable protocol: 200 with the job when the upload is complete,
         else 308 with the received Range (google-resumable-media==2.11.0:
         google/resumable_media/_upload.py:686-722)."""
+        chunk = await request.body()
+        # Read after the body await: reset may have invalidated the upload while it arrived.
         upload = self.uploads.get(request.query_params.get("upload_id") or "")
         if upload is None:
             return error_response(404, "notFound", "Not found: Upload", "NOT_FOUND")
-        match = _CONTENT_RANGE.match(request.headers.get("content-range", ""))
-        if match is None:
-            return error_response(
-                400, "invalid", "Crucible needs a Content-Range header", "INVALID_ARGUMENT"
-            )
-        start, end, total = match.groups()
-        chunk = await request.body()
-        if start is not None:
-            if int(start) != len(upload.data) or int(end) - int(start) + 1 != len(chunk):
+        if upload.task is None:
+            match = _CONTENT_RANGE.match(request.headers.get("content-range", ""))
+            if match is None:
                 return error_response(
-                    400,
-                    "invalid",
-                    "Content-Range does not match the upload so far and this chunk",
-                    "INVALID_ARGUMENT",
+                    400, "invalid", "Crucible needs a Content-Range header", "INVALID_ARGUMENT"
                 )
-            upload.data.extend(chunk)
-        if total == "*" or int(total) != len(upload.data):
-            headers = {"Range": f"bytes=0-{len(upload.data) - 1}"} if upload.data else {}
-            return Response(status_code=308, headers=headers)
-        upload_id = request.query_params["upload_id"]
-        self.uploads.pop(upload_id, None)
-        await run_in_threadpool(self.runner.run_load, upload.job, bytes(upload.data))
-        return JSONResponse(self.job_resource(upload.job, self._base(request)))
+            start, end, total = match.groups()
+            if start is not None:
+                if int(start) != len(upload.data) or int(end) - int(start) + 1 != len(chunk):
+                    return error_response(
+                        400,
+                        "invalid",
+                        "Content-Range does not match the upload so far and this chunk",
+                        "INVALID_ARGUMENT",
+                    )
+                upload.data.extend(chunk)
+            if total == "*" or int(total) != len(upload.data):
+                headers = {"Range": f"bytes=0-{len(upload.data) - 1}"} if upload.data else {}
+                return Response(status_code=308, headers=headers)
+            # No await between checking and claiming finalization on this server's event loop.
+            upload.task = asyncio.create_task(
+                run_in_threadpool(self.runner.run_load, upload.job, bytes(upload.data))
+            )
+            upload.data.clear()
+        # BigQuery API uploads, "Resume an interrupted upload": completed status probes return
+        # 200 with metadata. Keep the task until reset so retries also reuse the same load job.
+        job = await asyncio.shield(upload.task)
+        return JSONResponse(self.job_resource(job, self._base(request)))
 
 
 def _check_fields(body: dict[str, Any], allowed: tuple[str, ...], call: str) -> None:

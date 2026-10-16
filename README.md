@@ -57,7 +57,7 @@ local_bigquery:
 Snowflake runs on port 8080, with the same loopback rule:
 
 ```sh
-docker run --rm -p 127.0.0.1:8080:8080 ghcr.io/OWNER/crucible-emulator:latest serve --dialect snowflake
+docker run --rm -p 127.0.0.1:8080:8080 ghcr.io/callumwalterwhite/crucible-emulator:latest serve --dialect snowflake
 ```
 
 Python connector (planned):

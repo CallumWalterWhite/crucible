@@ -25,5 +25,7 @@ Emulating real asynchrony adds state and timing without improving fidelity for d
 
 ## Consequences
 
-- Responses are deterministic; polling clients see `DONE` on the first poll.
+- Submit responses report `DONE`. Concurrent polls during submission see `RUNNING` until the
+  completed job and its anonymous result table are published together. Reset invalidates pending
+  jobs so their workers cannot restore cleared results.
 - Results live in memory; very large results are out of scope (no performance work).

@@ -54,6 +54,81 @@ def test_unaliased_unnest_of_structs_exposes_fields(rows):
     assert values(result) == [[1, "a", 5], [2, "a", 7], [2, "b", 9]]
 
 
+def test_unnest_with_offset_without_alias_uses_array_name(rows):
+    # BigQuery names the value column after the array, so SELECT * keeps the value.
+    result = rows("SELECT * FROM t, UNNEST(t.arr) WITH OFFSET AS o")
+    assert column_types(result) == [
+        ("id", "INT64"),
+        ("a", "INT64"),
+        ("b", "INT64"),
+        ("arr", "ARRAY<STRING>"),
+        ("arr", "STRING"),
+        ("o", "INT64"),
+    ]
+    assert values(result) == [
+        [1, 5, 0, ["x", "y"], "x", 0],
+        [1, 5, 0, ["x", "y"], "y", 1],
+    ]
+
+
+def test_unnest_with_bare_offset_names_it_offset(rows):
+    result = rows("SELECT * FROM t, UNNEST(t.arr) WITH OFFSET")
+    assert column_types(result)[-2:] == [("arr", "STRING"), ("offset", "INT64")]
+    assert [row[-2:] for row in values(result)] == [["x", 0], ["y", 1]]
+
+
+def test_left_join_unnest_with_offset_without_alias_keeps_empty_arrays(rows):
+    result = rows("SELECT id, o FROM t LEFT JOIN UNNEST(t.arr) WITH OFFSET AS o ORDER BY id, o")
+    assert values(result) == [[1, 0], [1, 1], [2, None]]
+
+
+@pytest.mark.parametrize("array", ["[1,2,3]", "GENERATE_ARRAY(1,3)"])
+def test_unnest_expression_with_offset_without_alias(bq, array):
+    result = bq(f"SELECT * FROM UNNEST({array}) WITH OFFSET;")
+    assert column_types(result) == [("f0_", "INT64"), ("offset", "INT64")]
+    assert values(result) == [[1, 0], [2, 1], [3, 2]]
+
+
+def test_unnest_expression_with_named_offset_without_alias(rows):
+    result = rows("SELECT id, * EXCEPT(id) FROM t, UNNEST([1, 2]) WITH OFFSET AS o ORDER BY id, o")
+    assert column_types(result)[-2:] == [("f0_", "INT64"), ("o", "INT64")]
+    assert [row[-2:] for row in values(result)] == [[1, 0], [2, 1], [1, 0], [2, 1]]
+
+
+def test_unnest_expression_with_offset_numbers_anonymous_columns(bq):
+    result = bq("SELECT 99, * FROM UNNEST([1]) WITH OFFSET")
+    assert column_types(result) == [("f0_", "INT64"), ("f1_", "INT64"), ("offset", "INT64")]
+    assert values(result) == [[99, 1, 0]]
+
+
+def test_unnest_expression_with_offset_through_subquery(bq):
+    result = bq("SELECT * FROM (SELECT * FROM UNNEST([1]) WITH OFFSET) AS q")
+    assert column_types(result) == [("f0_", "INT64"), ("offset", "INT64")]
+    assert values(result) == [[1, 0]]
+
+
+def test_unnest_expression_with_offset_empty_array(bq):
+    result = bq("SELECT * FROM UNNEST(ARRAY<INT64>[]) WITH OFFSET")
+    assert column_types(result) == [("f0_", "INT64"), ("offset", "INT64")]
+    assert values(result) == []
+
+
+def test_unnest_synthetic_alias_does_not_collide_with_table_alias(rows):
+    result = rows(
+        "SELECT id, o FROM t AS crucible_unnest_0, UNNEST(crucible_unnest_0.arr) "
+        "WITH OFFSET AS o ORDER BY id, o"
+    )
+    assert values(result) == [[1, 0], [1, 1]]
+
+
+def test_unnest_with_offset_over_struct_array_is_unsupported(bq):
+    bq("CREATE TABLE s (st ARRAY<STRUCT<m STRING, v INT64>>)")
+    with pytest.raises(CrucibleUnsupportedError, match="over an array of STRUCTs"):
+        bq("SELECT * FROM s, UNNEST(st) WITH OFFSET AS o")
+    with pytest.raises(CrucibleUnsupportedError, match="over an array of STRUCTs"):
+        bq("SELECT * FROM s, UNNEST([STRUCT(1 AS a)]) WITH OFFSET AS o")
+
+
 def test_unnest_with_offset_is_zero_based_int64(rows):
     result = rows("SELECT id, x, o FROM t, UNNEST(t.arr) AS x WITH OFFSET o ORDER BY id, o")
     assert column_types(result) == [("id", "INT64"), ("x", "STRING"), ("o", "INT64")]

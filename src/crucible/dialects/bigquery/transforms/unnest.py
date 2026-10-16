@@ -22,13 +22,57 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from sqlglot import exp
+from sqlglot.helper import find_new_name
 
 from crucible.dialects.bigquery.transforms.common import T
+from crucible.engine import CrucibleUnsupportedError
 
 if TYPE_CHECKING:
     from crucible.dialects.bigquery.transforms import TransformContext
 
 _ROW = "crucible_u"
+_SYNTHETIC = "crucible_synthetic_alias"  # meta key: alias added by alias_offset_unnests
+
+
+def alias_offset_unnests(query: exp.Expr) -> set[str]:
+    """Name an unaliased UNNEST ... WITH OFFSET before qualify (called from prepare).
+
+    BigQuery names the value column after the array, so UNNEST(t.arr) yields arr. Without a
+    name qualify drops the value from SELECT *, and the offset silently displaces it. The
+    table alias is synthetic (a real name would collide with the table's own columns).
+    Only the value column takes the array's name. BigQuery reports a bare reference to
+    the array name as ambiguous; here it resolves to the unnested value. Scalar array
+    expressions get an internal value name, returned here so output naming can report
+    them as anonymous columns (f0_, f1_, ...).
+    """
+    count = 0
+    taken = {identifier.name.lower() for identifier in query.find_all(exp.Identifier)}
+    anonymous: set[str] = set()
+    for node in query.find_all(exp.Unnest):
+        # sqlglot parses a missing WITH OFFSET as False; only a real offset needs a name.
+        if node.args.get("alias") is not None or not isinstance(
+            node.args.get("offset"), exp.Identifier
+        ):
+            continue
+        if len(node.expressions) != 1:
+            continue
+        table_name = find_new_name(taken, f"crucible_unnest_{count}")
+        taken.add(table_name)
+        [array] = node.expressions
+        if isinstance(array, exp.Column):
+            name = array.name
+        else:
+            name = find_new_name(taken, f"{table_name}_value")
+            taken.add(name)
+            anonymous.add(name)
+        alias = exp.TableAlias(
+            this=exp.to_identifier(table_name),
+            columns=[exp.to_identifier(name)],
+        )
+        alias.meta[_SYNTHETIC] = True
+        node.set("alias", alias)
+        count += 1
+    return anonymous
 
 
 def _struct_fields(element_type: exp.DataType | None) -> list[str]:
@@ -53,6 +97,17 @@ def _rewrite(node: exp.Unnest) -> exp.Expr | None:
         element_type = inner if isinstance(inner, exp.DataType) else None
     columns = [c.name for c in alias.columns]
     fields = _struct_fields(element_type) if not columns else []
+    if alias.meta.get(_SYNTHETIC) and element_type is not None and element_type.this == T.STRUCT:
+        # A synthetic alias on a STRUCT array: BigQuery exposes the fields alongside the
+        # offset, but qualify already fixed the outer SELECT to a single value column.
+        raise CrucibleUnsupportedError("UNNEST WITH OFFSET over an array of STRUCTs")
+    if isinstance(offset, exp.Identifier) and not columns:
+        if fields:
+            # A struct literal: aliasing would keep one STRUCT value, but BigQuery
+            # exposes the fields, so an alias would not fix this either.
+            raise CrucibleUnsupportedError("UNNEST WITH OFFSET over an array of STRUCTs")
+        # Refuse any remaining shape without a value column rather than lose it from SELECT *.
+        raise CrucibleUnsupportedError("UNNEST WITH OFFSET without a table alias")
     if not isinstance(offset, exp.Identifier) and not fields:
         return None  # DuckDB's UNNEST already behaves like BigQuery's here
 
@@ -62,10 +117,8 @@ def _rewrite(node: exp.Unnest) -> exp.Expr | None:
         projections: list[exp.Expr] = [
             exp.alias_(_field(value.copy(), f), f, quoted=True) for f in fields
         ]
-    elif columns:
-        projections = [exp.alias_(value, columns[0], quoted=True)]
     else:
-        return None
+        projections = [exp.alias_(value, columns[0], quoted=True)]
     if isinstance(offset, exp.Identifier):
         index = exp.Sub(this=_field(row.copy(), "i"), expression=exp.Literal.number(1))
         projections.append(exp.alias_(index, offset.name, quoted=True))

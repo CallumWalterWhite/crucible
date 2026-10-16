@@ -11,7 +11,7 @@ import logging
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, cast
 
 from sqlglot import exp
@@ -129,10 +129,16 @@ class JobStore:
                 )
             self._jobs[key] = job
 
-    def finished(self, job: Job) -> None:
+    def finished(self, pending: Job, completed: Job) -> None:
+        """Publish a finished snapshot and its table together, unless reset removed the job."""
         with self._lock:
-            if job.anonymous_table is not None:
-                self._anonymous[(job.project, job.anonymous_table)] = job
+            key = (pending.project, pending.job_id)
+            # Identity also protects a new job that reused the id after reset.
+            if self._jobs.get(key) is not pending:
+                return
+            self._jobs[key] = completed
+            if completed.anonymous_table is not None:
+                self._anonymous[(completed.project, completed.anonymous_table)] = completed
 
     def get(self, project: str, job_id: str) -> Job:
         with self._lock:
@@ -181,8 +187,10 @@ class Runner:
         self.pipeline = Pipeline(engine, DIALECT)
 
     # --- queries ----------------------------------------------------------------------------
-    def run_query(self, job: Job) -> None:
+    def run_query(self, job: Job) -> Job:
         """Run a query job to completion; failures become the job's error, as in BigQuery."""
+        pending = job
+        job = replace(job)  # Readers keep the untouched RUNNING snapshot until publication.
         config = job.configuration["query"]
         try:
             check_query_config(config)
@@ -198,7 +206,8 @@ class Runner:
             _LOG.exception("query job %s failed inside Crucible", job.job_id)
             job.fail(CrucibleError(ErrorKind.INTERNAL, f"Crucible internal error: {exc!r}"))
         job.ended_ms = now_ms()
-        self.store.finished(job)
+        self.store.finished(pending, job)
+        return job
 
     def _record(self, job: Job, session: Any, results: list[Result]) -> None:
         last = results[-1]
@@ -234,7 +243,9 @@ class Runner:
                     job.target_schema = encoding.schema(columns, with_mode=False)
 
     # --- loads ------------------------------------------------------------------------------
-    def run_load(self, job: Job, data: bytes) -> None:
+    def run_load(self, job: Job, data: bytes) -> Job:
+        pending = job
+        job = replace(job)
         config = job.configuration["load"]
         try:
             self._load(job, config, data)
@@ -248,7 +259,8 @@ class Runner:
             _LOG.exception("load job %s failed inside Crucible", job.job_id)
             job.fail(CrucibleError(ErrorKind.INTERNAL, f"Crucible internal error: {exc!r}"))
         job.ended_ms = now_ms()
-        self.store.finished(job)
+        self.store.finished(pending, job)
+        return job
 
     def _load(self, job: Job, config: dict[str, Any], data: bytes) -> None:
         _unsupported_keys(

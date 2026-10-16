@@ -1,0 +1,6 @@
+description: UNION ALL rejects branches with different column counts.
+query: SELECT 1,2 UNION ALL SELECT 3
+expected:
+  error:
+    kind: invalid_query
+    message_contains: mismatched column

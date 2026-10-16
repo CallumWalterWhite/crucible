@@ -97,13 +97,17 @@ def _restore_struct_field_names(found: list[tuple[exp.Identifier, str]]) -> None
         identifier.set("this", name)
 
 
-def _output_names(select: exp.Select, stored: dict[str, str]) -> list[str]:
+def _output_names(
+    select: exp.Select, stored: dict[str, str], anonymous_columns: set[str]
+) -> list[str]:
     """BigQuery's output names: as written, stored names for SELECT *, f0_, f1_ ... if anonymous."""
     names: list[str] = []
     anonymous = 0
     for projection in select.expressions:
         inner = projection.this if isinstance(projection, exp.Alias) else projection
         tag = projection.meta.get(_NAME, inner.meta.get(_NAME))
+        if tag is None and projection.alias_or_name in anonymous_columns:
+            tag = _ANONYMOUS
         if tag is None:  # from a star expansion
             name = stored.get(projection.alias_or_name.lower(), projection.alias_or_name)
         elif tag == _ANONYMOUS:
@@ -135,6 +139,7 @@ class Prepared:
 
 def prepare(query: exp.Expr, ctx: ExecContext) -> Prepared:
     """Everything except the projection casts and generation (ADR 0010)."""
+    anonymous_columns = transforms.unnest.alias_offset_unnests(query)
     first = outer_selects(query)[0]
     _tag_names(first)
     infos = metadata.qualify_names(query, ctx)
@@ -149,8 +154,10 @@ def prepare(query: exp.Expr, ctx: ExecContext) -> Prepared:
     fix_annotation(query)
 
     selects = outer_selects(query)
+    if any(len(select.expressions) != len(selects[0].expressions) for select in selects[1:]):
+        raise errors.invalid("Queries in a set operation have mismatched column counts")
     stored = {c.name.lower(): c.name for info in infos for c in info.columns}
-    names = _output_names(selects[0], stored)
+    names = _output_names(selects[0], stored, anonymous_columns)
     out_types = _output_types(selects)
 
     query = transforms.apply(query, transforms.TransformContext(ctx.session))
@@ -167,8 +174,6 @@ def translate_query(
     prepared = prepare(query, ctx)
     out_types = target_types or prepared.types
     for select in outer_selects(prepared.query):
-        if len(select.expressions) != len(prepared.names):
-            raise errors.invalid("Queries in a set operation have mismatched column counts")
         _cast_projections(select, prepared.names, out_types)
     return Translation(generate(prepared.query), prepared.names, out_types)
 

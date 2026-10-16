@@ -1,0 +1,15 @@
+description: Unaliased scalar UNNEST WITH OFFSET returns an anonymous value and zero-based offset.
+tags:
+- unnest
+query: SELECT * FROM UNNEST([1,2,3]) WITH OFFSET
+ordered: false
+expected:
+  columns:
+  - name: f0_
+    type: INT64
+  - name: offset
+    type: INT64
+  rows:
+  - [1, 0]
+  - [2, 1]
+  - [3, 2]
