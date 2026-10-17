@@ -340,7 +340,7 @@ wheels = [
 
 [[package]]
 name = "crucible-emulator"
-version = "0.0.0"
+version = "0.1.0a1"
 source = { editable = "." }
 dependencies = [
     { name = "duckdb" },

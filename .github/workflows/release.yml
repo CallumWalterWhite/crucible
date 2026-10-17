@@ -13,14 +13,33 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
   build:
     runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - name: Read package version
+        id: version
+        run: echo "version=$(uv version --short)" >> "$GITHUB_OUTPUT"
+      - name: Validate release tag
+        if: github.event_name == 'push' || inputs.dry_run == false
+        env:
+          PACKAGE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          test "$GITHUB_REF_TYPE" = tag
+          test "$GITHUB_REF_NAME" = "v$PACKAGE_VERSION"
       - run: uv build
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -28,8 +47,8 @@ jobs:
           path: dist/
 
   pypi:
-    needs: build
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false)
+    needs: [build, checks]
+    if: vars.PYPI_PUBLISHING_ENABLED == 'true' && (github.event_name == 'push' || inputs.dry_run == false)
     runs-on: ubuntu-24.04
     environment: pypi
     permissions:
@@ -42,7 +61,7 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
 
   image:
-    needs: build
+    needs: [build, checks]
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -68,5 +87,10 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name == 'push' || inputs.dry_run == false }}
           tags: |
-            ghcr.io/callumwalterwhite/crucible-emulator:${{ github.ref_name }}
+            ghcr.io/callumwalterwhite/crucible-emulator:v${{ needs.build.outputs.version }}
             ghcr.io/callumwalterwhite/crucible-emulator:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.version=${{ needs.build.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.licenses=Apache-2.0
