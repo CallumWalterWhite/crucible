@@ -7,6 +7,8 @@ and this project does not yet follow semantic versioning.
 
 ## [Unreleased]
 
+## [0.1.0a1] - 2026-10-17
+
 ### Added
 
 - Initial project scaffolding.

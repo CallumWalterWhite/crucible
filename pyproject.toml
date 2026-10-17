@@ -1,6 +1,6 @@
 [project]
 name = "crucible-emulator"
-version = "0.0.0"
+version = "0.1.0a1"
 description = "Local BigQuery and Snowflake API emulator backed by DuckDB, for development and CI."
 readme = "README.md"
 license = "Apache-2.0"

@@ -47,6 +47,21 @@ request from a comment next to the workaround.
 
 Read [docs/architecture.md](docs/architecture.md) for the design, and [docs/adr/](docs/adr/) for the decisions behind it.
 
+## Publishing (maintainers)
+
+The Release workflow runs the full CI workflow before publishing Docker images for amd64 and arm64.
+To check a release without publishing, run it manually with `dry_run: true`.
+
+For a new release, update the package version with `uv version --no-sync <version>`, update the
+changelog, and commit both `pyproject.toml` and `uv.lock`. Push a matching tag, for example
+`v0.1.0a1` for package version `0.1.0a1`. The workflow publishes that version and `latest` to
+`ghcr.io/callumwalterwhite/crucible-emulator`. On first publication, set the package visibility
+to public in GitHub Packages so anonymous pulls work.
+
+PyPI publishing is disabled by default. To enable it, configure a PyPI Trusted Publisher for
+`CallumWalterWhite/crucible`, workflow `release.yml`, environment `pypi`, then set the repository
+variable `PYPI_PUBLISHING_ENABLED` to `true`. A release dry run never publishes to either registry.
+
 ## Licensing
 
 Crucible is licensed under the Apache License 2.0. By contributing, you agree that your contributions are licensed under
