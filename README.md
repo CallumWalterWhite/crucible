@@ -42,7 +42,13 @@ PY
 
 Expected output: `42`. Anonymous credentials and the explicit endpoint keep this query local.
 
-For Docker, build the image locally from the repository root, then run it instead of the uv server:
+For Docker, run the published pre-alpha image instead of the uv server:
+
+```sh
+docker run --rm -p 127.0.0.1:9050:9050 ghcr.io/callumwalterwhite/crucible-emulator:latest serve --dialect bigquery
+```
+
+To build the image yourself, run from the repository root:
 
 ```sh
 docker build -f docker/Dockerfile -t crucible:local .
