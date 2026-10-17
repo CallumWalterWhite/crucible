@@ -1,10 +1,11 @@
 # Crucible
 
-Crucible is a local BigQuery and Snowflake API emulator, backed by DuckDB, for development and CI. Point your existing
-client or dbt profile at `localhost`, change only the endpoint, and use dummy credentials. Queries run locally and cost
-nothing.
+Crucible is a local BigQuery API emulator, backed by DuckDB, for development and CI. Point your client at
+`localhost` and use dummy credentials. Queries run locally and cost nothing.
 
-Status: pre-alpha, not yet usable.
+Status: **BigQuery pre-alpha**. A subset of the BigQuery REST API and SQL is implemented, with official Python client
+and dbt-bigquery smoke tests in CI. APIs and supported SQL may change. **Snowflake support is planned**;
+its server currently provides health checks and unsupported-endpoint errors only.
 
 ## Principles
 
@@ -13,89 +14,45 @@ Status: pre-alpha, not yet usable.
   returns a silently wrong result.
 - **Fidelity is measured by the corpus.** What Crucible matches is backed by recorded warehouse cases.
 
-## Quickstart (planned)
+## Quickstart
 
-Every snippet below is planned. None of them work until Phase 6.
-
-Run the BigQuery emulator on port 9050, bound to the loopback interface only:
+From a repository checkout, install dependencies with [uv](https://docs.astral.sh/uv/) and start BigQuery on port 9050:
 
 ```sh
-docker run --rm -p 127.0.0.1:9050:9050 ghcr.io/callumwalterwhite/crucible-emulator:latest serve --dialect bigquery
+uv sync --extra server
+uv run crucible serve --dialect bigquery
 ```
 
-Python client (planned):
+In another terminal, from the same checkout, run a query with the official Python client:
 
-```python
+```sh
+uv run --with google-cloud-bigquery python - <<'PY'
 from google.auth.credentials import AnonymousCredentials
 from google.cloud import bigquery
 
 client = bigquery.Client(
     project="local-project",
     credentials=AnonymousCredentials(),
-    client_options={"api_endpoint": "http://localhost:9050"},
+    client_options={"api_endpoint": "http://127.0.0.1:9050"},
 )
+print(next(iter(client.query("SELECT 6 * 7 AS answer").result())).answer)
+client.close()
+PY
 ```
 
-dbt-bigquery `profiles.yml` (planned):
+Expected output: `42`. Anonymous credentials and the explicit endpoint keep this query local.
 
-```yaml
-local_bigquery:
-  target: dev
-  outputs:
-    dev:
-      type: bigquery
-      method: oauth-secrets
-      token: dummy-token
-      project: local-project
-      dataset: analytics
-      schema: analytics
-      location: US
-      api_endpoint: http://localhost:9050
-      threads: 1
-```
-
-Snowflake runs on port 8080, with the same loopback rule:
+For Docker, build the image locally from the repository root, then run it instead of the uv server:
 
 ```sh
-docker run --rm -p 127.0.0.1:8080:8080 ghcr.io/callumwalterwhite/crucible-emulator:latest serve --dialect snowflake
+docker build -f docker/Dockerfile -t crucible:local .
+docker run --rm -p 127.0.0.1:9050:9050 crucible:local serve --dialect bigquery
 ```
 
-Python connector (planned):
-
-```python
-import snowflake.connector
-
-conn = snowflake.connector.connect(
-    host="localhost",
-    port=8080,
-    protocol="http",
-    account="local",
-    user="local",
-    password="dummy",
-)
-```
-
-dbt-snowflake `profiles.yml` (planned):
-
-```yaml
-local_snowflake:
-  target: dev
-  outputs:
-    dev:
-      type: snowflake
-      account: local
-      user: local
-      password: dummy
-      host: localhost
-      port: 8080
-      protocol: http
-      database: analytics
-      schema: analytics
-      warehouse: local
-      threads: 1
-```
-
-The client details behind these snippets are in [docs/client-compat.md](docs/client-compat.md).
+Check either server with `curl --fail http://127.0.0.1:9050/_crucible/health`.
+More query, table, CSV load, and error examples are in [examples/bigquery/](examples/bigquery/README.md).
+Client and dbt connection details, including planned Snowflake support, are in
+[docs/client-compat.md](docs/client-compat.md).
 
 ## Security
 

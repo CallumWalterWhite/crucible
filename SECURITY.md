@@ -7,7 +7,7 @@ Crucible is pre-1.0. Only the latest release receives security fixes.
 ## Reporting a vulnerability
 
 Please report vulnerabilities privately, through GitHub private vulnerability reporting:
-<https://github.com/OWNER/crucible-emulator/security/advisories/new>
+<https://github.com/CallumWalterWhite/crucible/security/advisories/new>
 
 Do not open a public issue for a suspected vulnerability.
 

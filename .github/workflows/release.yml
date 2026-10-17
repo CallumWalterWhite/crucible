@@ -68,5 +68,5 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name == 'push' || inputs.dry_run == false }}
           tags: |
-            ghcr.io/OWNER/crucible-emulator:${{ github.ref_name }}
-            ghcr.io/OWNER/crucible-emulator:latest
+            ghcr.io/callumwalterwhite/crucible-emulator:${{ github.ref_name }}
+            ghcr.io/callumwalterwhite/crucible-emulator:latest

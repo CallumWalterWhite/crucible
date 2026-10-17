@@ -100,12 +100,6 @@ jobs:
           - dialect: bigquery
             port: 9050
             client: google-cloud-bigquery
-          - dialect: snowflake
-            port: 8080
-            client: snowflake-connector-python==3.12.0
-          - dialect: snowflake
-            port: 8080
-            client: snowflake-connector-python
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -142,13 +136,7 @@ jobs:
           CLIENT_SPEC: ${{ matrix.client }}
           DIALECT: ${{ matrix.dialect }}
           CRUCIBLE_URL: http://127.0.0.1:${{ matrix.port }}
-        run: |
-          set +e
-          uv run --with "$CLIENT_SPEC" pytest -m clients tests/clients -k "$DIALECT"
-          rc=$?
-          set -e
-          # Exit 5 (no tests collected) is accepted only for snowflake, whose suites come later.
-          if [ "$rc" -ne 0 ] && { [ "$rc" -ne 5 ] || [ "$DIALECT" = bigquery ]; }; then exit "$rc"; fi
+        run: uv run --with "$CLIENT_SPEC" pytest -m clients tests/clients -k "$DIALECT"
 
   dbt:
     needs: docker
@@ -165,14 +153,6 @@ jobs:
             port: 9050
             core: dbt-core
             adapter: dbt-bigquery
-          - dialect: snowflake
-            port: 8080
-            core: dbt-core==1.9.11
-            adapter: dbt-snowflake==1.9.0
-          - dialect: snowflake
-            port: 8080
-            core: dbt-core
-            adapter: dbt-snowflake
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -210,10 +190,4 @@ jobs:
           ADAPTER_SPEC: ${{ matrix.adapter }}
           DIALECT: ${{ matrix.dialect }}
           CRUCIBLE_URL: http://127.0.0.1:${{ matrix.port }}
-        run: |
-          set +e
-          uv run --with "$CORE_SPEC" --with "$ADAPTER_SPEC" pytest -m dbt tests/dbt -k "$DIALECT"
-          rc=$?
-          set -e
-          # Exit 5 (no tests collected) is accepted only for snowflake, whose suites come later.
-          if [ "$rc" -ne 0 ] && { [ "$rc" -ne 5 ] || [ "$DIALECT" = bigquery ]; }; then exit "$rc"; fi
+        run: uv run --with "$CORE_SPEC" --with "$ADAPTER_SPEC" pytest -m dbt tests/dbt -k "$DIALECT"

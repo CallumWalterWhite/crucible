@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   record:
-    if: github.repository == 'OWNER/crucible-emulator'
+    if: github.repository == 'CallumWalterWhite/crucible'
     runs-on: ubuntu-24.04
     environment: corpus-record
     permissions:
