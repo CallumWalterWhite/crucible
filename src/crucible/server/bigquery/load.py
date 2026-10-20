@@ -267,8 +267,17 @@ def _parse_int(text: str) -> int:
 
 
 # Exactly the spellings recorded; others (f, no, 0, FALSE, Yes, ...) are not confirmed.
-_BOOLS = {"true": True, "false": False, "T": True, "1": True, "yes": True, "TRUE": True}
-_BOOLS["False"] = False
+# "True" is what dbt seeds written from Python contain (load_bool_title_true).
+_BOOLS = {
+    "true": True,
+    "false": False,
+    "T": True,
+    "1": True,
+    "yes": True,
+    "TRUE": True,
+    "True": True,
+    "False": False,
+}
 
 
 def _parse_bool(text: str) -> bool:

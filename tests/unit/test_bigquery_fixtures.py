@@ -351,5 +351,7 @@ def test_every_fixture_matches_or_the_difference_is_listed(replayed):
     recorded_now = [p for p in NOT_RECORDED_YET if any(fnmatch.fnmatch(n, p) for n in recorded)]
     assert not recorded_now, f"recorded now, remove from NOT_RECORDED_YET: {recorded_now}"
     assert not unexplained, "\n".join(sorted(unexplained))
-    stale = [entry for entry in DIFFERENCES if entry not in used]
+    # Storage order is BigQuery's choice and changes between recordings, so that entry may go
+    # unused in one recording and be needed in the next.
+    stale = [e for e in DIFFERENCES if e not in used and e[0] != "tabledata_list_[ps]*"]
     assert not stale, f"listed differences that no longer occur: {stale}"

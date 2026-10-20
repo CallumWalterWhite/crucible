@@ -1,0 +1,32 @@
+name: corner_cafe
+
+profile: corner_cafe
+
+seed-paths: ["seeds"]
+model-paths: ["models"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+seeds:
+  corner_cafe:
+    # Seeds go to '<dataset>_raw'.
+    +schema: raw
+    # dbt types timestamp-looking seed columns as DATETIME, which Crucible's CSV loader does not
+    # load yet (BigQuery's DATETIME load spellings are not recorded), so type them as TIMESTAMP.
+    raw_customers:
+      +column_types:
+        signed_up_at: timestamp
+    raw_orders:
+      +column_types:
+        ordered_at: timestamp
+
+models:
+  corner_cafe:
+    # Staging models are views, marts are tables.
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table

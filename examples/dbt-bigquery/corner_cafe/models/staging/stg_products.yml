@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: stg_products
+    columns:
+      - name: product_sku
+        data_tests: [unique, not_null]
+
+unit_tests:
+  - name: test_prices_are_converted_from_cents_to_dollars
+    model: stg_products
+    given:
+      - input: ref('raw_products')
+        rows:
+          - {sku: ESP, name: Espresso, category: coffee, price_cents: 450, is_vegan: true}
+    expect:
+      rows:
+        - {product_sku: ESP, price: 4.5}

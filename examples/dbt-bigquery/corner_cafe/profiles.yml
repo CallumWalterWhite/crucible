@@ -1,0 +1,12 @@
+corner_cafe:
+  target: crucible
+  outputs:
+    crucible:
+      type: bigquery
+      method: oauth-secrets
+      token: dummy-token
+      project: crucible-example
+      dataset: corner_cafe
+      location: US
+      threads: 4
+      api_endpoint: "{{ env_var('CRUCIBLE_URL', 'http://127.0.0.1:9050') }}"

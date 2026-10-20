@@ -286,3 +286,13 @@ def test_every_query_bypasses_the_query_cache(recorded):
     real = [b for b in session.query_bodies if not b.get("dryRun")]
     assert len(real) > 10
     assert all(b.get("useQueryCache") is False for b in real)
+
+
+def test_a_rerun_removes_stale_fixtures_with_three_digit_numbers(tmp_path: Path):
+    for stale in ("07_old.json", "123_old.json"):
+        (tmp_path / stale).write_text("{}")
+    (tmp_path / "notes.txt").write_text("kept")
+    Recorder(FakeSession(), PROJECT, 104857600, tmp_path).run()
+    assert not (tmp_path / "07_old.json").exists()
+    assert not (tmp_path / "123_old.json").exists()
+    assert (tmp_path / "notes.txt").exists()

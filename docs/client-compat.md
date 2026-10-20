@@ -698,7 +698,7 @@ recorded with `crucible corpus record-api` (fixtures in `tests/fixtures/bigquery
 | `getQueryResults` on a failed job | HTTP 400 with the standard error body: `reason: invalidQuery`, `location: q`, `locationType: parameter`, `status: INVALID_ARGUMENT`, and the job's message (`division by zero: 1 / 0`). | `get_query_results_runtime_error.json` |
 | 409 bodies | `reason: duplicate`, `status: ALREADY_EXISTS`, message `Already Exists: Job <project>:<location>.<job>` (jobs.insert) or `Already Exists: Dataset <project>:<dataset>` (datasets.insert). | `jobs_insert_conflict.json`, `datasets_insert_conflict.json` |
 | CSV load spellings (TIMESTAMP) | Accepted: `2024-01-02T03:04:05Z`, `2024-01-02 03:04:05.123456 UTC`, `2024-01-02 03:04:05+01:00`, and integer epoch seconds `1704164645`. Rejected: a date-only value `2024-01-02` ("Could not parse '2024-01-02' as a timestamp. Required format is YYYY-MM-DD HH:MM[:SS[.SSSSSS]] or YYYY/MM/DD HH:MM[:SS[.SSSSSS]]"), although `CAST('2024-01-02' AS TIMESTAMP)` accepts it. | `46`–`65_load_ts_*`, `26_load_empty_fields_*` |
-| CSV load spellings (BOOL, DATE, NUMERIC, FLOAT64, empty fields) | Recorded (`load_<case>_*` fixtures). Accepted: BOOL `true` `false` `T` `1` `yes` `TRUE` `False`; INT64 `-1` `+1` `"1"`; NUMERIC `1e3` (1000); FLOAT64 `-inf` `NaN`; DATE `2024-1-2`; TIMESTAMP `2024/01/02 03:04:05`, `2024-01-02T03:04:05`, `.123`; `"a""b"` is `a"b`; `""` is an empty STRING; an unquoted empty field is NULL; CRLF line endings. Rejected: BOOL `maybe`, DATE `2024/01/02` and `2024-02-30` ("Unable to parse"), NUMERIC with 10 fraction digits ("Invalid NUMERIC value"), TIMESTAMP date only. Any spelling not recorded raises unsupported (`server/bigquery/load.py`). |
+| CSV load spellings (BOOL, DATE, NUMERIC, FLOAT64, empty fields) | Recorded (`load_<case>_*` fixtures). Accepted: BOOL `true` `false` `T` `1` `yes` `TRUE` `True` `False`; INT64 `-1` `+1` `"1"`; NUMERIC `1e3` (1000); FLOAT64 `-inf` `NaN`; DATE `2024-1-2`; TIMESTAMP `2024/01/02 03:04:05`, `2024-01-02T03:04:05`, `.123`; `"a""b"` is `a"b`; `""` is an empty STRING; an unquoted empty field is NULL; CRLF line endings. Rejected: BOOL `maybe`, DATE `2024/01/02` and `2024-02-30` ("Unable to parse"), NUMERIC with 10 fraction digits ("Invalid NUMERIC value"), TIMESTAMP date only. Any spelling not recorded raises unsupported (`server/bigquery/load.py`). |
 
 Wire details the fixtures show: REST schemas use legacy type names (`INTEGER`, `FLOAT`, `BOOLEAN`,
 `RECORD`) with `mode` `NULLABLE`/`REPEATED`; row values are strings in `f`/`v` cells; TIMESTAMP is
@@ -728,3 +728,20 @@ is set.
 - dbt seeds send `ALTER TABLE ... SET OPTIONS()` with an empty option list after the load.
 - `uv run --with dbt-bigquery==1.9.0` resolves the newest dbt-core (1.12.6 here); the CI "oldest"
   dbt row pins the adapter, not dbt-core.
+
+## dbt Fusion (dbt 2.0.6, BigQuery ADBC driver 0.21.0.dev+dbt0.21.19)
+
+Checked on 2026-10-20 against a local Crucible with `api_endpoint` set (examples/dbt-bigquery):
+
+- `dbt seed` loads CSVs with a **multipart** upload: `POST /upload/bigquery/v2/projects/{p}/jobs?uploadType=multipart`
+  with `multipart/related`, the job as `application/json` (with `jobReference.location`, `fieldDelimiter`, `schema`,
+  `skipLeadingRows`, `sourceFormat`) and then the file as `text/plain; charset=utf-8` with CRLF line endings. The
+  driver is Go (`gcloud-golang-bigquery/1.72.0`); it sends files below its chunk size this way
+  (google.golang.org/api internal/gensupport/media.go:84-96, :192-196). Crucible implements it and answers with the
+  job resource, as for the last chunk of a resumable upload.
+- `dbt run` passes (views and tables). `dbt test` and unit tests fail with "There was a problem connecting to the
+  BigQuery Storage API": the driver reads query results through the Storage Read API (it enables the storage read
+  client; its default target is `bigquerystorage.googleapis.com:443`) and no request reached Crucible. The Storage
+  Read API is gRPC and out of scope for Crucible, and the profile's `api_endpoint` does not redirect it. The driver
+  has a per-statement option `adbc.bigquery.sql.query.use_storage_api_disabled_client`, but Fusion sets it only
+  inside its `insert_overwrite` macro. So Fusion works for `seed` and `run` only.

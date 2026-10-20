@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Local BigQuery/Snowflake API emulator on DuckDB. Pre-alpha.
+Local BigQuery API emulator on DuckDB (Snowflake planned). Pre-alpha.
 
 ## Commands (use `uv run`)
 

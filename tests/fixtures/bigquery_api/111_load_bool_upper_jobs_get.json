@@ -81,7 +81,7 @@
             "totalSlotMs": "<duration>",
             "pendingUnits": "0",
             "completedUnits": "1",
-            "shuffleRamUsageRatio": 4.076973255055447e-06,
+            "shuffleRamUsageRatio": 1.52587890625e-05,
             "estimatedRunnableUnits": "0"
           }
         ]

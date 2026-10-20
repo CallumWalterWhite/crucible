@@ -1,0 +1,31 @@
+version: 2
+
+models:
+  - name: customers
+    columns:
+      - name: customer_id
+        data_tests: [unique, not_null]
+      - name: customer_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [new, returning]
+
+unit_tests:
+  - name: test_a_second_order_makes_a_customer_returning
+    model: customers
+    given:
+      - input: ref('stg_customers')
+        rows:
+          - {customer_id: 1, customer_name: Ada, is_subscriber: true}
+          - {customer_id: 2, customer_name: Bo, is_subscriber: false}
+      - input: ref('orders')
+        rows:
+          - {order_id: 10, customer_id: 1, ordered_at: "2025-01-01 09:00:00", order_total: 5.0, is_cancelled: false}
+          - {order_id: 11, customer_id: 1, ordered_at: "2025-01-02 09:00:00", order_total: 7.5, is_cancelled: false}
+          - {order_id: 12, customer_id: 2, ordered_at: "2025-01-02 10:00:00", order_total: 4.0, is_cancelled: false}
+          - {order_id: 13, customer_id: 2, ordered_at: "2025-01-03 10:00:00", order_total: 9.0, is_cancelled: true}
+    expect:
+      rows:
+        - {customer_id: 1, order_count: 2, lifetime_spend: 12.5, customer_type: returning}
+        - {customer_id: 2, order_count: 1, lifetime_spend: 4.0, customer_type: new}

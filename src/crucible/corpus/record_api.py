@@ -302,7 +302,7 @@ class Recorder:
         p, d = self.project, self.dataset
         datasets = f"{API}/projects/{p}/datasets"
         self.preflight()
-        for stale in self.out_dir.glob("[0-9][0-9]_*.json"):
+        for stale in self.out_dir.glob("[0-9][0-9]*_*.json"):
             stale.unlink()  # regenerated as a set: a partial run must not mix with an older one
         self.call(
             "datasets_insert",
@@ -618,6 +618,7 @@ LOAD_CASES: dict[str, str] = {
     "float_inf_nan": _HEADER + _row(f="-inf") + _row(id="2", f="NaN"),
     "bad_value": _HEADER + _row(b="maybe"),
     "bool_upper": _HEADER + _row(b="TRUE"),
+    "bool_title_true": _HEADER + _row(b="True"),
     "int_negative": _HEADER + _row(id="-1"),
     "int_plus": _HEADER + _row(id="+1"),
     "int_quoted": _HEADER + _row(id='"1"'),

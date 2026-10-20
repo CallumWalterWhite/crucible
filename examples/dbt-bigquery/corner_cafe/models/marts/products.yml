@@ -1,0 +1,7 @@
+version: 2
+
+models:
+  - name: products
+    columns:
+      - name: product_sku
+        data_tests: [unique, not_null]

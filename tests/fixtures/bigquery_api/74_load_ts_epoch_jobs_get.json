@@ -69,6 +69,7 @@
       "creationTime": "<time>",
       "startTime": "<time>",
       "endTime": "<time>",
+      "completionRatio": 1,
       "load": {
         "inputFiles": "1",
         "inputFileBytes": "55",
@@ -81,7 +82,14 @@
             "totalSlotMs": "<duration>",
             "pendingUnits": "0",
             "completedUnits": "1",
-            "shuffleRamUsageRatio": 4.076973255055447e-06,
+            "activeUnits": "0"
+          },
+          {
+            "elapsedMs": "<duration>",
+            "totalSlotMs": "<duration>",
+            "pendingUnits": "0",
+            "completedUnits": "1",
+            "shuffleRamUsageRatio": 1.52587890625e-05,
             "estimatedRunnableUnits": "0"
           }
         ]

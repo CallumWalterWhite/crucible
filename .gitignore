@@ -9,3 +9,5 @@ dist/
 # google-github-actions/auth credential files
 gha-creds-*.json
 .claude/
+.vscode/
+logs/

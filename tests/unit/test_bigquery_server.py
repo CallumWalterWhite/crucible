@@ -7,6 +7,7 @@ concurrency.
 
 from __future__ import annotations
 
+import json
 import threading
 import uuid
 from collections.abc import Iterator
@@ -553,10 +554,99 @@ def test_an_unknown_upload_id_is_a_404(client):
     assert response.status_code == 404
 
 
-def test_a_multipart_upload_is_unsupported(client):
-    response = client.post(f"{UPLOAD}", params={"uploadType": "multipart"}, json={})
+def test_an_upload_type_other_than_resumable_or_multipart_is_unsupported(client):
+    response = client.post(f"{UPLOAD}", params={"uploadType": "media"}, json={})
     assert response.status_code == 400
     assert response.json()["error"]["message"].startswith("Not supported by Crucible")
+
+
+BOUNDARY = "b0undary"
+
+
+def multipart(client: TestClient, metadata: bytes, media: bytes, **kwargs: Any) -> Any:
+    """The request cloud.google.com/go/bigquery v1.72.0 sends (captured from dbt Fusion): the
+    job as JSON with a trailing newline, then the file, as multipart/related."""
+    body = (
+        f"--{BOUNDARY}\r\nContent-Type: application/json\r\n\r\n".encode()
+        + metadata
+        + b"\n"
+        + f"\r\n--{BOUNDARY}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n".encode()
+        + media
+        + f"\r\n--{BOUNDARY}--\r\n".encode()
+    )
+    headers = {"Content-Type": f"multipart/related; boundary={BOUNDARY}"}
+    return client.post(
+        UPLOAD, params={"uploadType": "multipart"}, content=body, headers=headers | kwargs
+    )
+
+
+def load_metadata(table: str, job_id: str | None = None, **config: Any) -> bytes:
+    load = {
+        "destinationTable": {"projectId": PROJECT, "datasetId": "ds", "tableId": table},
+        "fieldDelimiter": ",",
+        "schema": {"fields": LOAD_FIELDS},
+        "skipLeadingRows": 1,
+        "sourceFormat": "CSV",
+        **config,
+    }
+    job = {"jobId": job_id or f"mp_{uuid.uuid4().hex[:8]}", "location": "US", "projectId": PROJECT}
+    return json.dumps({"configuration": {"load": load}, "jobReference": job}).encode()
+
+
+def test_a_multipart_upload_loads_the_file_in_one_request(client):
+    make_dataset(client)
+    response = multipart(client, load_metadata("mp"), CSV.replace(b"\n", b"\r\n"))
+    assert response.status_code == 200
+    assert response.json()["status"]["state"] == "DONE"
+    assert response.json()["configuration"]["jobType"] == "LOAD"
+    rows = run_query(client, "SELECT id, s FROM ds.mp ORDER BY id").json()["rows"]
+    assert values(rows) == ["1", "a", "2", "b", "3", "c"]
+
+
+def test_a_rejected_multipart_file_fails_the_job_and_creates_no_table(client):
+    make_dataset(client)
+    schema = {"fields": [{"name": "b", "type": "BOOLEAN"}]}  # "maybe" is a recorded rejection
+    job = multipart(client, load_metadata("bad", schema=schema), b"b\nmaybe\n").json()
+    assert job["status"]["errorResult"]["reason"] == "invalid"
+    assert (
+        run_query(client, "SELECT * FROM ds.bad").json()["error"]["errors"][0]["reason"]
+        == "notFound"
+    )
+
+
+def test_a_multipart_job_id_is_reserved_like_any_other(client):
+    make_dataset(client)
+    assert multipart(client, load_metadata("a", "same"), CSV).status_code == 200
+    again = multipart(client, load_metadata("b", "same"), CSV)
+    assert again.status_code == 409
+    assert again.json()["error"]["errors"][0]["reason"] == "duplicate"
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        b"not multipart at all",
+        f"--{BOUNDARY}\r\nContent-Type: application/json\r\n\r\n{{}}\r\n--{BOUNDARY}--\r\n".encode(),  # noqa: E501
+        (
+            f"--{BOUNDARY}\r\nContent-Type: text/plain\r\n\r\nx\r\n"
+            f"--{BOUNDARY}\r\nContent-Type: text/plain\r\n\r\ny\r\n--{BOUNDARY}--\r\n"
+        ).encode(),
+    ],
+    ids=["no parts", "one part", "metadata is not JSON"],
+)
+def test_a_malformed_multipart_body_is_refused(client, body):
+    response = client.post(
+        UPLOAD,
+        params={"uploadType": "multipart"},
+        content=body,
+        headers={"Content-Type": f"multipart/related; boundary={BOUNDARY}"},
+    )
+    assert response.status_code == 400
+
+
+def test_a_multipart_upload_without_multipart_related_is_refused(client):
+    response = client.post(UPLOAD, params={"uploadType": "multipart"}, json={})
+    assert response.status_code == 400
 
 
 def load_csv(client: TestClient, table: str, data: bytes, **config: Any) -> dict[str, Any]:

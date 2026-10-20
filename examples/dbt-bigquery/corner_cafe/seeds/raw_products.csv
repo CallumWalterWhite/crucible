@@ -1,0 +1,7 @@
+sku,name,category,price_cents,is_vegan
+ESP,Espresso,coffee,300,True
+LAT,Latte,coffee,450,False
+FLW,Flat white,coffee,420,False
+CRO,Croissant,bakery,350,False
+MUF,Oat muffin,bakery,380,True
+GRA,Granola bar,snack,250,True

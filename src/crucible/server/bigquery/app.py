@@ -8,11 +8,12 @@ remaining difference with its reason. Any bearer token is accepted and never rea
 from __future__ import annotations
 
 import asyncio
+import json
 import re
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from sqlglot import exp
 from starlette.concurrency import run_in_threadpool
@@ -835,30 +836,35 @@ class BigQueryServer:
         )
 
     # --- resumable upload (load jobs; docs/client-compat.md, "Resumable load upload") ---------
+    def _new_load_job(self, project: str, metadata: dict[str, Any]) -> Job:
+        """The load job an upload's metadata describes, reserved in the store."""
+        reference = obj(metadata.get("jobReference"))
+        configuration: dict[str, Any] = dict(obj(metadata.get("configuration")))
+        if list(configuration) != ["load"] and set(configuration) - {"load", "labels"}:
+            raise CrucibleUnsupportedError("an upload whose job is not a load job")
+        if "load" not in configuration:
+            raise CrucibleError(ErrorKind.INVALID_QUERY, "Upload job needs configuration.load")
+        job = Job(
+            project=project,
+            job_id=reference.get("jobId") or new_job_id(),
+            location=reference.get("location") or DEFAULT_LOCATION,
+            job_type="LOAD",
+            configuration=configuration,
+        )
+        self.store.add(job)
+        return job
+
     async def upload_initiate(self, request: Request) -> Response:
         project = request.path_params["project"]
-        if request.query_params.get("uploadType") != "resumable":
+        upload_type = request.query_params.get("uploadType")
+        if upload_type == "multipart":
+            return await self._upload_multipart(request, project)
+        if upload_type != "resumable":
             return http_error(
-                CrucibleUnsupportedError(
-                    f"uploadType={request.query_params.get('uploadType')} (only resumable)"
-                )
+                CrucibleUnsupportedError(f"uploadType={upload_type} (resumable and multipart only)")
             )
-        body: dict[str, Any] = await request.json()
-        reference = obj(body.get("jobReference"))
-        configuration: dict[str, Any] = dict(obj(body.get("configuration")))
         try:
-            if list(configuration) != ["load"] and set(configuration) - {"load", "labels"}:
-                raise CrucibleUnsupportedError("an upload whose job is not a load job")
-            if "load" not in configuration:
-                raise CrucibleError(ErrorKind.INVALID_QUERY, "Upload job needs configuration.load")
-            job = Job(
-                project=project,
-                job_id=reference.get("jobId") or new_job_id(),
-                location=reference.get("location") or DEFAULT_LOCATION,
-                job_type="LOAD",
-                configuration=configuration,
-            )
-            self.store.add(job)
+            job = self._new_load_job(project, await request.json())
         except CrucibleError as exc:
             return http_error(exc)
         upload_id = uuid.uuid4().hex
@@ -868,6 +874,22 @@ class BigQueryServer:
             f"?uploadType=resumable&upload_id={upload_id}"
         )
         return Response(status_code=200, headers={"Location": location})  # 21
+
+    async def _upload_multipart(self, request: Request, project: str) -> Response:
+        """A load in one request: multipart/related, the job as JSON and then the file. Go clients
+        (dbt Fusion's BigQuery driver, cloud.google.com/go/bigquery v1.72.0) send files below
+        their chunk size this way (google.golang.org/api internal/gensupport/media.go:84-96
+        CombineBodyMedia, :192-196 UploadType). The answer is the job resource, as for the last
+        chunk of a resumable upload (REST reference, jobs.insert, response body)."""
+        try:
+            metadata, media = multipart_related(
+                request.headers.get("content-type", ""), await request.body()
+            )
+            job = self._new_load_job(project, metadata)
+        except CrucibleError as exc:
+            return http_error(exc)
+        done = await run_in_threadpool(self.runner.run_load, job, media)
+        return JSONResponse(self.job_resource(done, self._base(request)))
 
     async def upload_chunk(self, request: Request) -> Response:
         """One PUT of the resumable protocol: 200 with the job when the upload is complete,
@@ -906,6 +928,44 @@ class BigQueryServer:
         # 200 with metadata. Keep the task until reset so retries also reuse the same load job.
         job = await asyncio.shield(upload.task)
         return JSONResponse(self.job_resource(job, self._base(request)))
+
+
+def multipart_related(content_type: str, body: bytes) -> tuple[dict[str, Any], bytes]:
+    """The JSON metadata and the file of a two-part multipart/related upload body.
+
+    Strict on purpose: anything but `application/json` then one media part, each with only the
+    plain headers clients send, is refused rather than guessed at."""
+    boundary = re.search(r'boundary="?([^";]+)', content_type)
+    if not content_type.lower().startswith("multipart/related") or boundary is None:
+        raise CrucibleError(
+            ErrorKind.INVALID_QUERY, "A multipart upload needs Content-Type multipart/related"
+        )
+    delimiter = b"--" + boundary.group(1).encode()
+    chunks = body.split(delimiter)
+    if len(chunks) != 4 or chunks[0] or not chunks[3].startswith(b"--"):
+        raise CrucibleUnsupportedError("a multipart upload that is not exactly two parts")
+    contents: list[bytes] = []
+    for chunk in chunks[1:3]:
+        if not (chunk.startswith(b"\r\n") and chunk.endswith(b"\r\n")):
+            raise CrucibleError(ErrorKind.INVALID_QUERY, "Malformed multipart upload body")
+        headers, separator, content = chunk[2:-2].partition(b"\r\n\r\n")
+        if not separator:
+            raise CrucibleError(ErrorKind.INVALID_QUERY, "Malformed multipart upload body")
+        lowered = headers.decode("latin-1").lower()
+        if "content-transfer-encoding" in lowered:
+            raise CrucibleUnsupportedError("a multipart upload part with Content-Transfer-Encoding")
+        contents.append(content)
+        if len(contents) == 1 and "application/json" not in lowered:
+            raise CrucibleError(
+                ErrorKind.INVALID_QUERY, "The first multipart part must be application/json"
+            )
+    try:
+        metadata: Any = json.loads(contents[0])
+    except ValueError as exc:
+        raise CrucibleError(ErrorKind.INVALID_QUERY, "The upload's job is not valid JSON") from exc
+    if not isinstance(metadata, dict):
+        raise CrucibleError(ErrorKind.INVALID_QUERY, "The upload's job must be a JSON object")
+    return cast("dict[str, Any]", metadata), contents[1]
 
 
 def _check_fields(body: dict[str, Any], allowed: tuple[str, ...], call: str) -> None:

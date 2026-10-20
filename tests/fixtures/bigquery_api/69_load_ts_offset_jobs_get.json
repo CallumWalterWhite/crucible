@@ -69,6 +69,7 @@
       "creationTime": "<time>",
       "startTime": "<time>",
       "endTime": "<time>",
+      "completionRatio": 1,
       "load": {
         "inputFiles": "1",
         "inputFileBytes": "70",
@@ -80,8 +81,26 @@
             "elapsedMs": "<duration>",
             "totalSlotMs": "<duration>",
             "pendingUnits": "0",
+            "completedUnits": "0",
+            "activeUnits": "0",
+            "estimatedRunnableUnits": "0"
+          },
+          {
+            "elapsedMs": "<duration>",
+            "totalSlotMs": "<duration>",
+            "pendingUnits": "1",
+            "completedUnits": "0",
+            "activeUnits": "0",
+            "shuffleRamUsageRatio": 3.0517578125e-05,
+            "estimatedRunnableUnits": "0"
+          },
+          {
+            "elapsedMs": "<duration>",
+            "totalSlotMs": "<duration>",
+            "pendingUnits": "0",
             "completedUnits": "1",
-            "shuffleRamUsageRatio": 4.076973255055447e-06,
+            "activeUnits": "1",
+            "shuffleRamUsageRatio": 1.52587890625e-05,
             "estimatedRunnableUnits": "0"
           }
         ]
