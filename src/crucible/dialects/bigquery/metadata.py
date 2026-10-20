@@ -30,6 +30,8 @@ def name_of(table: exp.Table, ctx: ExecContext) -> Name:
         raise CrucibleUnsupportedError("INFORMATION_SCHEMA")
     if table.name.endswith("*"):
         raise CrucibleUnsupportedError(f"wildcard table {table.sql('bigquery')}")
+    if table.args.get("version"):
+        raise CrucibleUnsupportedError("FOR SYSTEM_TIME AS OF")
     if not dataset:
         raise errors.invalid(
             f'Table "{table.name}" must be qualified with a dataset (e.g. dataset.table).'

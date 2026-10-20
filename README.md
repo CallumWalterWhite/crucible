@@ -67,7 +67,7 @@ Use **dbt-core 1.x with dbt-bigquery**. dbt Fusion (the `dbt` 2.x binary) works 
 
 | Command | dbt-core 1.12 + dbt-bigquery 1.12 | dbt Fusion 2.0 |
 | --- | --- | --- |
-| `dbt seed` | works | works¹ |
+| `dbt seed` | works | works |
 | `dbt run` | works | works |
 | `dbt test` (data tests) | works | fails |
 | unit tests | works | fails |
@@ -77,11 +77,41 @@ and Fusion has no setting to point it at a local endpoint, so its reads go to Go
 rows back fails, including `dbt test` and the test step of `dbt build`. CI tests dbt-core 1.9 and the latest
 1.x. Fusion details: [docs/client-compat.md](docs/client-compat.md#dbt-fusion-dbt-206-bigquery-adbc-driver-0210devdbt02119).
 
-¹ Fusion loads seeds with multipart uploads. Multipart upload is on `main` but not in the published
-`v0.1.0a1` image; build the image yourself until the next release.
-
 Fusion installs itself as `dbt` on your `PATH`. Check `dbt --version` reports Core 1.x, or call the
 virtualenv's binary by path as [examples/dbt-bigquery/](examples/dbt-bigquery/README.md) does.
+
+## What works
+
+- **REST API:** jobs (insert, get, cancel, query, getQueryResults), datasets and tables (list, get, insert,
+  patch, delete), tabledata.list, routines (list, get), and CSV load jobs through resumable or multipart upload.
+- **SQL:** each area below has corpus cases checked against real BigQuery (239 of 246 cases recorded):
+  aggregates, arrays and UNNEST, casts, conditionals, dates and times, error messages, hashing, JSON, math,
+  regular expressions, strings, window functions, QUALIFY, `SELECT * EXCEPT/REPLACE`, and the statements dbt
+  emits (CREATE TABLE AS with partitioning and clustering, views, INSERT, MERGE, ALTER TABLE, DROP).
+- **Clients:** google-cloud-bigquery for Python, dbt-core with dbt-bigquery, and dbt Fusion for seed and run.
+
+## Current limits
+
+Crucible is pre-alpha. Unsupported features fail with `Not supported by Crucible: ...` instead of returning a
+guess. Not supported yet:
+
+- Scripting (`DECLARE`, `BEGIN ... END`), temporary and persistent SQL functions (`CREATE FUNCTION`).
+- `INFORMATION_SCHEMA`, wildcard tables (`dataset.events_*`), time travel (`FOR SYSTEM_TIME AS OF`).
+- Geography functions (`ST_*`).
+- The BigQuery Storage Read and Write APIs (gRPC), so `to_dataframe()` needs
+  `create_bqstorage_client=False`, and dbt Fusion cannot run tests.
+- CSV loads into DATETIME columns, and load formats other than CSV.
+- Billing: `totalBytesProcessed` and `totalBytesBilled` are always `0`.
+- Authentication and IAM: there is none (see [Security](#security)).
+
+If something you need is missing, open an issue with the query and the result real BigQuery returns.
+
+## Alternatives
+
+[goccy/bigquery-emulator](https://github.com/goccy/bigquery-emulator) is a more mature BigQuery emulator
+written in Go. It runs GoogleSQL on SQLite, supports more clients, and serves the Storage Read and Write APIs.
+Crucible runs on DuckDB and SQLGlot, and is narrower: it targets dbt development and CI, checks its results
+against recorded real BigQuery responses, and refuses what it cannot match.
 
 ## Security
 
