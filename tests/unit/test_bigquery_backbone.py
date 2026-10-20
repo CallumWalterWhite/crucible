@@ -286,6 +286,8 @@ def test_create_table_options_are_accepted(run):
         "SELECT * FROM ds.INFORMATION_SCHEMA.TABLES",
         "SELECT * FROM `test-project.ds.t_*`",
         "DECLARE x INT64",
+        "SELECT * FROM ds.t FOR SYSTEM_TIME AS OF CURRENT_TIMESTAMP()",
+        "SELECT ST_GEOGPOINT(1, 2)",
     ],
 )
 def test_out_of_scope_constructs_raise_unsupported(run, sql):

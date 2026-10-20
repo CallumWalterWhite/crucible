@@ -1,0 +1,33 @@
+name: Unsupported feature
+description: Crucible answers "Not supported by Crucible" for something you need.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not include credentials, project IDs or private data.
+  - type: input
+    id: message
+    attributes:
+      label: Error message
+      description: The full "Not supported by Crucible ..." message.
+    validations:
+      required: true
+  - type: textarea
+    id: query
+    attributes:
+      label: Query or request
+      description: The smallest SQL (or API call) that triggers it.
+      render: sql
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What real BigQuery returns
+      description: The rows or result you expect, if you know them.
+  - type: textarea
+    id: context
+    attributes:
+      label: Where you hit it
+      description: For example a dbt package or macro, a client method, or your own SQL.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -76,6 +77,10 @@ def from_duckdb(exc: duckdb.Error) -> CrucibleError:
     if isinstance(exc, duckdb.TransactionException) and "Conflict" in text:
         return CrucibleError(ErrorKind.CONFLICT, text)
     if isinstance(exc, duckdb.CatalogException):
+        # A function DuckDB lacks reached generated SQL: the dialect does not emulate it.
+        function = re.search(r"Function with name (\w+) does not exist", text)
+        if function:
+            return CrucibleUnsupportedError(f"function {function.group(1).upper()}")
         if "already exists" in text:
             return CrucibleError(ErrorKind.ALREADY_EXISTS, text)
         if "does not exist" in text:

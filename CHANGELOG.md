@@ -7,6 +7,27 @@ and this project does not yet follow semantic versioning.
 
 ## [Unreleased]
 
+## [0.1.0a2] - 2026-10-20
+
+### Added
+
+- Multipart uploads (`uploadType=multipart`) for CSV load jobs, used by dbt Fusion for seeds.
+- CSV loads accept the BOOL spellings `True` and `False`, as written by Python tools.
+- `examples/dbt-bigquery`: an original dbt project with seeds, views, tables, data tests and unit tests.
+- README sections on supported dbt versions, current limits and alternatives.
+- Issue templates for bug reports and unsupported features.
+
+### Changed
+
+- The Python client examples moved to `examples/python-bigquery`.
+- The project is described as a BigQuery emulator, with Snowflake planned.
+
+### Fixed
+
+- `crucible corpus record-api` now removes stale fixtures with three-digit numbers.
+- Time travel (`FOR SYSTEM_TIME AS OF`) and functions DuckDB lacks (such as `ST_*`) raise
+  `Not supported by Crucible` instead of a DuckDB parser or catalog error.
+
 ## [0.1.0a1] - 2026-10-17
 
 ### Added
