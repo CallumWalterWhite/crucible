@@ -106,19 +106,6 @@ guess. Not supported yet:
 
 If something you need is missing, open an issue with the query and the result real BigQuery returns.
 
-## Alternatives
-
-[goccy/bigquery-emulator](https://github.com/goccy/bigquery-emulator) is a more mature BigQuery emulator
-written in Go. It runs GoogleSQL on SQLite, supports more clients, and serves the Storage Read and Write APIs.
-Crucible runs on DuckDB and SQLGlot, and is narrower: it targets dbt development and CI, checks its results
-against recorded real BigQuery responses, and refuses what it cannot match.
-
-## Security
-
-Crucible is a local development and CI tool with **no authentication**. It binds `127.0.0.1` by default, and you must
-never expose it on a network. See [SECURITY.md](SECURITY.md) for the deployment model and for how to report a
-vulnerability.
-
 ## Documentation
 
 - [CONTRIBUTING.md](CONTRIBUTING.md): setup, checks, corpus rules, and licensing.
