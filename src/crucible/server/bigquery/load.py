@@ -1,4 +1,4 @@
-"""CSV load parsing for BigQuery load jobs: the rules the recorded fixtures confirm (Phase 3, B2).
+"""CSV and newline-delimited JSON load parsing for BigQuery load jobs (Phase 3, B2; M2 item 3).
 
 Each rule cites the recorded fixture that proves it (tests/fixtures/bigquery_api); the CSV strings
 are in tests/unit/test_bq_load_csv.py, copied from the commit that recorded them. A construct the
@@ -7,17 +7,22 @@ kept apart, as BigQuery keeps them apart:
 
 - rejected: BigQuery refuses a row. The load fails with a LoadError listing each rejected row.
 - unsupported: Crucible cannot say what BigQuery would load. Any unsupported value fails the load.
+
+No NDJSON load is recorded yet, so parse_ndjson never reports a rejection: a row BigQuery would
+refuse is unsupported until record-api's ndjson_* cases record its message.
 """
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from typing import Any
+from typing import Any, NoReturn
 
 from crucible.engine import CrucibleUnsupportedError
+from crucible.server.bigquery import stream
 
 INT64_MAX = 2**63 - 1
 NUMERIC_MAX_FRACTION_DIGITS = 9
@@ -128,6 +133,55 @@ def parse_csv(
         summary = _SUMMARY.format(rows=len(lines), errors=len(failures))
         raise LoadError([summary, *failures])
     return rows
+
+
+def parse_ndjson(
+    data: bytes, fields: list[dict[str, Any]], *, ignore_unknown: bool
+) -> list[tuple[Any, ...]]:
+    """Rows of Python values in schema order, one JSON object per line (NEWLINE_DELIMITED_JSON).
+
+    The values take the insertAll spellings (stream.py), which google-cloud-bigquery's
+    load_table_from_json sends: json.dumps of each row, joined with newlines and no final one
+    (client.py: load_table_from_json). Nested RECORD and REPEATED fields are allowed here.
+    """
+    _refuse_required(fields)
+    if data.startswith(b"\xef\xbb\xbf"):
+        raise CrucibleUnsupportedError("NDJSON with a byte order mark")
+    if b"\r" in data:
+        raise CrucibleUnsupportedError("NDJSON with a carriage return")
+    lines = data.split(b"\n")
+    if lines[-1] == b"":
+        lines.pop()  # the file ended with a newline, or is empty
+    rows: list[tuple[Any, ...]] = []
+    for number, raw in enumerate(lines, start=1):
+        try:
+            text = raw.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise CrucibleUnsupportedError("NDJSON that is not UTF-8") from exc
+        if text == "":
+            raise CrucibleUnsupportedError(f"NDJSON blank line {number}")
+        try:
+            row = json.loads(text, parse_constant=_no_json_constant)
+        except ValueError as exc:
+            raise CrucibleUnsupportedError(f"NDJSON line {number} is not JSON") from exc
+        try:
+            rows.append(tuple(stream.parse_row(row, fields, ignore_unknown=ignore_unknown)))
+        except stream.RowError as exc:
+            raise CrucibleUnsupportedError(f"NDJSON line {number}: {exc.message}") from exc
+    return rows
+
+
+def _refuse_required(fields: list[dict[str, Any]]) -> None:
+    # stream.parse_row reads a missing REQUIRED value as NULL; BigQuery rejects it (not recorded).
+    for field in fields:
+        if str(field.get("mode", "NULLABLE")).upper() == "REQUIRED":
+            raise CrucibleUnsupportedError(f"NDJSON load into a REQUIRED column {field['name']}")
+        _refuse_required(field.get("fields", []))
+
+
+def _no_json_constant(name: str) -> NoReturn:
+    # json.loads accepts NaN and Infinity; JSON does not, and BigQuery's answer is not recorded.
+    raise CrucibleUnsupportedError(f"NDJSON with the non-JSON constant {name}")
 
 
 # --- schema --------------------------------------------------------------------------------------

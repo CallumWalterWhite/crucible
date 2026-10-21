@@ -912,6 +912,94 @@ def test_a_rejected_csv_fails_the_job_and_leaves_the_table_unchanged(client):
     assert values(rows) == ["3"]  # the old rows are kept
 
 
+def load_ndjson(
+    client: TestClient,
+    table: str,
+    data: bytes,
+    fields: list[dict[str, Any]] = LOAD_FIELDS,
+    **config: Any,
+) -> dict[str, Any]:
+    """A resumable NEWLINE_DELIMITED_JSON load into ds.<table>, answered with the job resource."""
+    body = {
+        "jobReference": {"projectId": PROJECT, "jobId": f"ndjson_{uuid.uuid4().hex[:8]}"},
+        "configuration": {
+            "load": {
+                "destinationTable": {"projectId": PROJECT, "datasetId": "ds", "tableId": table},
+                "schema": {"fields": fields},
+                "sourceFormat": "NEWLINE_DELIMITED_JSON",
+                "writeDisposition": "WRITE_TRUNCATE",
+                **config,
+            }
+        },
+    }
+    url = upload_url(client.post(UPLOAD, params={"uploadType": "resumable"}, json=body))
+    response = client.put(
+        url, content=data, headers={"Content-Range": f"bytes 0-{len(data) - 1}/{len(data)}"}
+    )
+    assert response.status_code == 200
+    job: dict[str, Any] = response.json()
+    return job
+
+
+def test_an_ndjson_load_loads_the_rows_in_the_client_spellings(client):
+    make_dataset(client)
+    data = b'{"id": 1, "s": "a"}\n{"id": "2", "s": "b"}'  # no final newline, as the client sends
+    job = load_ndjson(client, "nd", data)
+    assert job["status"]["state"] == "DONE"
+    assert "errorResult" not in job["status"]
+    rows = run_query(client, "SELECT id, s FROM ds.nd ORDER BY id").json()["rows"]
+    assert values(rows) == ["1", "a", "2", "b"]
+
+
+def test_an_ndjson_load_keeps_repeated_and_record_fields(client):
+    make_dataset(client)
+    fields = [
+        {"name": "a", "type": "INTEGER", "mode": "REPEATED"},
+        {"name": "r", "type": "RECORD", "fields": [{"name": "x", "type": "INTEGER"}]},
+    ]
+    job = load_ndjson(client, "nested", b'{"a": [1, 2], "r": {"x": 3}}', fields)
+    assert job["status"]["state"] == "DONE"
+    rows = run_query(client, "SELECT ARRAY_LENGTH(a) AS n, r.x AS x FROM ds.nested").json()["rows"]
+    assert values(rows) == ["2", "3"]
+
+
+def test_an_ndjson_value_outside_the_confirmed_spellings_fails_the_job_as_unsupported(client):
+    make_dataset(client)
+    job = load_ndjson(client, "bad", b'{"id": "abc", "s": "x"}')
+    error = job["status"]["errorResult"]
+    assert error["reason"] == "invalidQuery"
+    assert error["message"].startswith("Not supported by Crucible")
+    missing = run_query(client, "SELECT * FROM ds.bad").json()
+    assert missing["error"]["errors"][0]["reason"] == "notFound"  # no table was created
+
+
+def test_an_unknown_ndjson_field_fails_unless_ignore_unknown_values_is_set(client):
+    make_dataset(client)
+    data = b'{"id": 1, "s": "a", "nope": 2}'
+    refused = load_ndjson(client, "unknown", data)
+    assert refused["status"]["errorResult"]["reason"] == "invalidQuery"
+    loaded = load_ndjson(client, "ignored", data, ignoreUnknownValues=True)
+    assert loaded["status"]["state"] == "DONE"
+    rows = run_query(client, "SELECT id, s FROM ds.ignored").json()["rows"]
+    assert values(rows) == ["1", "a"]
+
+
+def test_an_ndjson_load_refuses_csv_only_options(client):
+    make_dataset(client)
+    job = load_ndjson(client, "csv_only", b'{"id": 1, "s": "a"}', skipLeadingRows=1)
+    assert job["status"]["errorResult"]["message"] == (
+        "Not supported by Crucible: load job configuration field skipLeadingRows"
+    )
+
+
+def test_an_ndjson_write_append_adds_rows_to_the_table(client):
+    make_dataset(client)
+    load_ndjson(client, "appended", b'{"id": 1, "s": "a"}')
+    load_ndjson(client, "appended", b'{"id": 2, "s": "b"}', writeDisposition="WRITE_APPEND")
+    rows = run_query(client, "SELECT COUNT(*) AS n FROM ds.appended").json()["rows"]
+    assert values(rows) == ["2"]
+
+
 # --- 13. concurrency ----------------------------------------------------------------------------
 def test_concurrent_queries_and_ctas_through_one_client_all_succeed(client):
     make_dataset(client)

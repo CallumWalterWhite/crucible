@@ -108,7 +108,7 @@ The full list, with a link to the test behind each feature, is in
 [docs/bigquery-features.md](docs/bigquery-features.md).
 
 - **REST API:** jobs (insert, get, cancel, query, getQueryResults), datasets and tables (list, get, insert,
-  patch, delete), tabledata.list, routines (list, get), and CSV load jobs through resumable or multipart upload.
+  patch, delete), tabledata.list, routines (list, get), and CSV and newline-delimited JSON load jobs through resumable or multipart upload.
 - **SQL:** each area below has corpus cases checked against real BigQuery (239 of 246 cases recorded):
   aggregates, arrays and UNNEST, casts, conditionals, dates and times, error messages, hashing, JSON, math,
   regular expressions, strings, window functions, QUALIFY, `SELECT * EXCEPT/REPLACE`, and the statements dbt
@@ -126,7 +126,7 @@ guess. Not supported yet:
 - Geography functions (`ST_*`).
 - The BigQuery Storage Read and Write APIs (gRPC), so `to_dataframe()` needs
   `create_bqstorage_client=False`, and dbt Fusion cannot run tests.
-- CSV loads into DATETIME columns, and load formats other than CSV.
+- CSV loads into DATETIME columns, and load formats other than CSV and NDJSON (Parquet: ADR 0015, proposed).
 - Billing: `totalBytesProcessed` and `totalBytesBilled` are always `0`.
 - Authentication and IAM: there is none (see [SECURITY.md](SECURITY.md)).
 

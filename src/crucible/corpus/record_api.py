@@ -488,6 +488,7 @@ class Recorder:
         self.record_query_parameters(p)
         self.record_scripts_and_copies(p)
         self.record_udfs(p)
+        self.record_ndjson_loads()
 
     def record_metadata(self, p: str, tables: str) -> None:
         """Table description, labels, field descriptions and REQUIRED columns: as tables.insert
@@ -860,22 +861,34 @@ class Recorder:
 
     def load(self, name: str, csv_text: str) -> None:
         """A dbt-seed-style load: resumable upload of a CSV with an explicit schema."""
-        job = self.job_id(f"load_{name}")
+        self.load_job(
+            f"load_{name}",
+            csv_text,
+            {
+                "schema": {"fields": LOAD_SCHEMA},
+                "sourceFormat": "CSV",
+                "skipLeadingRows": 1,
+                "writeDisposition": "WRITE_TRUNCATE",
+            },
+            f"SELECT * FROM load_{name} ORDER BY id",
+        )
+
+    def load_job(self, name: str, text: str, config: dict[str, Any], select: str) -> None:
+        """A load by resumable upload: the job's configuration, then the file as the upload's body,
+        then the loaded table, queried when the load succeeded. `name` names the calls and table."""
+        job = self.job_id(name)
         configuration = {
             "load": {
                 "destinationTable": {
                     "projectId": self.project,
                     "datasetId": self.dataset,
-                    "tableId": f"load_{name}",
+                    "tableId": name,
                 },
-                "schema": {"fields": LOAD_SCHEMA},
-                "sourceFormat": "CSV",
-                "skipLeadingRows": 1,
-                "writeDisposition": "WRITE_TRUNCATE",
+                **config,
             }
         }
         _, headers = self.call(
-            f"load_{name}_initiate",
+            f"{name}_initiate",
             "POST",
             f"{UPLOAD}/projects/{self.project}/jobs",
             params={"uploadType": "resumable"},
@@ -887,27 +900,43 @@ class Recorder:
         location = {k.lower(): v for k, v in headers.items()}.get("location")
         if not location:
             raise RecordApiError("resumable upload returned no Location header")
-        payload = csv_text.encode()
+        payload = text.encode()
         self.call(
-            f"load_{name}_upload",
+            f"{name}_upload",
             "PUT",
             location,
             data=payload,
             headers={"Content-Range": f"bytes 0-{len(payload) - 1}/{len(payload)}"},
         )
         self.wait(job)
-        self.call(f"load_{name}_jobs_get", "GET", f"{API}/projects/{self.project}/jobs/{job}")
-        select = self.insert_job(
-            f"load_{name}_select_insert",
-            f"load_{name}_select",
-            self.query_config(f"SELECT * FROM load_{name} ORDER BY id"),
+        self.call(f"{name}_jobs_get", "GET", f"{API}/projects/{self.project}/jobs/{job}")
+        select_job = self.insert_job(
+            f"{name}_select_insert", f"{name}_select", self.query_config(select)
         )
-        result = self.wait(select)
+        result = self.wait(select_job)
         if result.get("status", {}).get("errorResult") is None:
             self.call(
-                f"load_{name}_query_results",
+                f"{name}_query_results",
                 "GET",
-                f"{API}/projects/{self.project}/queries/{select}",
+                f"{API}/projects/{self.project}/queries/{select_job}",
+            )
+
+    def record_ndjson_loads(self) -> None:
+        """NEWLINE_DELIMITED_JSON loads, each a file of rows as load_table_from_json sends it
+        (json.dumps per row, joined with newlines, no final newline; client.py). Last, so the
+        placeholders of every earlier call keep their numbers."""
+        for name, fields, rows, extra in NDJSON_LOADS:
+            text = "\n".join(json.dumps(row, ensure_ascii=False) for row in rows)
+            self.load_job(
+                f"ndjson_{name}",
+                text,
+                {
+                    "schema": {"fields": fields},
+                    "sourceFormat": "NEWLINE_DELIMITED_JSON",
+                    "writeDisposition": "WRITE_TRUNCATE",
+                    **extra,
+                },
+                f"SELECT * FROM ndjson_{name}",
             )
 
 
@@ -1124,6 +1153,43 @@ LOAD_CASES: dict[str, str] = {
     "string_escaped_quote": _HEADER + _row(s='"a""b"'),
     "crlf": (_HEADER + _row()).replace("\n", "\r\n"),
 }
+
+# NEWLINE_DELIMITED_JSON loads (load.parse_ndjson): name, schema, rows, extra configuration. Rows
+# are plain JSON values and the string forms insertAll takes (stream.py), one per type.
+_KEY_FIELDS: list[dict[str, Any]] = [{"name": "k", "type": "INTEGER"}]
+_NDJSON_TYPES_ROW = {
+    "k": 1,
+    "f": 1.5,
+    "n": "1.25",
+    "b": True,
+    "s": "x",
+    "y": "Af8=",
+    "d": "2024-02-29",
+    "dt": "2024-01-02T03:04:05.123456",
+    "tm": "04:05:06.500000",
+    "ts": "2024-01-02T03:04:05.123456Z",
+    "j": '{"a": 1}',
+}
+NDJSON_LOADS: list[tuple[str, list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]] = [
+    ("types", [f for f in STREAMED_FIELDS if f["name"] not in ("a", "r")], [_NDJSON_TYPES_ROW], {}),
+    (
+        "nested",
+        [
+            {"name": "k", "type": "INTEGER"},
+            {"name": "a", "type": "INTEGER", "mode": "REPEATED"},
+            {
+                "name": "r",
+                "type": "RECORD",
+                "fields": [{"name": "x", "type": "INTEGER"}, {"name": "z", "type": "STRING"}],
+            },
+        ],
+        [{"k": 1, "a": [1, 2], "r": {"x": 3, "z": "q"}}],
+        {},
+    ),
+    ("bad_value", _KEY_FIELDS, [{"k": "abc"}], {}),
+    ("unknown_field", _KEY_FIELDS, [{"k": 1, "nope": 1}], {}),
+    ("ignore_unknown", _KEY_FIELDS, [{"k": 1, "nope": 1}], {"ignoreUnknownValues": True}),
+]
 
 
 def record_api(

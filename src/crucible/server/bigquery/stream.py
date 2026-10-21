@@ -1,4 +1,4 @@
-"""Row values for tabledata.insertAll (streaming inserts).
+"""Row values for tabledata.insertAll (streaming inserts) and NDJSON load jobs (load.parse_ndjson).
 
 Each row is a JSON object keyed by column name. A value is accepted only in the spellings below:
 the ones google-cloud-bigquery's insert_rows sends (google/cloud/bigquery/_helpers.py,
@@ -6,7 +6,8 @@ _SCALAR_VALUE_TO_JSON_ROW) and the plain JSON forms insert_rows_json passes thro
 records each one (insert_all_* fixtures); until it does, they are listed in NOT_RECORDED_YET.
 Any other spelling raises CrucibleUnsupportedError rather than being guessed. Two bad inputs are
 known to fail one row rather than the request, and become that row's insertErrors entry: a
-field the table does not have, and an INT64 string that is not a number.
+field the table does not have, and an INT64 string that is not a number. A load job reads the
+same spellings but reports those two as unsupported, since its rejection message is not recorded.
 """
 
 from __future__ import annotations
@@ -82,7 +83,7 @@ def _field_value(value: Any, field: dict[str, Any], location: str) -> Any:
 
 def _scalar_or_record(value: Any, field: dict[str, Any], location: str) -> Any:
     kind = str(field.get("type", "")).upper()
-    if kind == "RECORD":
+    if kind in ("RECORD", "STRUCT"):  # a load schema may use the standard name
         if not isinstance(value, dict):
             raise CrucibleUnsupportedError(f"insertAll value for RECORD field {location}")
         record = cast("dict[str, Any]", value)
@@ -102,7 +103,7 @@ def _scalar_or_record(value: Any, field: dict[str, Any], location: str) -> Any:
 
 
 def scalar(kind: str, value: Any, location: str) -> Any:
-    """One scalar value of a legacy-named type (INTEGER, FLOAT, ...) in a confirmed spelling."""
+    """One scalar value of a type (INTEGER or INT64, FLOAT...) in a confirmed spelling."""
     parse = _SCALARS.get(kind)
     if parse is None:
         raise CrucibleUnsupportedError(f"insertAll into a {kind} column")
@@ -210,9 +211,12 @@ def _json(value: Any, location: str) -> Any:
 
 _SCALARS = {
     "INTEGER": _int64,
+    "INT64": _int64,
     "FLOAT": _float64,
+    "FLOAT64": _float64,
     "NUMERIC": _numeric,
     "BOOLEAN": _bool,
+    "BOOL": _bool,
     "STRING": _string,
     "BYTES": _bytes,
     "DATE": _date,

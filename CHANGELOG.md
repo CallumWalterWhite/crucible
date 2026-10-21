@@ -36,6 +36,10 @@ and this project does not yet follow semantic versioning.
   `labels` (`tables.insert`, `tables.patch`, `OPTIONS`, `ALTER ... SET OPTIONS`), column descriptions
   (`ALTER COLUMN ... SET OPTIONS`, and `tables.patch`), `REQUIRED` columns (NOT NULL), and `ALTER VIEW
   ... SET OPTIONS`. `tables.get` returns them. Other field options stay refused.
+- Load jobs with `sourceFormat=NEWLINE_DELIMITED_JSON` (`load_table_from_json`) and an explicit schema, with
+  `ignoreUnknownValues`, nested `RECORD` and `REPEATED` fields, and `WRITE_TRUNCATE` or `WRITE_APPEND`. Values that
+  BigQuery would reject are refused as unsupported until its message is recorded. Parquet loads are a design
+  note only (ADR 0015, proposed).
 
 ### Fixed
 
