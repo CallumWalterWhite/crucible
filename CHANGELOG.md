@@ -11,11 +11,14 @@ and this project does not yet follow semantic versioning.
 
 - `docs/bigquery-features.md`: supported and unsupported BigQuery features, each linked to its test.
 - README roadmap.
+- Corpus cases (to be recorded) for 62 common features that had no test.
 - `UPDATE` (including `UPDATE ... FROM`), `DELETE` and `TRUNCATE TABLE`, with `numDmlAffectedRows` and
   `dmlStats`. UPDATE and DELETE require a WHERE clause, as in BigQuery.
 
 ### Fixed
 
+- `LIKE` now treats a backslash as BigQuery's escape character (`'a%' LIKE 'a\\%'` was false).
+- `EXTRACT(WEEK(<weekday>))` is supported instead of refused.
 - `MERGE ... USING s` with an unaliased source table now resolves `s.column`.
 - `CREATE MATERIALIZED VIEW` was accepted and created nothing; it now raises `Not supported by Crucible`.
 - Functions SQLGlot does not model (such as `RANGE`), BigQuery ML functions and `SHA512` raise
