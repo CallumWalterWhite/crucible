@@ -1130,3 +1130,75 @@ def test_table_options_in_a_dataset_with_a_default_expiration_is_unsupported(cli
     response = run_query(client, "SELECT option_name FROM ds.INFORMATION_SCHEMA.TABLE_OPTIONS")
     assert response.status_code == 400
     assert "default table expiration" in response.json()["error"]["message"]
+
+
+# --- copy jobs (copy.py) -------------------------------------------------------------------------
+def copy_job(client: TestClient, source: str, destination: str, **extra: Any) -> Any:
+    def ref(table: str) -> dict[str, str]:
+        return {"projectId": PROJECT, "datasetId": "ds", "tableId": table}
+
+    copy = {"sourceTables": [ref(source)], "destinationTable": ref(destination), **extra}
+    return client.post(f"{API}/jobs", json={"configuration": {"copy": copy}}).json()
+
+
+@pytest.fixture
+def partitioned(client):
+    make_dataset(client)
+    insert_query(client, "CREATE TABLE ds.m (d DATE, k INT64) PARTITION BY d")
+    insert_query(client, "INSERT INTO ds.m VALUES (DATE '2024-01-01', 1), (DATE '2024-01-02', 2)")
+    insert_query(
+        client,
+        "CREATE TABLE ds.tmp PARTITION BY d AS "
+        "SELECT DATE '2024-01-02' AS d, 20 AS k UNION ALL SELECT DATE '2024-01-03', 30",
+    )
+    return client
+
+
+def test_a_partition_copy_with_write_truncate_replaces_only_that_partition(partitioned):
+    job = copy_job(partitioned, "tmp$20240102", "m$20240102", writeDisposition="WRITE_TRUNCATE")
+    assert job["status"] == {"state": "DONE"}
+    assert job["configuration"]["jobType"] == "COPY"
+    rows = run_query(partitioned, "SELECT CAST(d AS STRING), k FROM ds.m ORDER BY 1").json()
+    assert values(rows["rows"]) == ["2024-01-01", "1", "2024-01-02", "20"]
+    assert partitioned.get(f"{API}/jobs/{job['jobReference']['jobId']}").json()["status"] == {
+        "state": "DONE"
+    }
+
+
+def test_a_table_copy_creates_the_destination_with_the_source_partitioning(partitioned):
+    assert copy_job(partitioned, "tmp", "fresh")["status"] == {"state": "DONE"}
+    table = partitioned.get(f"{API}/datasets/ds/tables/fresh").json()
+    assert table["timePartitioning"] == {"type": "DAY", "field": "d"}
+    assert table["numRows"] == "2"
+
+
+def test_write_append_adds_and_write_empty_refuses_a_non_empty_table(partitioned):
+    assert copy_job(partitioned, "tmp", "m", writeDisposition="WRITE_APPEND")["status"] == {
+        "state": "DONE"
+    }
+    assert values(run_query(partitioned, "SELECT COUNT(*) FROM ds.m").json()["rows"]) == ["4"]
+    refused = copy_job(partitioned, "tmp", "m")  # WRITE_EMPTY is the default
+    assert refused["status"]["errorResult"]["message"].startswith("Not supported by Crucible")
+
+
+@pytest.mark.parametrize(
+    ("source", "destination"),
+    [("tmp$20240102", "m$20240103"), ("tmp$2024010", "m$2024010"), ("tmp$__NULL__", "m$__NULL__")],
+)
+def test_decorators_crucible_cannot_match_are_refused(partitioned, source, destination):
+    job = copy_job(partitioned, source, destination, writeDisposition="WRITE_TRUNCATE")
+    assert job["status"]["errorResult"]["message"].startswith("Not supported by Crucible")
+
+
+def test_routines_list_and_get_report_persistent_functions(client):
+    make_dataset(client)
+    insert_query(client, "CREATE FUNCTION ds.g(x FLOAT64) RETURNS FLOAT64 AS (x * 2)")
+    listed = client.get(f"{API}/datasets/ds/routines").json()["routines"]
+    assert [r["routineReference"]["routineId"] for r in listed] == ["g"]
+    assert "definitionBody" not in listed[0]
+    routine = client.get(f"{API}/datasets/ds/routines/g").json()
+    assert routine["routineType"] == "SCALAR_FUNCTION"
+    assert routine["language"] == "SQL"
+    assert routine["arguments"] == [{"name": "x", "dataType": {"typeKind": "FLOAT64"}}]
+    assert routine["returnType"] == {"typeKind": "FLOAT64"}
+    assert routine["definitionBody"] == "(x * 2)"

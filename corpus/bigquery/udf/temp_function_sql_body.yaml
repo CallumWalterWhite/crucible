@@ -1,0 +1,8 @@
+description: A temporary SQL function's body is evaluated with its arguments. See https://cloud.google.com/bigquery/docs/user-defined-functions.
+tags: [udf]
+query: CREATE TEMP FUNCTION f(x INT64, y STRING) RETURNS STRING AS (CONCAT(y, CAST(x * 2 AS STRING))); SELECT f(3, 'n') AS v
+expected:
+  columns:
+  - {name: v, type: STRING}
+  rows:
+  - [n6]

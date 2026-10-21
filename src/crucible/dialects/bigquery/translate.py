@@ -21,8 +21,10 @@ from crucible.dialects.bigquery import (
     information_schema,
     metadata,
     parameters,
+    scripting,
     transforms,
     types,
+    udfs,
 )
 from crucible.dialects.bigquery.generator import generate
 from crucible.dialects.bigquery.transforms.common import check, raise_runtime
@@ -152,6 +154,7 @@ def prepare(query: exp.Expr, ctx: ExecContext) -> Prepared:
     first = outer_selects(query)[0]
     _tag_names(first)
     infos = metadata.qualify_names(query, ctx)
+    scripting.bind(query, ctx, {c.name.lower() for info in infos for c in info.columns})
     schema = schema_for(infos)
     struct_names = _struct_field_names(query)
     try:
@@ -161,6 +164,7 @@ def prepare(query: exp.Expr, ctx: ExecContext) -> Prepared:
     _restore_struct_field_names(struct_names)
     query = annotate_types(query, schema=schema, dialect="bigquery")
     fix_annotation(query)
+    udfs.check(query)
 
     selects = outer_selects(query)
     if any(len(select.expressions) != len(selects[0].expressions) for select in selects[1:]):

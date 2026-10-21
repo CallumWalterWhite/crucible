@@ -1,0 +1,12 @@
+description: A persistent SQL function, created in the dataset, is called over a table's rows. See https://cloud.google.com/bigquery/docs/user-defined-functions.
+tags: [udf]
+setup:
+- CREATE TABLE t (a INT64)
+- INSERT INTO t VALUES (1), (2), (3)
+- CREATE FUNCTION double_it(x INT64) RETURNS INT64 AS (x * 2)
+query: SELECT SUM(double_it(a)) AS s FROM t
+expected:
+  columns:
+  - {name: s, type: INT64}
+  rows:
+  - [12]

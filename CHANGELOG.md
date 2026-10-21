@@ -9,6 +9,12 @@ and this project does not yet follow semantic versioning.
 
 ### Added
 
+- SQL user-defined functions: `CREATE TEMP FUNCTION`, `CREATE [OR REPLACE] FUNCTION`, `DROP FUNCTION`, typed
+  arguments and RETURNS with BigQuery's `No matching signature` error, and persistent functions in
+  `routines.list` and `routines.get`. JavaScript, remote, table-valued and ANY TYPE functions are refused.
+- BigQuery scripting subset for dbt: `DECLARE` and `SET` with script variables, so dbt-bigquery's dynamic
+  `insert_overwrite` and `microbatch` work. Copy jobs (`client.copy_table`) with `$partition` decorators,
+  so `copy_partitions` works. The CI dbt project now runs all three strategies twice.
 - Query parameters (`queryParameters`, named and positional, including ARRAY and STRUCT) on `jobs.query`
   and `jobs.insert`, bound as DuckDB parameters.
 - `examples/ci/github-actions.yml`: a GitHub Actions recipe that runs the dbt example against Crucible as a service

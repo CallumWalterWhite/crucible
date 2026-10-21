@@ -12,7 +12,16 @@ from sqlglot.errors import ParseError
 from sqlglot.optimizer.annotate_types import annotate_types
 from sqlglot.tokenizer_core import TokenType
 
-from crucible.dialects.bigquery import ddl, dml, errors, metadata, parameters, types
+from crucible.dialects.bigquery import (
+    ddl,
+    dml,
+    errors,
+    metadata,
+    parameters,
+    scripting,
+    types,
+    udfs,
+)
 from crucible.dialects.bigquery.keywords import RESERVED
 from crucible.dialects.bigquery.translate import (
     fix_annotation,
@@ -171,6 +180,11 @@ def _refuse_unmodelled(tree: exp.Expr) -> None:
 
 
 def _plan(tree: exp.Expr, ctx: ExecContext) -> Plan:
+    if isinstance(tree, exp.Create) and (tree.kind or "").upper() == "FUNCTION":
+        return udfs.plan_create(tree, ctx)  # its body is checked when the function is called
+    if isinstance(tree, exp.Drop) and (tree.kind or "").upper() == "FUNCTION":
+        return udfs.plan_drop(tree, ctx)
+    tree = udfs.expand(tree, ctx)
     _refuse_unmodelled(tree)
     if isinstance(tree, exp.Query):
         return run_sql(translate_query(tree, ctx).sql, "SELECT", ctx)
@@ -190,6 +204,10 @@ def _plan(tree: exp.Expr, ctx: ExecContext) -> Plan:
         return dml.plan_truncate(tree, ctx)
     if isinstance(tree, exp.Insert):
         return _insert(tree, ctx)
+    if isinstance(tree, exp.Declare):
+        return scripting.plan_declare(tree, ctx, lambda q: _plan(q, ctx))
+    if isinstance(tree, exp.Set):
+        return scripting.plan_set(tree, ctx, lambda q: _plan(q, ctx))
     if isinstance(tree, exp.Command) and tree.name.upper() == "ALTER":
         return ddl.plan_alter_column(str(tree.args.get("expression") or ""), ctx)
     if isinstance(tree, exp.Command):

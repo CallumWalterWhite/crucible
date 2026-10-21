@@ -1,0 +1,7 @@
+description: A STRING argument to an INT64 parameter has no matching signature. See https://cloud.google.com/bigquery/docs/user-defined-functions.
+tags: [udf]
+query: CREATE TEMP FUNCTION f(x INT64) AS (x); SELECT f('a') AS v
+expected:
+  error:
+    kind: invalid_query
+    message_contains: No matching signature

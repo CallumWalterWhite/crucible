@@ -318,3 +318,38 @@ def test_bigquery_query_parameters(client):
         query_parameters=[bigquery.ScalarQueryParameter(None, "INT64", 2)]
     )
     assert next(iter(client.query("SELECT ? * 10 AS v", job_config=positional).result())).v == 20
+
+
+def test_bigquery_copy_table_and_a_partition(client, dataset):
+    """client.copy_table, as dbt-bigquery's insert_overwrite with copy_partitions uses it."""
+    client.query(
+        f"CREATE TABLE `{PROJECT}.{dataset}.m` PARTITION BY d AS "
+        "SELECT DATE '2024-01-01' AS d, 1 AS k UNION ALL SELECT DATE '2024-01-02', 2"
+    ).result()
+    client.query(
+        f"CREATE TABLE `{PROJECT}.{dataset}.tmp` PARTITION BY d AS "
+        "SELECT DATE '2024-01-02' AS d, 20 AS k"
+    ).result()
+    truncate = bigquery.CopyJobConfig(write_disposition="WRITE_TRUNCATE")
+    client.copy_table(
+        f"{PROJECT}.{dataset}.tmp$20240102", f"{PROJECT}.{dataset}.m$20240102", job_config=truncate
+    ).result()
+    rows = client.query(f"SELECT k FROM `{PROJECT}.{dataset}.m` ORDER BY d").result()
+    assert [r.k for r in rows] == [1, 20]
+    client.copy_table(f"{PROJECT}.{dataset}.m", f"{PROJECT}.{dataset}.whole").result()
+    assert client.get_table(f"{PROJECT}.{dataset}.whole").num_rows == 2
+
+
+def test_bigquery_sql_udfs_and_routines(client, dataset):
+    temp = "CREATE TEMP FUNCTION f(x INT64) AS (x * 3); SELECT f(2) AS v"
+    assert next(iter(client.query(temp).result())).v == 6
+    client.query(
+        f"CREATE FUNCTION `{PROJECT}.{dataset}.g`(x FLOAT64) RETURNS FLOAT64 AS (x / 2)"
+    ).result()
+    assert next(iter(client.query(f"SELECT `{PROJECT}.{dataset}`.g(5) AS v").result())).v == 2.5
+    [listed] = list(client.list_routines(f"{PROJECT}.{dataset}"))
+    assert listed.routine_id == "g"
+    routine = client.get_routine(f"{PROJECT}.{dataset}.g")
+    assert routine.type_ == "SCALAR_FUNCTION"
+    assert [a.name for a in routine.arguments] == ["x"]
+    assert routine.body == "(x / 2)"

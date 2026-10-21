@@ -1,0 +1,8 @@
+description: An INT64 argument coerces to a FLOAT64 parameter. See https://cloud.google.com/bigquery/docs/user-defined-functions.
+tags: [udf]
+query: CREATE TEMP FUNCTION f(x FLOAT64) AS (x / 4); SELECT f(1) AS v
+expected:
+  columns:
+  - {name: v, type: FLOAT64}
+  rows:
+  - [0.25]

@@ -1,0 +1,8 @@
+description: SET var = expression reads the variable's old value. See https://cloud.google.com/bigquery/docs/reference/standard-sql/procedural-language#set.
+tags: [scripting]
+query: DECLARE z INT64 DEFAULT 2; SET z = z * 10; SELECT z AS v
+expected:
+  columns:
+  - {name: v, type: INT64}
+  rows:
+  - [20]

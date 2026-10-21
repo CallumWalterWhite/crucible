@@ -223,3 +223,25 @@ def encode_rows(
         }
         for row in rows
     ]
+
+
+def standard_sql_type(type_sql: str) -> dict[str, Any]:
+    """A BigQuery type as a StandardSqlDataType (REST reference: typeKind, arrayElementType,
+    structType), as routines report their arguments and return type."""
+    data_type = types.parse(type_sql)
+    if data_type.this == T.ARRAY:
+        [element] = data_type.expressions
+        assert isinstance(element, exp.DataType)
+        return {
+            "typeKind": "ARRAY",
+            "arrayElementType": standard_sql_type(types.type_name(element)),
+        }
+    if data_type.this == T.STRUCT:
+        fields: list[dict[str, Any]] = []
+        for field in data_type.expressions:
+            assert isinstance(field, exp.ColumnDef)
+            kind = field.args.get("kind")
+            assert isinstance(kind, exp.DataType)
+            fields.append({"name": field.name, "type": standard_sql_type(types.type_name(kind))})
+        return {"typeKind": "STRUCT", "structType": {"fields": fields}}
+    return {"typeKind": types.type_name(data_type)}

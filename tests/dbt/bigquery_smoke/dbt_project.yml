@@ -17,3 +17,7 @@ models:
       columns: true
     +labels:
       team: data
+    # insert_overwrite and microbatch models, enabled only by test_bigquery_partition_strategies
+    # (--vars '{partitions: true}'), which writes their source and bounds the microbatch window.
+    partitions:
+      +enabled: "{{ var('partitions', false) }}"
