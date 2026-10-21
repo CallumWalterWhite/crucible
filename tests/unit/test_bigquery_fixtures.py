@@ -179,6 +179,9 @@ NOT_RECORDED_YET: list[str] = [
     "*_select_streamed",
     "get_query_results_streamed",
     "jobs_query_update_streamed",
+    # INFORMATION_SCHEMA and __TABLES__ (record_api.record_information_schema), to be recorded.
+    "*_options_table",
+    "jobs_query_information_schema_*",
 ]
 
 

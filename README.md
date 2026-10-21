@@ -100,7 +100,7 @@ guess. Not supported yet:
 
 - Scripting (`DECLARE`, `BEGIN ... END`), temporary and persistent SQL functions (`CREATE FUNCTION`).
 - Query parameters.
-- `INFORMATION_SCHEMA`, wildcard tables (`dataset.events_*`), time travel (`FOR SYSTEM_TIME AS OF`).
+- `INFORMATION_SCHEMA` beyond the views `dbt docs generate` reads, wildcard tables (`dataset.events_*`), time travel (`FOR SYSTEM_TIME AS OF`).
 - Geography functions (`ST_*`).
 - The BigQuery Storage Read and Write APIs (gRPC), so `to_dataframe()` needs
   `create_bqstorage_client=False`, and dbt Fusion cannot run tests.

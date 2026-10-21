@@ -147,3 +147,28 @@ def test_bigquery_snapshots_close_changed_row_and_open_new_rows(dbt_workdir):
         ], snapshot
         # dbt closes the old version exactly when the new version starts.
         assert rows[0].dbt_valid_to == rows[1].dbt_valid_from, snapshot
+
+
+def test_bigquery_docs_generate_reads_the_catalog(dbt_workdir):
+    """docs generate reads __TABLES__ and INFORMATION_SCHEMA (dbt-bigquery catalog.sql)."""
+    assert_all_ok(dbt(dbt_workdir, "seed"), "seed")
+    assert_all_ok(dbt(dbt_workdir, "run"), "run")
+    result = dbt(dbt_workdir, "docs", "generate")
+    assert result.success, f"dbt docs generate: {result.exception}"
+    catalog = json.loads((dbt_workdir / "target" / "catalog.json").read_text(encoding="utf-8"))
+    assert not catalog.get("errors"), catalog.get("errors")
+    nodes = {key.split(".")[-1]: node for key, node in catalog["nodes"].items()}
+    assert nodes["vip_customers"]["metadata"]["type"] == "table"
+    assert nodes["vip_summary"]["metadata"]["type"] == "view"
+    customers = nodes["customers"]
+    columns = sorted(customers["columns"].values(), key=lambda c: c["index"])
+    assert [c["name"] for c in columns] == [
+        "customer_id",
+        "name",
+        "signup_date",
+        "credit_limit",
+        "is_vip",
+        "tier",
+    ]
+    assert customers["columns"]["customer_id"]["type"] == "INT64"
+    assert customers["stats"]["num_rows"]["value"] == 6
