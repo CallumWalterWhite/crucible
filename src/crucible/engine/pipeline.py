@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -87,6 +88,12 @@ class ExecContext:
         return result
 
     def run_sql(self, sql: str, params: Params = None, *, returns_rows: bool = True) -> Result:
+        if params is None and isinstance(self.params, Mapping):
+            # The request's named parameters this SQL references (`$name`); DuckDB refuses
+            # parameters a statement does not use.
+            params = {
+                k: v for k, v in self.params.items() if re.search(rf"\${re.escape(k)}\b", sql)
+            } or None
         try:
             self.cursor.execute(sql, params)
             description = self.cursor.description or []
@@ -151,6 +158,6 @@ class Pipeline:
             if isinstance(plan, CommandPlan):
                 describe = plan.columns_sql
             if describe is not None:
-                described = ctx.run_sql(f"DESCRIBE {describe}", params).rows
+                described = ctx.run_sql(f"DESCRIBE {describe}").rows
                 result.columns = [Column(str(r[0]), parse_type(str(r[1]))) for r in described]
             return result
