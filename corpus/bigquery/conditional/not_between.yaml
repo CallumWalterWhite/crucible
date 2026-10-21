@@ -1,0 +1,13 @@
+description: NOT BETWEEN keeps the values outside both bounds. See https://cloud.google.com/bigquery/docs/reference/standard-sql/operators#between_operators.
+tags:
+- probe
+- conditional
+query: SELECT x FROM UNNEST([1, 2, 3, 4]) AS x WHERE x NOT BETWEEN 2 AND 3
+ordered: false
+expected:
+  columns:
+  - name: x
+    type: INT64
+  rows:
+  - - 1
+  - - 4

@@ -1,0 +1,16 @@
+description: REGEXP_REPLACE takes the RE2 pattern from a column, so each row uses its own pattern. See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions#regexp_replace.
+tags:
+- probe
+- regexp
+setup:
+- CREATE TABLE r (s STRING, p STRING)
+- INSERT INTO r VALUES ('a1b22', '[0-9]+'), ('a1b22', 'b')
+query: SELECT REGEXP_REPLACE(s, p, '#') AS v FROM r
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: STRING
+  rows:
+  - - a#b#
+  - - a1#22

@@ -111,6 +111,18 @@ class BigQueryToDuckDB(DuckDB):
             )
             return self.sql(exp.Cast(this=epoch, to=exp.DataType(this=exp.DType.BIGINT)))
 
+        def like_sql(self, expression: exp.Like) -> str:
+            # BigQuery escapes `%`, `_` and `\` with a backslash; DuckDB's LIKE has no escape
+            # character unless one is named.
+            pattern = expression.expression
+            if isinstance(pattern, exp.Literal) and pattern.is_string:
+                trailing = len(pattern.this) - len(pattern.this.rstrip("\\"))
+                if trailing % 2:
+                    # shortcut: literal patterns only; BigQuery's error for this is unrecorded.
+                    self.unsupported("LIKE pattern ending in an unescaped backslash")
+            sql = super().like_sql(expression)
+            return sql if isinstance(expression.parent, exp.Escape) else f"{sql} ESCAPE '\\'"
+
         def strtodate_sql(self, expression: exp.StrToDate) -> str:
             """PARSE_DATE -> CAST(STRPTIME(...) AS DATE), built as a tree.
 

@@ -1,0 +1,17 @@
+description: A correlated scalar subquery is evaluated once per outer row. See https://cloud.google.com/bigquery/docs/reference/standard-sql/subqueries#scalar_subquery_concepts.
+tags:
+- probe
+- syntax
+query: SELECT x, (SELECT COUNT(*) FROM UNNEST([1, 2, 3]) AS y WHERE y <= x) AS n FROM UNNEST([1, 2]) AS x ORDER BY x
+ordered: true
+expected:
+  columns:
+  - name: x
+    type: INT64
+  - name: n
+    type: INT64
+  rows:
+  - - 1
+    - 1
+  - - 2
+    - 2

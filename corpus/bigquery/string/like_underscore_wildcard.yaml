@@ -1,0 +1,13 @@
+description: LIKE with _ matches exactly one character. See https://cloud.google.com/bigquery/docs/reference/standard-sql/operators#like_operator.
+tags:
+- probe
+- string
+query: SELECT x LIKE 'a_c' AS v FROM UNNEST(['abc', 'ac']) AS x
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: BOOL
+  rows:
+  - - true
+  - - false

@@ -1,0 +1,13 @@
+description: A backslash escapes a wildcard in LIKE, so the pattern a\% matches a literal percent sign. See https://cloud.google.com/bigquery/docs/reference/standard-sql/operators#like_operator.
+tags:
+- probe
+- string
+query: SELECT x LIKE 'a\\%' AS v FROM UNNEST(['a%', 'ab']) AS x
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: BOOL
+  rows:
+  - - true
+  - - false

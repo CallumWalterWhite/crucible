@@ -1,0 +1,12 @@
+description: JSON_QUERY returns NULL when the path does not exist in the JSON. See https://cloud.google.com/bigquery/docs/reference/standard-sql/json_functions.
+tags:
+- probe
+- json
+query: "SELECT JSON_QUERY('{\"a\": 1}', '$.b') AS v"
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: STRING
+  rows:
+  - - null

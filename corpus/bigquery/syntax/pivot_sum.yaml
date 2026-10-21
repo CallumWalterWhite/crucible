@@ -1,0 +1,18 @@
+description: PIVOT turns the values listed in IN into output columns, each holding the aggregate for that value. See https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#pivot_operator.
+tags:
+- probe
+- syntax
+setup:
+- CREATE TABLE s (k STRING, v INT64)
+- INSERT INTO s VALUES ('a', 1), ('a', 2), ('b', 5)
+query: SELECT * FROM s PIVOT(SUM(v) FOR k IN ('a', 'b'))
+ordered: false
+expected:
+  columns:
+  - name: a
+    type: INT64
+  - name: b
+    type: INT64
+  rows:
+  - - 3
+    - 5

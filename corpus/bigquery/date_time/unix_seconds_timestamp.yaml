@@ -1,0 +1,12 @@
+description: UNIX_SECONDS returns whole seconds since the Unix epoch as an INT64. See https://cloud.google.com/bigquery/docs/reference/standard-sql/timestamp_functions#unix_seconds.
+tags:
+- probe
+- date_time
+query: SELECT UNIX_SECONDS(TIMESTAMP '1970-01-01 00:01:00 UTC') AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: INT64
+  rows:
+  - - 60

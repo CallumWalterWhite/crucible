@@ -1,0 +1,18 @@
+description: PIVOT gives NULL for a listed value that has no matching rows. See https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#pivot_operator.
+tags:
+- probe
+- syntax
+setup:
+- CREATE TABLE s (k STRING, v INT64)
+- INSERT INTO s VALUES ('a', 1), ('a', 2), ('b', 5)
+query: SELECT * FROM s PIVOT(SUM(v) FOR k IN ('a', 'c'))
+ordered: false
+expected:
+  columns:
+  - name: a
+    type: INT64
+  - name: c
+    type: INT64
+  rows:
+  - - 3
+    - null

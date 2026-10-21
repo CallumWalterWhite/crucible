@@ -1,0 +1,16 @@
+description: Comparisons with NaN follow IEEE-754, so NaN = NaN, NaN > 1 and 1 < NaN are all
+  FALSE. Crucible differs today (DuckDB treats NaN as equal to itself and greater than every number).
+  See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#floating_point_semantics.
+tags:
+- probe
+- math
+- known-divergence
+query: SELECT CAST('nan' AS FLOAT64) = CAST('nan' AS FLOAT64) AS eq, CAST('nan' AS FLOAT64) > 1.0 AS gt,
+  1.0 < CAST('nan' AS FLOAT64) AS lt
+expected:
+  columns:
+  - {name: eq, type: BOOL}
+  - {name: gt, type: BOOL}
+  - {name: lt, type: BOOL}
+  rows:
+  - [false, false, false]

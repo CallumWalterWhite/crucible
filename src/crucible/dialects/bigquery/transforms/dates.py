@@ -95,20 +95,39 @@ def _timestamp_diff(node: exp.TimestampDiff) -> exp.Expr:
     return typed(call, "INT64")
 
 
+_WEEKDAYS = ("SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY")
+
+
 # --- EXTRACT -----------------------------------------------------------------------------------
 def _extract(node: exp.Extract) -> exp.Expr | None:
     part = node.this
+    start = 0  # WEEK: Sunday
     if isinstance(part, exp.WeekStart):
-        # WEEK(<weekday>): weeks starting on another day; unrecorded, not translated.
-        raise CrucibleUnsupportedError("EXTRACT(WEEK(<weekday>))")
-    if isinstance(part, exp.Var) and part.name.upper() == "WEEK":
-        # BigQuery WEEK: weeks start on Sunday, days before the year's first Sunday are week 0
-        # (recorded: 2024-01-07, a Sunday, is week 1). DuckDB's week is ISO.
+        day = part.this.name.upper() if isinstance(part.this, exp.Var) else ""
+        if day not in _WEEKDAYS:
+            raise CrucibleUnsupportedError(f"EXTRACT(WEEK({day}))")
+        start = _WEEKDAYS.index(day)
+    if isinstance(part, exp.WeekStart) or (
+        isinstance(part, exp.Var) and part.name.upper() == "WEEK"
+    ):
+        # BigQuery WEEK(<weekday>): weeks start on that day, and days before the year's first such
+        # day are week 0 (recorded for Sunday: 2024-01-07 is week 1). DuckDB's week is ISO.
         value = node.expression
         day_of_year = exp.Anonymous(this="dayofyear", expressions=[value.copy()])
         weekday = exp.Anonymous(this="dayofweek", expressions=[value.copy()])  # Sunday = 0
+        # Days since the week's start day: (dayofweek - start + 7) % 7.
+        since_start = exp.Mod(
+            this=exp.Paren(
+                this=exp.Add(
+                    this=exp.Sub(this=weekday, expression=exp.Literal.number(start)),
+                    expression=exp.Literal.number(7),
+                )
+            ),
+            expression=exp.Literal.number(7),
+        )
         shifted = exp.Sub(
-            this=exp.Add(this=day_of_year, expression=exp.Literal.number(6)), expression=weekday
+            this=exp.Add(this=day_of_year, expression=exp.Literal.number(6)),
+            expression=exp.Paren(this=since_start),
         )
         return typed(
             exp.IntDiv(this=exp.Paren(this=shifted), expression=exp.Literal.number(7)), "INT64"

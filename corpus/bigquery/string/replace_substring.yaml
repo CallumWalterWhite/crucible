@@ -1,0 +1,12 @@
+description: REPLACE substitutes every occurrence of the search string. See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions#replace.
+tags:
+- probe
+- string
+query: SELECT REPLACE('abcabc', 'b', 'x') AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: STRING
+  rows:
+  - - axcaxc

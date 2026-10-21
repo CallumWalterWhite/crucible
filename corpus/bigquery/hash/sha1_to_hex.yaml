@@ -1,0 +1,12 @@
+description: TO_HEX of the BYTES result of SHA1 returns the 40-character lowercase hexadecimal digest.
+tags:
+- probe
+- hash
+query: SELECT TO_HEX(SHA1('abc')) AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: STRING
+  rows:
+  - - a9993e364706816aba3e25717850c26c9cd0d89d

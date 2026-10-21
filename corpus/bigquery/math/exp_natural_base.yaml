@@ -1,0 +1,12 @@
+description: EXP returns e raised to the given power. See https://cloud.google.com/bigquery/docs/reference/standard-sql/mathematical_functions#exp.
+tags:
+- probe
+- math
+query: SELECT ROUND(EXP(1), 6) AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: FLOAT64
+  rows:
+  - - 2.718282

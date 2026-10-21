@@ -1,0 +1,12 @@
+description: RTRIM with one argument removes trailing whitespace only. See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions#rtrim.
+tags:
+- probe
+- string
+query: SELECT RTRIM('  hi  ') AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: STRING
+  rows:
+  - - '  hi'

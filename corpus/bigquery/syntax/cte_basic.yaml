@@ -1,0 +1,12 @@
+description: A WITH clause names a subquery that the main query can read. See https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#with_clause.
+tags:
+- probe
+- syntax
+query: WITH t AS (SELECT 1 AS x UNION ALL SELECT 2) SELECT SUM(x) AS s FROM t
+ordered: false
+expected:
+  columns:
+  - name: s
+    type: INT64
+  rows:
+  - - 3

@@ -1,0 +1,12 @@
+description: AVG of INT64 values returns a FLOAT64 mean. See https://cloud.google.com/bigquery/docs/reference/standard-sql/aggregate_functions.
+tags:
+- probe
+- aggregate
+query: SELECT AVG(x) AS v FROM UNNEST([1, 2]) AS x
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: FLOAT64
+  rows:
+  - - 1.5

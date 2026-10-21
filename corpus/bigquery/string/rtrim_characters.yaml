@@ -1,0 +1,12 @@
+description: RTRIM with a second argument removes trailing characters from that set. See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions#rtrim.
+tags:
+- probe
+- string
+query: SELECT RTRIM('xxhixx', 'x') AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: STRING
+  rows:
+  - - xxhi

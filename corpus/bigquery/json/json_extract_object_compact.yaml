@@ -1,0 +1,12 @@
+description: JSON_EXTRACT returns the value at the path as a compact JSON STRING with no spaces. See https://cloud.google.com/bigquery/docs/reference/standard-sql/json_functions.
+tags:
+- probe
+- json
+query: "SELECT JSON_EXTRACT('{\"a\": {\"b\": 1}}', '$.a') AS v"
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: STRING
+  rows:
+  - - '{"b":1}'

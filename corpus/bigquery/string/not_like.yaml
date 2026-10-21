@@ -1,0 +1,12 @@
+description: NOT LIKE is TRUE when the pattern does not match. See https://cloud.google.com/bigquery/docs/reference/standard-sql/operators#like_operator.
+tags:
+- probe
+- string
+query: SELECT 'abc' NOT LIKE 'x%' AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: BOOL
+  rows:
+  - - true

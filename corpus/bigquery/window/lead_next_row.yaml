@@ -1,0 +1,17 @@
+description: LEAD returns the next row's value, or NULL for the last row.
+tags:
+- probe
+- window
+query: SELECT x, LEAD(x) OVER (ORDER BY x) AS v FROM UNNEST([1, 2]) AS x ORDER BY x
+ordered: true
+expected:
+  columns:
+  - name: x
+    type: INT64
+  - name: v
+    type: INT64
+  rows:
+  - - 1
+    - 2
+  - - 2
+    - null

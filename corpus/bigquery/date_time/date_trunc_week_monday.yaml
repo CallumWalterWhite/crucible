@@ -1,0 +1,12 @@
+description: DATE_TRUNC to WEEK(MONDAY) returns the preceding Monday. See https://cloud.google.com/bigquery/docs/reference/standard-sql/date_functions#date_trunc.
+tags:
+- probe
+- date_time
+query: SELECT DATE_TRUNC(DATE '2024-03-06', WEEK(MONDAY)) AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: DATE
+  rows:
+  - - '2024-03-04'

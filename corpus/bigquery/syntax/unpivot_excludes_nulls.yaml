@@ -1,0 +1,21 @@
+description: UNPIVOT drops a row for a NULL value unless INCLUDE NULLS is given, so EXCLUDE NULLS is the default. See https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#unpivot_operator.
+tags:
+- probe
+- syntax
+setup:
+- CREATE TABLE u (id INT64, a INT64, b INT64)
+- INSERT INTO u VALUES (1, 10, NULL)
+query: SELECT id, k, v FROM u UNPIVOT(v FOR k IN (a, b))
+ordered: false
+expected:
+  columns:
+  - name: id
+    type: INT64
+  - name: k
+    type: STRING
+  - name: v
+    type: INT64
+  rows:
+  - - 1
+    - a
+    - 10

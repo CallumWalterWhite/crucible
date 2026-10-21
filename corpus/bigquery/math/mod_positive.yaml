@@ -1,0 +1,12 @@
+description: MOD returns the remainder of the integer division. See https://cloud.google.com/bigquery/docs/reference/standard-sql/mathematical_functions#mod.
+tags:
+- probe
+- math
+query: SELECT MOD(10, 3) AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: INT64
+  rows:
+  - - 1

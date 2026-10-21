@@ -1,0 +1,12 @@
+description: COUNT(DISTINCT) counts the distinct non-NULL values. See https://cloud.google.com/bigquery/docs/reference/standard-sql/aggregate_functions.
+tags:
+- probe
+- aggregate
+query: SELECT COUNT(DISTINCT x) AS v FROM UNNEST([1, 1, 2, NULL]) AS x
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: INT64
+  rows:
+  - - 2

@@ -1,0 +1,12 @@
+description: APPROX_COUNT_DISTINCT estimates COUNT(DISTINCT); on this small input the estimate is 3. See https://cloud.google.com/bigquery/docs/reference/standard-sql/aggregate_functions.
+tags:
+- probe
+- aggregate
+query: SELECT APPROX_COUNT_DISTINCT(x) AS v FROM UNNEST([1, 1, 2, 3]) AS x
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: INT64
+  rows:
+  - - 3

@@ -1,0 +1,12 @@
+description: TIMESTAMP_TRUNC to DAY truncates to midnight UTC, the default time zone. See https://cloud.google.com/bigquery/docs/reference/standard-sql/timestamp_functions#timestamp_trunc.
+tags:
+- probe
+- date_time
+query: SELECT TIMESTAMP_TRUNC(TIMESTAMP '2024-03-06 15:45:30', DAY) AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: TIMESTAMP
+  rows:
+  - - '2024-03-06T00:00:00Z'

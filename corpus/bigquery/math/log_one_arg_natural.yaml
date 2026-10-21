@@ -1,0 +1,12 @@
+description: LOG with one argument returns the natural logarithm, not base 10. See https://cloud.google.com/bigquery/docs/reference/standard-sql/mathematical_functions#log.
+tags:
+- probe
+- math
+query: SELECT ROUND(LOG(10), 6) AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: FLOAT64
+  rows:
+  - - 2.302585
