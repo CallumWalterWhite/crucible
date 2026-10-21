@@ -482,6 +482,7 @@ class Recorder:
         self.call("tables_delete", "DELETE", f"{tables}/all_types", expect=(200, 204))
         self.record_metadata(p, tables)
         self.record_table_options(p)
+        self.record_dry_runs(p)
 
     def record_metadata(self, p: str, tables: str) -> None:
         """Table description, labels, field descriptions and REQUIRED columns: as tables.insert
@@ -703,6 +704,33 @@ class Recorder:
                 f"WHERE table_name IN {names} ORDER BY table_name, option_name"
             )["query"],
             expect=None,
+        )
+
+    def record_dry_runs(self, p: str) -> None:
+        """dryRun on jobs.insert and jobs.query: a query, a statement and a plan-time error.
+        Last, so earlier placeholders keep their numbers."""
+        for name, sql in (
+            ("select", "SELECT k, s, 1 / 0 AS z FROM streamed"),
+            ("ddl", "CREATE TABLE dry_t (a INT64)"),
+            ("missing_table", "SELECT * FROM no_such_table"),
+        ):
+            job = self.job_id(f"dry_{name}")
+            body = {
+                "jobReference": {"projectId": p, "jobId": job},
+                "configuration": {**self.query_config(sql), "dryRun": True},
+            }
+            self.call(
+                f"jobs_insert_dry_run_{name}",
+                "POST",
+                f"{API}/projects/{p}/jobs",
+                body=body,
+                expect=None,
+            )
+        self.call(
+            "jobs_query_dry_run",
+            "POST",
+            f"{API}/projects/{p}/queries",
+            body={**self.query_config("SELECT k, s FROM streamed")["query"], "dryRun": True},
         )
 
     def load(self, name: str, csv_text: str) -> None:

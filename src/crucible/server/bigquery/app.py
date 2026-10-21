@@ -71,6 +71,7 @@ _QUERY_REQUEST_KEYS = frozenset(
         "formatOptions",
         "useQueryCache",
         "kind",
+        "dryRun",
     }
 )
 # REST reference, Dataset resource: fields Crucible stores and echoes.
@@ -199,7 +200,9 @@ class BigQueryServer:
         }
         if job.job_type == "QUERY":
             query: dict[str, Any] = configuration["query"]
-            if job.anonymous_table is not None:
+            if job.dry_run:
+                pass  # nothing ran, so there is no destination table
+            elif job.anonymous_table is not None:
                 query["destinationTable"] = {
                     "projectId": job.project,
                     "datasetId": ANONYMOUS_DATASET,
@@ -248,6 +251,9 @@ class BigQueryServer:
             "cacheHit": False,
             "statementType": job.statement_type,
         }
+        if job.dry_run and job.columns is not None:
+            # JobStatistics2.schema: a dry-run query's result schema (REST reference, Job).
+            stats["schema"] = encoding.schema([(c.name, c.type) for c in job.columns])
         if job.dml_affected_rows is not None:
             stats["numDmlAffectedRows"] = str(job.dml_affected_rows)
             # JobStatistics2.dmlStats: https://cloud.google.com/bigquery/docs/reference/rest/v2/Job#DmlStats
@@ -286,8 +292,6 @@ class BigQueryServer:
                     f"jobs.insert of a {kinds[0] if kinds else 'empty'} job (only query jobs; "
                     "load jobs use the resumable upload)"
                 )
-            if configuration.get("dryRun"):
-                raise CrucibleUnsupportedError("dry-run jobs")
             job = Job(
                 project=project,
                 job_id=reference.get("jobId") or new_job_id(),
@@ -295,6 +299,10 @@ class BigQueryServer:
                 job_type="QUERY",
                 configuration=configuration,
             )
+            if configuration.get("dryRun"):
+                # A dry run is planned and answered, never stored: jobs.get does not find it.
+                job = await run_in_threadpool(self.runner.dry_run_query, job)
+                return JSONResponse(self.job_resource(job, self._base(request)))
             self.store.add(job)
         except CrucibleError as exc:
             return http_error(exc)
@@ -417,6 +425,25 @@ class BigQueryServer:
                 job_type="QUERY",
                 configuration={"query": config},
             )
+            if body.get("dryRun"):
+                job = await run_in_threadpool(self.runner.dry_run_query, job)
+                if job.error is not None:
+                    assert job.error_kind is not None
+                    return job_error_response(job.error, job.error_kind)
+                # QueryResponse for a dry run: the schema, no rows and no job id (REST, jobs.query).
+                dry: dict[str, Any] = {"kind": "bigquery#queryResponse"}
+                if job.columns is not None:
+                    dry["schema"] = encoding.schema([(c.name, c.type) for c in job.columns])
+                reference = {"projectId": job.project, "location": job.location}
+                return JSONResponse(
+                    dry
+                    | {
+                        "jobReference": reference,
+                        "totalBytesProcessed": "0",
+                        "jobComplete": True,
+                        "cacheHit": False,
+                    }
+                )
             self.store.add(job)
         except CrucibleError as exc:
             return http_error(exc, query_parameter=True)

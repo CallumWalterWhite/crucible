@@ -189,6 +189,9 @@ DIFFERENCES: list[tuple[str, str, str]] = [
 NOT_RECORDED_YET: list[str] = [
     # TABLE_OPTIONS in a dataset without a default table expiration (record_table_options).
     "*_no_expiration",
+    # dryRun (record_api.record_dry_runs), to be recorded.
+    "jobs_insert_dry_run_*",
+    "jobs_query_dry_run",
 ]
 
 

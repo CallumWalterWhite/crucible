@@ -247,15 +247,57 @@ def test_jobs_query_with_query_parameters_is_unsupported(client):
     assert response.json()["error"]["message"].startswith("Not supported by Crucible")
 
 
-def test_dry_run_in_jobs_insert_is_unsupported(client):
-    response = client.post(
-        f"{API}/jobs",
-        json={
-            "configuration": {"dryRun": True, "query": {"query": "SELECT 1", "useLegacySql": False}}
-        },
+def dry_run(client: TestClient, sql: str, job_id: str = "dry") -> Any:
+    query = {
+        "query": sql,
+        "useLegacySql": False,
+        "defaultDataset": {"projectId": PROJECT, "datasetId": "ds"},
+    }
+    body = {"jobReference": {"jobId": job_id}, "configuration": {"dryRun": True, "query": query}}
+    return client.post(f"{API}/jobs", json=body)
+
+
+def test_a_dry_run_query_returns_its_schema_without_running(client):
+    make_dataset(client)
+    insert_query(client, "CREATE TABLE ds.t (a INT64, b STRING)")
+    job = dry_run(client, "SELECT a, b, 1 / 0 AS z FROM ds.t").json()
+    assert job["status"] == {"state": "DONE"}
+    assert job["configuration"]["dryRun"] is True
+    stats = job["statistics"]["query"]
+    assert stats["statementType"] == "SELECT"
+    assert stats["totalBytesProcessed"] == "0"
+    assert [(f["name"], f["type"]) for f in stats["schema"]["fields"]] == [
+        ("a", "INTEGER"),
+        ("b", "STRING"),
+        ("z", "FLOAT"),
+    ]
+    assert client.get(f"{API}/jobs/dry").status_code == 404  # a dry run is not stored
+
+
+def test_a_dry_run_statement_changes_nothing(client):
+    make_dataset(client)
+    assert (
+        dry_run(client, "CREATE TABLE ds.u (a INT64)").json()["statistics"]["query"][
+            "statementType"
+        ]
+        == "CREATE_TABLE"
     )
-    assert response.status_code == 400
-    assert response.json()["error"]["message"].startswith("Not supported by Crucible")
+    assert client.get(f"{API}/datasets/ds/tables/u").status_code == 404
+
+
+def test_a_dry_run_reports_plan_time_errors(client):
+    make_dataset(client)
+    job = dry_run(client, "SELECT * FROM ds.missing").json()
+    assert job["status"]["errorResult"]["reason"] == "notFound"
+
+
+def test_jobs_query_dry_run_has_a_schema_and_no_rows_or_job_id(client):
+    make_dataset(client)
+    body = run_query(client, "SELECT 1 AS a", dryRun=True).json()
+    assert body["schema"]["fields"][0]["name"] == "a"
+    assert "rows" not in body
+    assert "jobId" not in body["jobReference"]
+    assert body["totalBytesProcessed"] == "0"
 
 
 # --- 7. DDL and DML jobs ----------------------------------------------------------------------

@@ -205,7 +205,7 @@ def run_sql(sql: str, statement_type: str, ctx: ExecContext, *, returns_rows: bo
         result.statement_type = statement_type
         return result
 
-    return CommandPlan(run, statement_type)
+    return CommandPlan(run, statement_type, columns_sql=sql if returns_rows else None)
 
 
 def _insert(tree: exp.Insert, ctx: ExecContext) -> Plan:

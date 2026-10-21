@@ -103,6 +103,7 @@ class Job:
     target_schema: dict[str, Any] | None = None
     anonymous_table: str | None = None
     load_statistics: dict[str, str] | None = None
+    dry_run: bool = False  # planned, not run, and never stored (REST: configuration.dryRun)
 
     @property
     def done(self) -> bool:
@@ -210,6 +211,28 @@ class Runner:
             job.fail(CrucibleError(ErrorKind.INTERNAL, f"Crucible internal error: {exc!r}"))
         job.ended_ms = now_ms()
         self.store.finished(pending, job)
+        return job
+
+    def dry_run_query(self, job: Job) -> Job:
+        """Plan a query job without running it (configuration.dryRun): its statement type and,
+        for a query, its schema; byte counts are not emulated (always "0")."""
+        job = replace(job, dry_run=True)
+        config = job.configuration["query"]
+        try:
+            check_query_config(config)
+            default = obj(config.get("defaultDataset"))
+            session = DIALECT.new_session(
+                default.get("projectId") or job.project, default.get("datasetId")
+            )
+            result = self.pipeline.dry_run(session, config["query"])
+            job.statement_type = result.statement_type
+            if result.statement_type == "SELECT":
+                for column in result.columns:
+                    encoding.schema_field(column.name, column.type)  # raises for unmapped types
+                job.columns = result.columns
+        except CrucibleError as exc:
+            job.fail(exc)
+        job.ended_ms = now_ms()
         return job
 
     def _record(self, job: Job, session: Any, results: list[Result]) -> None:

@@ -283,3 +283,11 @@ def test_bigquery_insert_rows_and_insert_rows_json(client, dataset):
         (1, "ada", datetime.date(2024, 1, 2), at, decimal.Decimal("1.5"), ["a", "b"]),
         (2, "grace", None, None, None, []),
     ]
+
+
+def test_bigquery_dry_run_returns_the_schema_and_zero_bytes(client):
+    config = bigquery.QueryJobConfig(dry_run=True, use_query_cache=False)
+    job = client.query("SELECT 1 AS a, 'x' AS b", job_config=config)
+    assert job.state == "DONE"
+    assert job.total_bytes_processed == 0
+    assert [(f.name, f.field_type) for f in job.schema] == [("a", "INTEGER"), ("b", "STRING")]
