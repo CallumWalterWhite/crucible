@@ -9,6 +9,8 @@ and this project does not yet follow semantic versioning.
 
 ### Added
 
+- `dryRun` on `jobs.insert` and `jobs.query`: the statement is planned, not run, and the response carries
+  its schema and `statementType`; `totalBytesProcessed` is `"0"` (byte estimates are not emulated).
 - `docs/bigquery-features.md`: supported and unsupported BigQuery features, each linked to its test.
 - README roadmap.
 - `INFORMATION_SCHEMA.COLUMNS`, `COLUMN_FIELD_PATHS`, `TABLE_OPTIONS`, `MATERIALIZED_VIEWS` and `__TABLES__`, with

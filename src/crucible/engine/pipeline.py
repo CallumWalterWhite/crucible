@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 import duckdb
 
 from crucible.engine.catalog import Catalog
-from crucible.engine.errors import CrucibleError, ErrorKind, from_duckdb
+from crucible.engine.errors import CrucibleError, CrucibleUnsupportedError, ErrorKind, from_duckdb
 from crucible.engine.session import Session
 from crucible.engine.types import Column, parse_type
 
@@ -48,6 +48,8 @@ class CommandPlan:
 
     run: Callable[[ExecContext], Result]
     statement_type: str
+    # SQL whose columns are the result's, so a dry run can describe it without running `run`.
+    columns_sql: str | None = None
 
 
 Plan = SqlPlan | CommandPlan
@@ -129,3 +131,26 @@ class Pipeline:
         with self.engine.cursor(session) as cursor:
             ctx = ExecContext(self.engine, self.dialect, session, cursor, params)
             return [ctx.execute(s) for s in statements]
+
+    def dry_run(self, session: Session, sql: str, params: Params = None) -> Result:
+        """Plan one statement without running it: its type and, for a query, its columns.
+
+        A query's columns come from DuckDB's DESCRIBE, which binds the SQL without executing it
+        (so runtime errors, such as a division by zero, are not raised, as in a real dry run).
+        """
+        statements = self.dialect.split(sql)
+        if len(statements) != 1:
+            raise CrucibleUnsupportedError("a dry run of more than one statement")
+        with self.engine.cursor(session) as cursor:
+            ctx = ExecContext(self.engine, self.dialect, session, cursor, params)
+            plan = self.dialect.plan(statements[0], ctx)
+            result = Result(plan.statement_type)
+            describe: str | None = (
+                plan.sql if isinstance(plan, SqlPlan) and plan.returns_rows else None
+            )
+            if isinstance(plan, CommandPlan):
+                describe = plan.columns_sql
+            if describe is not None:
+                described = ctx.run_sql(f"DESCRIBE {describe}", params).rows
+                result.columns = [Column(str(r[0]), parse_type(str(r[1]))) for r in described]
+            return result
