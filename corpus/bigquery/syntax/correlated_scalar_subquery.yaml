@@ -2,7 +2,8 @@ description: A correlated scalar subquery is evaluated once per outer row. See h
 tags:
 - probe
 - syntax
-query: SELECT x, (SELECT COUNT(*) FROM UNNEST([1, 2, 3]) AS y WHERE y <= x) AS n FROM UNNEST([1, 2]) AS x ORDER BY x
+query: SELECT x, (SELECT COUNT(*) FROM UNNEST([1, 2, 3]) AS y WHERE y <= x) AS n FROM
+  UNNEST([1, 2]) AS x ORDER BY x
 ordered: true
 expected:
   columns:
@@ -15,3 +16,5 @@ expected:
     - 1
   - - 2
     - 2
+verified: true
+recorded_at: '2026-10-21T12:41:24Z'

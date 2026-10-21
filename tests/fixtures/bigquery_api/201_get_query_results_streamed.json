@@ -1,0 +1,554 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/queries/<job-70>",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#getQueryResultsResponse",
+    "etag": "<etag>",
+    "schema": {
+      "fields": [
+        {
+          "name": "k",
+          "type": "INTEGER",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "f",
+          "type": "FLOAT",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "n",
+          "type": "NUMERIC",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "b",
+          "type": "BOOLEAN",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "s",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "y",
+          "type": "BYTES",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "d",
+          "type": "DATE",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "dt",
+          "type": "DATETIME",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "tm",
+          "type": "TIME",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "ts",
+          "type": "TIMESTAMP",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "j",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "a",
+          "type": "INTEGER",
+          "mode": "REPEATED"
+        },
+        {
+          "name": "r",
+          "type": "RECORD",
+          "mode": "NULLABLE",
+          "fields": [
+            {
+              "name": "x",
+              "type": "INTEGER",
+              "mode": "NULLABLE"
+            },
+            {
+              "name": "z",
+              "type": "STRING",
+              "mode": "NULLABLE"
+            }
+          ]
+        }
+      ]
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-70>",
+      "location": "<location>"
+    },
+    "totalRows": "10",
+    "rows": [
+      {
+        "f": [
+          {
+            "v": "1"
+          },
+          {
+            "v": "1.5"
+          },
+          {
+            "v": "1.25"
+          },
+          {
+            "v": "true"
+          },
+          {
+            "v": "x"
+          },
+          {
+            "v": "Af8="
+          },
+          {
+            "v": "2024-02-29"
+          },
+          {
+            "v": "2024-01-02T03:04:05.123456"
+          },
+          {
+            "v": "04:05:06.500000"
+          },
+          {
+            "v": "1.704164645123456E9"
+          },
+          {
+            "v": "{\"a\":1}"
+          },
+          {
+            "v": [
+              {
+                "v": "1"
+              },
+              {
+                "v": "2"
+              }
+            ]
+          },
+          {
+            "v": {
+              "f": [
+                {
+                  "v": "3"
+                },
+                {
+                  "v": "q"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "2"
+          },
+          {
+            "v": "2.0"
+          },
+          {
+            "v": "3"
+          },
+          {
+            "v": "false"
+          },
+          {
+            "v": "plain"
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": "1.7041646455E9"
+          },
+          {
+            "v": "null"
+          },
+          {
+            "v": []
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "3"
+          },
+          {
+            "v": "NaN"
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": "null"
+          },
+          {
+            "v": []
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "3"
+          },
+          {
+            "v": "NaN"
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": "null"
+          },
+          {
+            "v": []
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "3"
+          },
+          {
+            "v": "-Infinity"
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": "null"
+          },
+          {
+            "v": []
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "3"
+          },
+          {
+            "v": "-Infinity"
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": "null"
+          },
+          {
+            "v": []
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "3"
+          },
+          {
+            "v": "Infinity"
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": "null"
+          },
+          {
+            "v": []
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "3"
+          },
+          {
+            "v": "Infinity"
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": "null"
+          },
+          {
+            "v": []
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "6"
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": "null"
+          },
+          {
+            "v": []
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "7"
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": null
+          },
+          {
+            "v": "null"
+          },
+          {
+            "v": []
+          },
+          {
+            "v": null
+          }
+        ]
+      }
+    ],
+    "totalBytesProcessed": "0",
+    "jobComplete": true,
+    "cacheHit": false
+  }
+}

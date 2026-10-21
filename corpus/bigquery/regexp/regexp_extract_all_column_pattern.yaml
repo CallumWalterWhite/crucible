@@ -1,4 +1,5 @@
-description: REGEXP_EXTRACT_ALL takes the RE2 pattern from a column, so each row uses its own pattern. See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions#regexp_extract_all.
+description: REGEXP_EXTRACT_ALL takes the RE2 pattern from a column, so each row uses
+  its own pattern. See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions#regexp_extract_all.
 tags:
 - probe
 - regexp
@@ -17,3 +18,5 @@ expected:
   - - - x
       - y
       - z
+verified: true
+recorded_at: '2026-10-21T12:39:25Z'

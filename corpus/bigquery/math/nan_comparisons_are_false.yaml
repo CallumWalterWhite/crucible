@@ -1,15 +1,21 @@
-description: Comparisons with NaN follow IEEE-754, so NaN = NaN, NaN > 1 and 1 < NaN are all
-  FALSE.
-  See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#floating_point_semantics.
+description: Comparisons with NaN follow IEEE-754, so NaN = NaN, NaN > 1 and 1 < NaN
+  are all FALSE. See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#floating_point_semantics.
 tags:
 - probe
 - math
-query: SELECT CAST('nan' AS FLOAT64) = CAST('nan' AS FLOAT64) AS eq, CAST('nan' AS FLOAT64) > 1.0 AS gt,
-  1.0 < CAST('nan' AS FLOAT64) AS lt
+query: SELECT CAST('nan' AS FLOAT64) = CAST('nan' AS FLOAT64) AS eq, CAST('nan' AS
+  FLOAT64) > 1.0 AS gt, 1.0 < CAST('nan' AS FLOAT64) AS lt
 expected:
   columns:
-  - {name: eq, type: BOOL}
-  - {name: gt, type: BOOL}
-  - {name: lt, type: BOOL}
+  - name: eq
+    type: BOOL
+  - name: gt
+    type: BOOL
+  - name: lt
+    type: BOOL
   rows:
-  - [false, false, false]
+  - - false
+    - false
+    - false
+verified: true
+recorded_at: '2026-10-21T12:39:07Z'

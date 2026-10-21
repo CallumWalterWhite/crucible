@@ -80,14 +80,6 @@
             "elapsedMs": "<duration>",
             "totalSlotMs": "<duration>",
             "pendingUnits": "0",
-            "completedUnits": "0",
-            "activeUnits": "0",
-            "estimatedRunnableUnits": "0"
-          },
-          {
-            "elapsedMs": "<duration>",
-            "totalSlotMs": "<duration>",
-            "pendingUnits": "0",
             "completedUnits": "1",
             "shuffleRamUsageRatio": 1.52587890625e-05,
             "estimatedRunnableUnits": "0"

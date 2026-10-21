@@ -1,4 +1,5 @@
-description: LIKE treats . as a literal character, not as a regular-expression wildcard. See https://cloud.google.com/bigquery/docs/reference/standard-sql/operators#like_operator.
+description: LIKE treats . as a literal character, not as a regular-expression wildcard.
+  See https://cloud.google.com/bigquery/docs/reference/standard-sql/operators#like_operator.
 tags:
 - probe
 - string
@@ -10,3 +11,5 @@ expected:
     type: BOOL
   rows:
   - - false
+verified: true
+recorded_at: '2026-10-21T12:40:57Z'

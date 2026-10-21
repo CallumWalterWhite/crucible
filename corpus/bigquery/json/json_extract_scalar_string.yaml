@@ -1,8 +1,9 @@
-description: JSON_EXTRACT_SCALAR returns the JSON string at the path as an unquoted STRING. See https://cloud.google.com/bigquery/docs/reference/standard-sql/json_functions.
+description: JSON_EXTRACT_SCALAR returns the JSON string at the path as an unquoted
+  STRING. See https://cloud.google.com/bigquery/docs/reference/standard-sql/json_functions.
 tags:
 - probe
 - json
-query: "SELECT JSON_EXTRACT_SCALAR('{\"a\": {\"b\": \"x\"}}', '$.a.b') AS v"
+query: 'SELECT JSON_EXTRACT_SCALAR(''{"a": {"b": "x"}}'', ''$.a.b'') AS v'
 ordered: false
 expected:
   columns:
@@ -10,3 +11,5 @@ expected:
     type: STRING
   rows:
   - - x
+verified: true
+recorded_at: '2026-10-21T12:38:47Z'

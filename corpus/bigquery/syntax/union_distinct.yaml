@@ -2,7 +2,8 @@ description: UNION DISTINCT returns the distinct rows from both queries. See htt
 tags:
 - probe
 - syntax
-query: SELECT x FROM UNNEST([1, 1, 2]) AS x UNION DISTINCT SELECT x FROM UNNEST([2, 3]) AS x
+query: SELECT x FROM UNNEST([1, 1, 2]) AS x UNION DISTINCT SELECT x FROM UNNEST([2,
+  3]) AS x
 ordered: false
 expected:
   columns:
@@ -12,3 +13,5 @@ expected:
   - - 1
   - - 2
   - - 3
+verified: true
+recorded_at: '2026-10-21T12:41:53Z'

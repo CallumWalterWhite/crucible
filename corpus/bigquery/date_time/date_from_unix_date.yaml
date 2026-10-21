@@ -10,3 +10,5 @@ expected:
     type: DATE
   rows:
   - - '1970-01-02'
+verified: true
+recorded_at: '2026-10-21T12:38:14Z'

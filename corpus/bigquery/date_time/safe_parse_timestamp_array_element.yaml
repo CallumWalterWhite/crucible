@@ -1,9 +1,9 @@
-description: SAFE.PARSE_TIMESTAMP over an array element (SQLGlot re-parsed the generated cast, shifting
-  the index).
+description: SAFE.PARSE_TIMESTAMP over an array element (SQLGlot re-parsed the generated
+  cast, shifting the index).
 tags:
 - phase4
-query: SELECT SAFE.PARSE_TIMESTAMP('%Y-%m-%d', (SELECT a[OFFSET(1)] FROM (SELECT ['2020-01-01', '2021-02-03',
-  'x'] AS a))) AS v
+query: SELECT SAFE.PARSE_TIMESTAMP('%Y-%m-%d', (SELECT a[OFFSET(1)] FROM (SELECT ['2020-01-01',
+  '2021-02-03', 'x'] AS a))) AS v
 ordered: false
 expected:
   columns:
@@ -11,5 +11,5 @@ expected:
     type: TIMESTAMP
   rows:
   - - '2021-02-03T00:00:00Z'
-verified: false
-recorded_at: null
+verified: true
+recorded_at: '2026-10-21T12:38:24Z'

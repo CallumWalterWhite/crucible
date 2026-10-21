@@ -1,0 +1,28 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/datasets/<dataset>/tables/streamed/insertAll",
+    "params": {},
+    "body": {
+      "rows": [
+        {
+          "json": {
+            "k": 2,
+            "f": 2,
+            "n": 3,
+            "b": false,
+            "ts": 1704164645.5,
+            "s": "plain"
+          }
+        }
+      ]
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#tableDataInsertAllResponse"
+  }
+}

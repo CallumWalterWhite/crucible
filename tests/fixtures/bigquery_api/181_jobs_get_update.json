@@ -1,0 +1,325 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/jobs/<job-67>",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:<location>.<job-67>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "query": {
+        "query": "UPDATE dml_t SET k = k + 10 WHERE k >= 2",
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "dml_t"
+        },
+        "defaultDataset": {
+          "datasetId": "<dataset>",
+          "projectId": "<project>"
+        },
+        "priority": "INTERACTIVE",
+        "useQueryCache": false,
+        "maximumBytesBilled": "104857600",
+        "useLegacySql": false
+      },
+      "jobType": "QUERY"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-67>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "endTime": "<time>",
+      "totalBytesProcessed": "24",
+      "query": {
+        "queryPlan": [
+          {
+            "name": "S00: Input",
+            "id": "0",
+            "startMs": "<time>",
+            "endMs": "<time>",
+            "waitRatioAvg": 0.016129032258064516,
+            "waitMsAvg": "2",
+            "waitRatioMax": 0.016129032258064516,
+            "waitMsMax": "2",
+            "readRatioAvg": 0.08064516129032258,
+            "readMsAvg": "10",
+            "readRatioMax": 0.08064516129032258,
+            "readMsMax": "10",
+            "computeRatioAvg": 0.1532258064516129,
+            "computeMsAvg": "19",
+            "computeRatioMax": 0.1532258064516129,
+            "computeMsMax": "19",
+            "writeRatioAvg": 0.06451612903225806,
+            "writeMsAvg": "8",
+            "writeRatioMax": 0.06451612903225806,
+            "writeMsMax": "8",
+            "shuffleOutputBytes": "54",
+            "shuffleOutputBytesSpilled": "0",
+            "recordsRead": "3",
+            "recordsWritten": "2",
+            "parallelInputs": "1",
+            "completedParallelInputs": "1",
+            "status": "COMPLETE",
+            "steps": [
+              {
+                "kind": "READ",
+                "substeps": [
+                  "$1:k, $2:$file_temp_id, $3:$row_temp_id",
+                  "FROM dml_t",
+                  "WHERE greater_or_equal($1, 2)"
+                ]
+              },
+              {
+                "kind": "WRITE",
+                "substeps": [
+                  "$1, $2, $3",
+                  "TO __stage00_output",
+                  "BY HASH($2)"
+                ]
+              }
+            ],
+            "slotMs": "<duration>",
+            "computeMode": "BIGQUERY"
+          },
+          {
+            "name": "S01: Sort+",
+            "id": "1",
+            "startMs": "<time>",
+            "endMs": "<time>",
+            "inputStages": [
+              "0"
+            ],
+            "waitRatioAvg": 0.016129032258064516,
+            "waitMsAvg": "2",
+            "waitRatioMax": 0.016129032258064516,
+            "waitMsMax": "2",
+            "readRatioAvg": 0.0967741935483871,
+            "readMsAvg": "12",
+            "readRatioMax": 0.0967741935483871,
+            "readMsMax": "12",
+            "computeRatioAvg": 0.13709677419354838,
+            "computeMsAvg": "17",
+            "computeRatioMax": 0.13709677419354838,
+            "computeMsMax": "17",
+            "writeRatioAvg": 0.024193548387096774,
+            "writeMsAvg": "3",
+            "writeRatioMax": 0.024193548387096774,
+            "writeMsMax": "3",
+            "shuffleOutputBytes": "59",
+            "shuffleOutputBytesSpilled": "0",
+            "recordsRead": "5",
+            "recordsWritten": "3",
+            "parallelInputs": "1",
+            "completedParallelInputs": "1",
+            "status": "COMPLETE",
+            "steps": [
+              {
+                "kind": "READ",
+                "substeps": [
+                  "$1, $2, $3",
+                  "FROM __stage00_output"
+                ]
+              },
+              {
+                "kind": "COMPUTE",
+                "substeps": [
+                  "$10 := if($21, 'UPDATE', 'REINSERT')",
+                  "$11 := if($21, add($40, 10), $20)"
+                ]
+              },
+              {
+                "kind": "UPDATE",
+                "substeps": [
+                  "FILE $31 ROW $32",
+                  "$20:k",
+                  "FROM dml_t"
+                ]
+              },
+              {
+                "kind": "SORT",
+                "substeps": [
+                  "$2 ASC, $3 DESC"
+                ]
+              },
+              {
+                "kind": "WRITE",
+                "substeps": [
+                  "$10, $11",
+                  "TO __stage01_output"
+                ]
+              }
+            ],
+            "slotMs": "<duration>",
+            "computeMode": "BIGQUERY"
+          },
+          {
+            "name": "S02: Coalesce",
+            "id": "2",
+            "startMs": "<time>",
+            "endMs": "<time>",
+            "inputStages": [
+              "1"
+            ],
+            "waitRatioAvg": 0.3064516129032258,
+            "waitMsAvg": "38",
+            "waitRatioMax": 0.3064516129032258,
+            "waitMsMax": "38",
+            "readRatioAvg": 0,
+            "readMsAvg": "0",
+            "readRatioMax": 0,
+            "readMsMax": "0",
+            "computeRatioAvg": 0.07258064516129033,
+            "computeMsAvg": "9",
+            "computeRatioMax": 0.10483870967741936,
+            "computeMsMax": "13",
+            "writeRatioAvg": 0.008064516129032258,
+            "writeMsAvg": "1",
+            "writeRatioMax": 0.016129032258064516,
+            "writeMsMax": "2",
+            "shuffleOutputBytes": "59",
+            "shuffleOutputBytesSpilled": "0",
+            "recordsRead": "3",
+            "recordsWritten": "3",
+            "parallelInputs": "50",
+            "completedParallelInputs": "50",
+            "status": "COMPLETE",
+            "steps": [
+              {
+                "kind": "READ",
+                "substeps": [
+                  "FROM __stage01_output"
+                ]
+              }
+            ],
+            "slotMs": "<duration>",
+            "computeMode": "BIGQUERY"
+          },
+          {
+            "name": "S03: Output",
+            "id": "3",
+            "startMs": "<time>",
+            "endMs": "<time>",
+            "inputStages": [
+              "2"
+            ],
+            "waitRatioAvg": 0.5806451612903226,
+            "waitMsAvg": "72",
+            "waitRatioMax": 0.5806451612903226,
+            "waitMsMax": "72",
+            "readRatioAvg": 0,
+            "readMsAvg": "0",
+            "readRatioMax": 0,
+            "readMsMax": "0",
+            "computeRatioAvg": 0.21774193548387097,
+            "computeMsAvg": "27",
+            "computeRatioMax": 0.21774193548387097,
+            "computeMsMax": "27",
+            "writeRatioAvg": 1,
+            "writeMsAvg": "124",
+            "writeRatioMax": 1,
+            "writeMsMax": "124",
+            "shuffleOutputBytes": "0",
+            "shuffleOutputBytesSpilled": "0",
+            "recordsRead": "3",
+            "recordsWritten": "3",
+            "parallelInputs": "1",
+            "completedParallelInputs": "1",
+            "status": "COMPLETE",
+            "steps": [
+              {
+                "kind": "READ",
+                "substeps": [
+                  "$10, $11",
+                  "FROM __stage02_output"
+                ]
+              },
+              {
+                "kind": "EXPORT",
+                "substeps": [
+                  "$11:k, $10:_CHANGE_TYPE",
+                  "TO <dataset>.dml_t"
+                ]
+              },
+              {
+                "kind": "WRITE",
+                "substeps": [
+                  "$11",
+                  "TO __stage03_output"
+                ]
+              }
+            ],
+            "slotMs": "<duration>",
+            "computeMode": "BIGQUERY"
+          }
+        ],
+        "estimatedBytesProcessed": "24",
+        "timeline": [
+          {
+            "elapsedMs": "<duration>",
+            "totalSlotMs": "<duration>",
+            "pendingUnits": "0",
+            "completedUnits": "53",
+            "estimatedRunnableUnits": "0"
+          }
+        ],
+        "totalPartitionsProcessed": "0",
+        "totalBytesProcessed": "24",
+        "totalBytesBilled": "10485760",
+        "billingTier": 1,
+        "totalSlotMs": "<duration>",
+        "cacheHit": false,
+        "referencedTables": [
+          {
+            "projectId": "<project>",
+            "datasetId": "<dataset>",
+            "tableId": "dml_t"
+          }
+        ],
+        "numDmlAffectedRows": "2",
+        "statementType": "UPDATE",
+        "dmlStats": {
+          "updatedRowCount": "2",
+          "dmlMode": "COARSE_GRAINED_DML",
+          "fineGrainedDmlUnusedReason": "TABLE_NOT_ENROLLED"
+        },
+        "transferredBytes": "0",
+        "metadataCacheStatistics": {
+          "tableMetadataCacheUsage": [
+            {
+              "tableReference": {
+                "projectId": "<project>",
+                "datasetId": "<dataset>",
+                "tableId": "dml_t"
+              },
+              "unusedReason": "OTHER_REASON",
+              "explanation": "Table does not have CMETA."
+            }
+          ]
+        }
+      },
+      "totalSlotMs": "<duration>",
+      "finalExecutionDurationMs": "<duration>"
+    },
+    "status": {
+      "state": "DONE"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

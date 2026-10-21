@@ -1,4 +1,5 @@
-description: LTRIM with a second argument removes leading characters from that set. See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions#ltrim.
+description: LTRIM with a second argument removes leading characters from that set.
+  See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions#ltrim.
 tags:
 - probe
 - string
@@ -10,3 +11,5 @@ expected:
     type: STRING
   rows:
   - - hixx
+verified: true
+recorded_at: '2026-10-21T12:41:09Z'

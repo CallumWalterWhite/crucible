@@ -10,3 +10,5 @@ expected:
     type: INT64
   rows:
   - - 2
+verified: true
+recorded_at: '2026-10-21T12:37:58Z'

@@ -16,3 +16,5 @@ expected:
   rows:
   - - 3
     - null
+verified: true
+recorded_at: '2026-10-21T12:41:42Z'

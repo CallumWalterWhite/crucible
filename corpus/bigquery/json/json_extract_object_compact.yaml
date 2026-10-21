@@ -1,8 +1,9 @@
-description: JSON_EXTRACT returns the value at the path as a compact JSON STRING with no spaces. See https://cloud.google.com/bigquery/docs/reference/standard-sql/json_functions.
+description: JSON_EXTRACT returns the value at the path as a compact JSON STRING with
+  no spaces. See https://cloud.google.com/bigquery/docs/reference/standard-sql/json_functions.
 tags:
 - probe
 - json
-query: "SELECT JSON_EXTRACT('{\"a\": {\"b\": 1}}', '$.a') AS v"
+query: 'SELECT JSON_EXTRACT(''{"a": {"b": 1}}'', ''$.a'') AS v'
 ordered: false
 expected:
   columns:
@@ -10,3 +11,5 @@ expected:
     type: STRING
   rows:
   - - '{"b":1}'
+verified: true
+recorded_at: '2026-10-21T12:38:42Z'

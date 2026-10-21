@@ -1,0 +1,35 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/queries",
+    "params": {},
+    "body": {
+      "query": "SELECT table_name, column_name FROM `<project>`.`region-us`.INFORMATION_SCHEMA.COLUMNS WHERE table_schema = '<dataset>' AND table_name = 'opts' ORDER BY ordinal_position",
+      "useLegacySql": false,
+      "maximumBytesBilled": "104857600",
+      "defaultDataset": {
+        "projectId": "<project>",
+        "datasetId": "<dataset>"
+      },
+      "useQueryCache": false
+    }
+  },
+  "status": 403,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "error": {
+      "code": 403,
+      "message": "Access Denied: Table <project>:region-us.INFORMATION_SCHEMA.COLUMNS: User does not have the required permissions ('bigquery.tables.list' permission(s) at the dataset level; and 'bigquery.tables.get' permission(s) at the table level) to query system entity <project>:region-us.INFORMATION_SCHEMA.COLUMNS.",
+      "errors": [
+        {
+          "message": "Access Denied: Table <project>:region-us.INFORMATION_SCHEMA.COLUMNS: User does not have the required permissions ('bigquery.tables.list' permission(s) at the dataset level; and 'bigquery.tables.get' permission(s) at the table level) to query system entity <project>:region-us.INFORMATION_SCHEMA.COLUMNS.",
+          "domain": "global",
+          "reason": "accessDenied"
+        }
+      ],
+      "status": "PERMISSION_DENIED"
+    }
+  }
+}

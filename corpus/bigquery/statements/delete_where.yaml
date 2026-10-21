@@ -1,5 +1,7 @@
 description: DELETE removes only the rows its WHERE clause matches. See https://cloud.google.com/bigquery/docs/reference/standard-sql/dml-syntax#delete_statement.
-tags: [dml, statements]
+tags:
+- dml
+- statements
 setup:
 - CREATE TABLE t (k INT64)
 - INSERT INTO t VALUES (1), (2), (3)
@@ -8,7 +10,10 @@ query: SELECT k FROM t
 ordered: false
 expected:
   columns:
-  - {name: k, type: INT64}
+  - name: k
+    type: INT64
   rows:
-  - [1]
-  - [3]
+  - - 1
+  - - 3
+verified: true
+recorded_at: '2026-10-21T12:39:39Z'

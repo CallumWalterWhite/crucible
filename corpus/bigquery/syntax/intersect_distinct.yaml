@@ -1,8 +1,10 @@
-description: INTERSECT DISTINCT returns the distinct rows present in both queries. See https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#set_operators.
+description: INTERSECT DISTINCT returns the distinct rows present in both queries.
+  See https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#set_operators.
 tags:
 - probe
 - syntax
-query: SELECT x FROM UNNEST([1, 1, 2, 3]) AS x INTERSECT DISTINCT SELECT x FROM UNNEST([1, 3, 3]) AS x
+query: SELECT x FROM UNNEST([1, 1, 2, 3]) AS x INTERSECT DISTINCT SELECT x FROM UNNEST([1,
+  3, 3]) AS x
 ordered: false
 expected:
   columns:
@@ -11,3 +13,5 @@ expected:
   rows:
   - - 1
   - - 3
+verified: true
+recorded_at: '2026-10-21T12:41:33Z'

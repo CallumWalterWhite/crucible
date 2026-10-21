@@ -1,9 +1,15 @@
-description: DELETE without a WHERE clause is an error; BigQuery requires one. See https://cloud.google.com/bigquery/docs/reference/standard-sql/dml-syntax#delete_statement.
-tags: [dml, statements]
+description: DELETE without a WHERE clause is an error; BigQuery requires one. See
+  https://cloud.google.com/bigquery/docs/reference/standard-sql/dml-syntax#delete_statement.
+tags:
+- dml
+- statements
 setup:
 - CREATE TABLE t (k INT64)
 query: DELETE FROM t
 expected:
   error:
     kind: invalid_query
+    message: DELETE must have a WHERE clause at [1:1]
     message_contains: WHERE
+verified: true
+recorded_at: '2026-10-21T12:39:44Z'

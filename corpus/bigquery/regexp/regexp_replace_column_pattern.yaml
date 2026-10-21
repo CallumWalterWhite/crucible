@@ -1,4 +1,5 @@
-description: REGEXP_REPLACE takes the RE2 pattern from a column, so each row uses its own pattern. See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions#regexp_replace.
+description: REGEXP_REPLACE takes the RE2 pattern from a column, so each row uses
+  its own pattern. See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions#regexp_replace.
 tags:
 - probe
 - regexp
@@ -12,5 +13,7 @@ expected:
   - name: v
     type: STRING
   rows:
-  - - a#b#
   - - a1#22
+  - - a#b#
+verified: true
+recorded_at: '2026-10-21T12:39:31Z'

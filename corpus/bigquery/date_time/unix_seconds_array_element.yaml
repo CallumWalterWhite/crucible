@@ -1,8 +1,9 @@
-description: UNIX_SECONDS over an array element (SQLGlot re-parsed the generated cast, shifting the index).
+description: UNIX_SECONDS over an array element (SQLGlot re-parsed the generated cast,
+  shifting the index).
 tags:
 - phase4
-query: SELECT UNIX_SECONDS((SELECT a[OFFSET(0)] FROM (SELECT [TIMESTAMP '2024-01-01 00:00:00+00', TIMESTAMP
-  '2025-01-01 00:00:00+00'] AS a))) AS v
+query: SELECT UNIX_SECONDS((SELECT a[OFFSET(0)] FROM (SELECT [TIMESTAMP '2024-01-01
+  00:00:00+00', TIMESTAMP '2025-01-01 00:00:00+00'] AS a))) AS v
 ordered: false
 expected:
   columns:
@@ -10,5 +11,5 @@ expected:
     type: INT64
   rows:
   - - 1704067200
-verified: false
-recorded_at: null
+verified: true
+recorded_at: '2026-10-21T12:38:33Z'
