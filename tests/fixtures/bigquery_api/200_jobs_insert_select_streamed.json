@@ -1,0 +1,227 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/jobs",
+    "params": {},
+    "body": {
+      "jobReference": {
+        "projectId": "<project>",
+        "jobId": "<job-70>"
+      },
+      "configuration": {
+        "query": {
+          "query": "SELECT k, f, n, b, s, y, d, dt, tm, ts, TO_JSON_STRING(j) AS j, a, r FROM streamed ORDER BY k, f",
+          "useLegacySql": false,
+          "maximumBytesBilled": "104857600",
+          "defaultDataset": {
+            "projectId": "<project>",
+            "datasetId": "<dataset>"
+          },
+          "useQueryCache": false
+        }
+      }
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:<location>.<job-70>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "query": {
+        "query": "SELECT k, f, n, b, s, y, d, dt, tm, ts, TO_JSON_STRING(j) AS j, a, r FROM streamed ORDER BY k, f",
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<anon-dataset-1>",
+          "tableId": "<anon-table-26>"
+        },
+        "writeDisposition": "WRITE_TRUNCATE",
+        "defaultDataset": {
+          "datasetId": "<dataset>",
+          "projectId": "<project>"
+        },
+        "priority": "INTERACTIVE",
+        "useQueryCache": false,
+        "maximumBytesBilled": "104857600",
+        "useLegacySql": false
+      },
+      "jobType": "QUERY"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-70>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "endTime": "<time>",
+      "totalBytesProcessed": "0",
+      "query": {
+        "queryPlan": [
+          {
+            "name": "S00: Input",
+            "id": "0",
+            "startMs": "<time>",
+            "endMs": "<time>",
+            "waitRatioAvg": 0.008849557522123894,
+            "waitMsAvg": "1",
+            "waitRatioMax": 0.008849557522123894,
+            "waitMsMax": "1",
+            "readRatioAvg": 1,
+            "readMsAvg": "113",
+            "readRatioMax": 1,
+            "readMsMax": "113",
+            "computeRatioAvg": 0.12389380530973451,
+            "computeMsAvg": "14",
+            "computeRatioMax": 0.12389380530973451,
+            "computeMsMax": "14",
+            "writeRatioAvg": 0.02654867256637168,
+            "writeMsAvg": "3",
+            "writeRatioMax": 0.02654867256637168,
+            "writeMsMax": "3",
+            "shuffleOutputBytes": "579",
+            "shuffleOutputBytesSpilled": "0",
+            "recordsRead": "10",
+            "recordsWritten": "10",
+            "parallelInputs": "1",
+            "completedParallelInputs": "1",
+            "status": "COMPLETE",
+            "steps": [
+              {
+                "kind": "READ",
+                "substeps": [
+                  "$1:k, $2:f, $3:n, $4:b, $5:s, $6:y, $7:d, $8:dt, $9:tm, $10:ts, $12:a, $13:r.$is_not_null, $14:r.z, $15:r.x, $11:j",
+                  "FROM streamed"
+                ]
+              },
+              {
+                "kind": "WRITE",
+                "substeps": [
+                  "$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $12, $13, $14, $15, $30",
+                  "TO __stage00_output"
+                ]
+              }
+            ],
+            "slotMs": "<duration>",
+            "computeMode": "BIGQUERY"
+          },
+          {
+            "name": "S01: Output",
+            "id": "1",
+            "startMs": "<time>",
+            "endMs": "<time>",
+            "inputStages": [
+              "0"
+            ],
+            "waitRatioAvg": 0.017699115044247787,
+            "waitMsAvg": "2",
+            "waitRatioMax": 0.017699115044247787,
+            "waitMsMax": "2",
+            "readRatioAvg": 0,
+            "readMsAvg": "0",
+            "readRatioMax": 0,
+            "readMsMax": "0",
+            "computeRatioAvg": 0.08849557522123894,
+            "computeMsAvg": "10",
+            "computeRatioMax": 0.08849557522123894,
+            "computeMsMax": "10",
+            "writeRatioAvg": 0.008849557522123894,
+            "writeMsAvg": "1",
+            "writeRatioMax": 0.008849557522123894,
+            "writeMsMax": "1",
+            "shuffleOutputBytes": "568",
+            "shuffleOutputBytesSpilled": "0",
+            "recordsRead": "10",
+            "recordsWritten": "10",
+            "parallelInputs": "1",
+            "completedParallelInputs": "1",
+            "status": "COMPLETE",
+            "steps": [
+              {
+                "kind": "READ",
+                "substeps": [
+                  "$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $12, $13, $14, $15, $30",
+                  "FROM __stage00_output"
+                ]
+              },
+              {
+                "kind": "COMPUTE",
+                "substeps": [
+                  "$20 := MAKE_STRUCT($53, $52, $51)"
+                ]
+              },
+              {
+                "kind": "SORT",
+                "substeps": [
+                  "$1 ASC, $2 ASC"
+                ]
+              },
+              {
+                "kind": "WRITE",
+                "substeps": [
+                  "$40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $50, $20, $54",
+                  "TO __stage01_output"
+                ]
+              }
+            ],
+            "slotMs": "<duration>",
+            "computeMode": "BIGQUERY"
+          }
+        ],
+        "estimatedBytesProcessed": "0",
+        "timeline": [
+          {
+            "elapsedMs": "<duration>",
+            "totalSlotMs": "<duration>",
+            "pendingUnits": "0",
+            "completedUnits": "2",
+            "estimatedRunnableUnits": "0"
+          }
+        ],
+        "totalPartitionsProcessed": "0",
+        "totalBytesProcessed": "0",
+        "totalBytesBilled": "0",
+        "billingTier": 0,
+        "totalSlotMs": "<duration>",
+        "cacheHit": false,
+        "referencedTables": [
+          {
+            "projectId": "<project>",
+            "datasetId": "<dataset>",
+            "tableId": "streamed"
+          }
+        ],
+        "statementType": "SELECT",
+        "transferredBytes": "0",
+        "metadataCacheStatistics": {
+          "tableMetadataCacheUsage": [
+            {
+              "tableReference": {
+                "projectId": "<project>",
+                "datasetId": "<dataset>",
+                "tableId": "streamed"
+              },
+              "unusedReason": "OTHER_REASON",
+              "explanation": "Table does not have CMETA."
+            }
+          ]
+        }
+      },
+      "totalSlotMs": "<duration>",
+      "finalExecutionDurationMs": "<duration>"
+    },
+    "status": {
+      "state": "DONE"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

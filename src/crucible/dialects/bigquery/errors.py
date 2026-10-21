@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from sqlglot import exp
+
 from crucible.engine import CrucibleError, ErrorKind
+from crucible.engine.errors import Location
 
 
 def table_not_found(project: str, dataset: str, table: str) -> CrucibleError:
@@ -15,6 +18,17 @@ def dataset_not_found(project: str, dataset: str) -> CrucibleError:
 
 def invalid(message: str) -> CrucibleError:
     return CrucibleError(ErrorKind.INVALID_QUERY, message)
+
+
+STATEMENT_START = "crucible_statement_start"  # tree.meta key set by statements.split
+
+
+def invalid_at_statement(tree: exp.Expr, message: str) -> CrucibleError:
+    """An invalid-query error located at the statement's first token, as BigQuery reports it."""
+    start = tree.meta.get(STATEMENT_START)
+    return CrucibleError(
+        ErrorKind.INVALID_QUERY, message, location=start if isinstance(start, Location) else None
+    )
 
 
 def reword(exc: CrucibleError) -> CrucibleError:
@@ -35,9 +49,8 @@ def reword(exc: CrucibleError) -> CrucibleError:
     elif first.startswith("Conversion Error: Date out of range"):
         message = f"Out-of-range datetime field in parsing function ({first})"
     elif first.startswith("Constraint Error: NOT NULL constraint failed: "):
-        # A REQUIRED column. BigQuery's wording is unverified (no recording yet): shortcut: the
-        # text is a guess that keeps the word NULL; upgrade when the REQUIRED case is recorded.
-        message = f"Column {first.rsplit('.', 1)[-1]} cannot be NULL"
+        # A REQUIRED column (recorded: jobs_query_null_into_required).
+        message = f"Required field {first.rsplit('.', 1)[-1]} cannot be null"
     else:
         return exc
     return CrucibleError(ErrorKind.RUNTIME, message, location=exc.location)

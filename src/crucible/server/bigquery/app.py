@@ -23,7 +23,6 @@ from starlette.routing import BaseRoute, Route
 
 from crucible.dialects.bigquery import ddl, metadata, types
 from crucible.dialects.bigquery.dialect import DIALECT
-from crucible.dialects.bigquery.dml import STREAMING_BUFFER
 from crucible.engine import (
     CrucibleError,
     CrucibleUnsupportedError,
@@ -39,6 +38,7 @@ from crucible.server.bigquery.errors import error_response, http_error, job_erro
 from crucible.server.bigquery.jobs import (
     ANONYMOUS_DATASET,
     DEFAULT_LOCATION,
+    SCHEMA_IN_RESULTS,
     Job,
     JobStore,
     Runner,
@@ -251,14 +251,18 @@ class BigQueryServer:
         if job.dml_affected_rows is not None:
             stats["numDmlAffectedRows"] = str(job.dml_affected_rows)
             # JobStatistics2.dmlStats: https://cloud.google.com/bigquery/docs/reference/rest/v2/Job#DmlStats
-            counter = {"INSERT": "insertedRowCount", "UPDATE": "updatedRowCount"}.get(
-                job.statement_type, "deletedRowCount" if job.statement_type == "DELETE" else None
-            )
+            counter = {
+                "INSERT": "insertedRowCount",
+                "UPDATE": "updatedRowCount",
+                "DELETE": "deletedRowCount",
+                "TRUNCATE_TABLE": "deletedRowCount",  # jobs_get_truncate
+            }.get(job.statement_type)
             if counter is not None:
                 stats["dmlStats"] = {counter: str(job.dml_affected_rows)}
-        if job.statement_type == "CREATE_TABLE_AS_SELECT" and job.target is not None:
+        # ddlTargetTable: CTAS (jobs_get_ctas) and ALTER TABLE (jobs_get_alter_options).
+        if job.statement_type in ("CREATE_TABLE_AS_SELECT", "ALTER_TABLE") and job.target:
             project, dataset, table = job.target
-            if job.target_schema is not None:
+            if job.target_schema is not None and job.statement_type == "CREATE_TABLE_AS_SELECT":
                 stats["schema"] = job.target_schema
             stats["ddlTargetTable"] = {
                 "projectId": project,
@@ -335,6 +339,8 @@ class BigQueryServer:
             # (google-cloud-bigquery==3.45.2: google/cloud/bigquery/job/query.py:1827).
             if job.dml_affected_rows is not None:
                 response["numDmlAffectedRows"] = str(job.dml_affected_rows)
+            if job.statement_type in SCHEMA_IN_RESULTS and job.target_schema is not None:
+                response["schema"] = job.target_schema  # get_query_results_update
             return response
         columns = [(c.name, c.type) for c in job.columns]
         rows, token = page(
@@ -611,7 +617,8 @@ class BigQueryServer:
             count = ctx.run_sql(
                 f"select count(*) from {qualified(info.catalog, info.schema, info.name)}"
             )
-            rows = int(count.rows[0][0])
+            # Streamed rows are not counted until BigQuery flushes them (tables_get_streamed).
+            rows = int(count.rows[0][0]) - int(info.properties.get(metadata.STREAMING_BUFFER) or 0)
         location = self._dataset_props(ctx, info.catalog, info.schema).get(
             "location", DEFAULT_LOCATION
         )
@@ -726,7 +733,8 @@ class BigQueryServer:
             if errors and not body.get("skipInvalidRows"):
                 # Without skipInvalidRows nothing is inserted; valid rows are reported as stopped.
                 stopped = [_insert_error("stopped", "", "")]
-                return _insert_all_response({i: errors.get(i, stopped) for i in range(len(rows))})
+                stopped_rows = {i: stopped for i in range(len(rows)) if i not in errors}
+                return _insert_all_response(errors | stopped_rows)
             inserted = [r for r in parsed if r is not None]
             if inserted:
                 full = qualified(info.catalog, info.schema, info.name)
@@ -743,9 +751,9 @@ class BigQueryServer:
                 finally:
                     ctx.cursor.execute(f"DROP TABLE IF EXISTS {staging}")
                 props = ctx.catalog.properties(info.catalog, info.schema, info.name)
-                ctx.catalog.set_properties(
-                    info.catalog, info.schema, info.name, props | {STREAMING_BUFFER: True}
-                )
+                streamed = int(props.get(metadata.STREAMING_BUFFER) or 0) + len(inserted)
+                props[metadata.STREAMING_BUFFER] = streamed
+                ctx.catalog.set_properties(info.catalog, info.schema, info.name, props)
             return _insert_all_response(errors)
 
         try:
@@ -1073,7 +1081,8 @@ def _insert_all_response(errors: dict[int, list[dict[str, str]]]) -> dict[str, A
     # TableDataInsertAllResponse: insertErrors is omitted when every row was inserted.
     body: dict[str, Any] = {"kind": "bigquery#tableDataInsertAllResponse"}
     if errors:
-        body["insertErrors"] = [{"index": i, "errors": e} for i, e in sorted(errors.items())]
+        # Recorded order (insert_all_bad_row): the invalid rows, then the stopped ones.
+        body["insertErrors"] = [{"index": i, "errors": e} for i, e in errors.items()]
     return body
 
 

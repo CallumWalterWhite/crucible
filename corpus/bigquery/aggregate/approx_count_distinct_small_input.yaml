@@ -1,4 +1,5 @@
-description: APPROX_COUNT_DISTINCT estimates COUNT(DISTINCT); on this small input the estimate is 3. See https://cloud.google.com/bigquery/docs/reference/standard-sql/aggregate_functions.
+description: APPROX_COUNT_DISTINCT estimates COUNT(DISTINCT); on this small input
+  the estimate is 3. See https://cloud.google.com/bigquery/docs/reference/standard-sql/aggregate_functions.
 tags:
 - probe
 - aggregate
@@ -10,3 +11,5 @@ expected:
     type: INT64
   rows:
   - - 3
+verified: true
+recorded_at: '2026-10-21T12:37:51Z'

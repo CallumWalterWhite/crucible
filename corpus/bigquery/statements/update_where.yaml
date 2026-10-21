@@ -1,5 +1,7 @@
 description: UPDATE changes only the rows its WHERE clause matches. See https://cloud.google.com/bigquery/docs/reference/standard-sql/dml-syntax#update_statement.
-tags: [dml, statements]
+tags:
+- dml
+- statements
 setup:
 - CREATE TABLE t (k INT64, a INT64)
 - INSERT INTO t VALUES (1, 10), (2, 20), (3, 30)
@@ -8,9 +10,16 @@ query: SELECT k, a FROM t
 ordered: false
 expected:
   columns:
-  - {name: k, type: INT64}
-  - {name: a, type: INT64}
+  - name: k
+    type: INT64
+  - name: a
+    type: INT64
   rows:
-  - [1, 10]
-  - [2, 21]
-  - [3, 31]
+  - - 1
+    - 10
+  - - 3
+    - 31
+  - - 2
+    - 21
+verified: true
+recorded_at: '2026-10-21T12:40:50Z'

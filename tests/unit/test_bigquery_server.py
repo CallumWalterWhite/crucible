@@ -517,7 +517,7 @@ def test_description_labels_and_field_descriptions_are_stored_and_returned(clien
     ]
     refused = run_query(client, "INSERT INTO ds.t (k, s) VALUES (NULL, 'x')")
     assert refused.status_code == 400
-    assert "NULL" in refused.json()["error"]["message"]
+    assert "cannot be null" in refused.json()["error"]["message"]
 
 
 def test_patch_sets_description_labels_and_field_descriptions(client):
@@ -1079,3 +1079,12 @@ def test_tabledata_list_with_a_non_integer_max_results_is_invalid(client):
     response = list_data(client, maxResults="ten")
     assert response.status_code == 400
     assert response.json()["error"]["errors"][0]["reason"] == "invalidQuery"
+
+
+def test_table_options_in_a_dataset_with_a_default_expiration_is_unsupported(client):
+    # BigQuery lists each table's expiration_timestamp there; object times are not tracked.
+    make_dataset(client, defaultTableExpirationMs="3600000")
+    insert_query(client, "CREATE TABLE ds.t (a INT64)")
+    response = run_query(client, "SELECT option_name FROM ds.INFORMATION_SCHEMA.TABLE_OPTIONS")
+    assert response.status_code == 400
+    assert "default table expiration" in response.json()["error"]["message"]

@@ -1,0 +1,215 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/queries",
+    "params": {},
+    "body": {
+      "query": "SELECT table_name, option_name, option_type, option_value FROM `<project>`.`<dataset>`.INFORMATION_SCHEMA.TABLE_OPTIONS WHERE table_name IN ('all_types', 'opts', 'partitioned_day', 'partitioned_range', 'streamed') ORDER BY table_name, option_name",
+      "useLegacySql": false,
+      "maximumBytesBilled": "104857600",
+      "defaultDataset": {
+        "projectId": "<project>",
+        "datasetId": "<dataset>"
+      },
+      "useQueryCache": false
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#queryResponse",
+    "schema": {
+      "fields": [
+        {
+          "name": "table_name",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "option_name",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "option_type",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "option_value",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        }
+      ]
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-73>",
+      "location": "<location>"
+    },
+    "totalRows": "9",
+    "rows": [
+      {
+        "f": [
+          {
+            "v": "all_types"
+          },
+          {
+            "v": "expiration_timestamp"
+          },
+          {
+            "v": "TIMESTAMP"
+          },
+          {
+            "v": "TIMESTAMP \"2026-10-21T13:43:28.258Z\""
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "opts"
+          },
+          {
+            "v": "description"
+          },
+          {
+            "v": "STRING"
+          },
+          {
+            "v": "\"Say \\\"hi\\\"\""
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "opts"
+          },
+          {
+            "v": "expiration_timestamp"
+          },
+          {
+            "v": "TIMESTAMP"
+          },
+          {
+            "v": "TIMESTAMP \"2026-10-21T13:46:57.684Z\""
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "opts"
+          },
+          {
+            "v": "labels"
+          },
+          {
+            "v": "ARRAY<STRUCT<STRING, STRING>>"
+          },
+          {
+            "v": "[STRUCT(\"team\", \"data\")]"
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "partitioned_day"
+          },
+          {
+            "v": "expiration_timestamp"
+          },
+          {
+            "v": "TIMESTAMP"
+          },
+          {
+            "v": "TIMESTAMP \"2026-10-21T13:46:27.494Z\""
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "partitioned_day"
+          },
+          {
+            "v": "require_partition_filter"
+          },
+          {
+            "v": "BOOL"
+          },
+          {
+            "v": "false"
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "partitioned_range"
+          },
+          {
+            "v": "expiration_timestamp"
+          },
+          {
+            "v": "TIMESTAMP"
+          },
+          {
+            "v": "TIMESTAMP \"2026-10-21T13:46:38.490Z\""
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "partitioned_range"
+          },
+          {
+            "v": "require_partition_filter"
+          },
+          {
+            "v": "BOOL"
+          },
+          {
+            "v": "false"
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "streamed"
+          },
+          {
+            "v": "expiration_timestamp"
+          },
+          {
+            "v": "TIMESTAMP"
+          },
+          {
+            "v": "TIMESTAMP \"2026-10-21T13:46:52.455Z\""
+          }
+        ]
+      }
+    ],
+    "totalBytesProcessed": "10485760",
+    "jobComplete": true,
+    "cacheHit": false,
+    "queryId": "<query-id>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    },
+    "totalBytesBilled": "10485760",
+    "totalSlotMs": "<duration>",
+    "location": "<location>",
+    "creationTime": "<time>",
+    "startTime": "<time>",
+    "endTime": "<time>",
+    "pageRowCount": "9",
+    "statementType": "SELECT"
+  }
+}

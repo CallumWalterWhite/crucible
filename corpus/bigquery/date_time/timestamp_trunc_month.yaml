@@ -1,4 +1,5 @@
-description: TIMESTAMP_TRUNC to MONTH returns the first day of the month at midnight UTC. See https://cloud.google.com/bigquery/docs/reference/standard-sql/timestamp_functions#timestamp_trunc.
+description: TIMESTAMP_TRUNC to MONTH returns the first day of the month at midnight
+  UTC. See https://cloud.google.com/bigquery/docs/reference/standard-sql/timestamp_functions#timestamp_trunc.
 tags:
 - probe
 - date_time
@@ -10,3 +11,5 @@ expected:
     type: TIMESTAMP
   rows:
   - - '2024-03-01T00:00:00Z'
+verified: true
+recorded_at: '2026-10-21T12:38:31Z'

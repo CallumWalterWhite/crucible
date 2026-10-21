@@ -1,0 +1,37 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/queries",
+    "params": {},
+    "body": {
+      "query": "UPDATE streamed SET s = 'u' WHERE TRUE",
+      "useLegacySql": false,
+      "maximumBytesBilled": "104857600",
+      "defaultDataset": {
+        "projectId": "<project>",
+        "datasetId": "<dataset>"
+      },
+      "useQueryCache": false
+    }
+  },
+  "status": 400,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "error": {
+      "code": 400,
+      "message": "UPDATE or DELETE statement over table streamed would affect rows in the streaming buffer, which is not supported",
+      "errors": [
+        {
+          "message": "UPDATE or DELETE statement over table streamed would affect rows in the streaming buffer, which is not supported",
+          "domain": "global",
+          "reason": "invalidQuery",
+          "location": "q",
+          "locationType": "parameter"
+        }
+      ],
+      "status": "INVALID_ARGUMENT"
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/datasets/<dataset>/tables/streamed/insertAll",
+    "params": {},
+    "body": {
+      "rows": [
+        {
+          "json": {
+            "k": 6
+          }
+        },
+        {
+          "json": {
+            "k": "abc"
+          }
+        }
+      ],
+      "skipInvalidRows": true
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#tableDataInsertAllResponse",
+    "insertErrors": [
+      {
+        "index": 1,
+        "errors": [
+          {
+            "reason": "invalid",
+            "location": "k",
+            "debugInfo": "",
+            "message": "Cannot convert value to integer (bad value): abc"
+          }
+        ]
+      }
+    ]
+  }
+}

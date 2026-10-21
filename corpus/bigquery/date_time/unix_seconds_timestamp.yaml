@@ -1,4 +1,5 @@
-description: UNIX_SECONDS returns whole seconds since the Unix epoch as an INT64. See https://cloud.google.com/bigquery/docs/reference/standard-sql/timestamp_functions#unix_seconds.
+description: UNIX_SECONDS returns whole seconds since the Unix epoch as an INT64.
+  See https://cloud.google.com/bigquery/docs/reference/standard-sql/timestamp_functions#unix_seconds.
 tags:
 - probe
 - date_time
@@ -10,3 +11,5 @@ expected:
     type: INT64
   rows:
   - - 60
+verified: true
+recorded_at: '2026-10-21T12:38:36Z'

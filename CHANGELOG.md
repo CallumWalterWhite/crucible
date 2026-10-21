@@ -25,6 +25,16 @@ and this project does not yet follow semantic versioning.
 
 ### Fixed
 
+- Reconciled with the Milestone 1 recording: UPDATE/DELETE without WHERE report `at [line:col]`;
+  TRUNCATE TABLE reports the rows it removed and its destination table; getQueryResults of UPDATE,
+  DELETE and TRUNCATE carries the table's schema; CREATE TABLE and ALTER TABLE jobs report their
+  destination (and ALTER its `ddlTargetTable`); insertAll lists invalid rows before stopped ones;
+  streamed rows are left out of `numRows` and `__TABLES__.row_count`; the streaming-buffer and NOT NULL
+  errors use BigQuery's wording; ARRAY columns are not nullable in `INFORMATION_SCHEMA.COLUMNS`;
+  partitioned tables list `require_partition_filter`.
+- `BOOL_AND` and `BOOL_OR` are not BigQuery functions and now fail with `Function not found`.
+- The `region-<location>` INFORMATION_SCHEMA form is refused until it can be recorded, and
+  TABLE_OPTIONS is refused in a dataset with a default table expiration.
 - NaN follows BigQuery's rules instead of DuckDB's: comparisons with NaN are false (`!=` true), NaN sorts
   between NULL and -inf in every ORDER BY, and MIN, LEAST and GREATEST return NaN. Comparisons Crucible
   cannot prove for FLOAT64 (IN subqueries, IS DISTINCT FROM, NULLIF, simple CASE, RANGE-offset frames)

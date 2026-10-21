@@ -1,5 +1,5 @@
-description: An unaliased scalar subquery in the SELECT list is named f0_. Crucible generated invalid
-  SQL for it.
+description: An unaliased scalar subquery in the SELECT list is named f0_. Crucible
+  generated invalid SQL for it.
 tags:
 - phase4
 query: SELECT (SELECT x FROM (SELECT 1 AS x) WHERE x > 0)
@@ -10,5 +10,5 @@ expected:
     type: INT64
   rows:
   - - 1
-verified: false
-recorded_at: null
+verified: true
+recorded_at: '2026-10-21T12:41:50Z'

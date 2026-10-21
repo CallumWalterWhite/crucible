@@ -1,4 +1,5 @@
-description: A backslash escapes a wildcard in LIKE, so the pattern a\% matches a literal percent sign. See https://cloud.google.com/bigquery/docs/reference/standard-sql/operators#like_operator.
+description: A backslash escapes a wildcard in LIKE, so the pattern a\% matches a
+  literal percent sign. See https://cloud.google.com/bigquery/docs/reference/standard-sql/operators#like_operator.
 tags:
 - probe
 - string
@@ -11,3 +12,5 @@ expected:
   rows:
   - - true
   - - false
+verified: true
+recorded_at: '2026-10-21T12:40:59Z'

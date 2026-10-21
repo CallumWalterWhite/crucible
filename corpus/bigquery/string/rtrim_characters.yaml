@@ -1,4 +1,5 @@
-description: RTRIM with a second argument removes trailing characters from that set. See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions#rtrim.
+description: RTRIM with a second argument removes trailing characters from that set.
+  See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions#rtrim.
 tags:
 - probe
 - string
@@ -10,3 +11,5 @@ expected:
     type: STRING
   rows:
   - - xxhi
+verified: true
+recorded_at: '2026-10-21T12:41:20Z'

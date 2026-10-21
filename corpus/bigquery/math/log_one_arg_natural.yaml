@@ -1,4 +1,5 @@
-description: LOG with one argument returns the natural logarithm, not base 10. See https://cloud.google.com/bigquery/docs/reference/standard-sql/mathematical_functions#log.
+description: LOG with one argument returns the natural logarithm, not base 10. See
+  https://cloud.google.com/bigquery/docs/reference/standard-sql/mathematical_functions#log.
 tags:
 - probe
 - math
@@ -10,3 +11,5 @@ expected:
     type: FLOAT64
   rows:
   - - 2.302585
+verified: true
+recorded_at: '2026-10-21T12:38:58Z'

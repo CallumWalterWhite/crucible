@@ -1,4 +1,5 @@
-description: REGEXP_CONTAINS takes the RE2 pattern from a column, so each row uses its own pattern. See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions#regexp_contains.
+description: REGEXP_CONTAINS takes the RE2 pattern from a column, so each row uses
+  its own pattern. See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions#regexp_contains.
 tags:
 - probe
 - regexp
@@ -12,5 +13,7 @@ expected:
   - name: v
     type: BOOL
   rows:
-  - - true
   - - false
+  - - true
+verified: true
+recorded_at: '2026-10-21T12:39:17Z'

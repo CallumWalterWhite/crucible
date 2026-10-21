@@ -481,6 +481,7 @@ class Recorder:
         self.record_information_schema(p, self.dataset)
         self.call("tables_delete", "DELETE", f"{tables}/all_types", expect=(200, 204))
         self.record_metadata(p, tables)
+        self.record_table_options(p)
 
     def record_metadata(self, p: str, tables: str) -> None:
         """Table description, labels, field descriptions and REQUIRED columns: as tables.insert
@@ -615,12 +616,6 @@ class Recorder:
                 f"FROM `{p}`.`{d}`.__TABLES__ WHERE table_id IN {names} ORDER BY table_id",
             ),
             (
-                "table_options",
-                f"SELECT table_name, option_name, option_type, option_value "
-                f"FROM `{p}`.`{d}`.INFORMATION_SCHEMA.TABLE_OPTIONS "
-                f"WHERE table_name IN {names} ORDER BY table_name, option_name",
-            ),
-            (
                 "columns",
                 f"SELECT table_catalog, table_schema, table_name, column_name, ordinal_position, "
                 f"is_nullable, data_type, is_partitioning_column, clustering_ordinal_position "
@@ -650,6 +645,65 @@ class Recorder:
                 body=self.query_config(sql)["query"],
                 expect=None,
             )
+
+    def record_table_options(self, p: str) -> None:
+        """INFORMATION_SCHEMA.TABLE_OPTIONS. In the main dataset every table has an
+        expiration_timestamp option (its default table expiration), which Crucible refuses, so
+        that call runs last; a dataset without a default expiration gives the comparable answer."""
+        d = self.dataset
+        plain = f"{d}_noexp"
+        datasets = f"{API}/projects/{p}/datasets"
+        self.call(
+            "datasets_insert_no_expiration",
+            "POST",
+            datasets,
+            body={"datasetReference": {"projectId": p, "datasetId": plain}, "labels": LABELS},
+        )
+        try:
+            for name, sql in (
+                (
+                    "opts",
+                    f"CREATE TABLE `{plain}`.opts (a INT64) CLUSTER BY a "
+                    "OPTIONS (description = 'Say \"hi\"', labels = [('team', 'data')])",
+                ),
+                (
+                    "parts",
+                    f"CREATE TABLE `{plain}`.parts PARTITION BY d AS SELECT DATE '2024-01-02' AS d",
+                ),
+            ):
+                job = self.insert_job(
+                    f"jobs_insert_{name}_no_expiration",
+                    f"{name}_no_expiration",
+                    self.query_config(sql),
+                )
+                self.wait_ok(job, f"CREATE TABLE {name}")
+            self.call(
+                "jobs_query_information_schema_table_options_no_expiration",
+                "POST",
+                f"{API}/projects/{p}/queries",
+                body=self.query_config(
+                    "SELECT table_name, option_name, option_type, option_value "
+                    f"FROM `{p}`.`{plain}`.INFORMATION_SCHEMA.TABLE_OPTIONS "
+                    "ORDER BY table_name, option_name"
+                )["query"],
+                expect=None,
+            )
+        finally:
+            self.session.request(
+                "DELETE", f"{datasets}/{plain}", params={"deleteContents": "true"}, timeout=120
+            )
+        names = "('opts', 'partitioned_day', 'partitioned_range', 'streamed')"
+        self.call(
+            "jobs_query_information_schema_table_options",
+            "POST",
+            f"{API}/projects/{p}/queries",
+            body=self.query_config(
+                "SELECT table_name, option_name, option_type, option_value "
+                f"FROM `{p}`.`{d}`.INFORMATION_SCHEMA.TABLE_OPTIONS "
+                f"WHERE table_name IN {names} ORDER BY table_name, option_name"
+            )["query"],
+            expect=None,
+        )
 
     def load(self, name: str, csv_text: str) -> None:
         """A dbt-seed-style load: resumable upload of a CSV with an explicit schema."""

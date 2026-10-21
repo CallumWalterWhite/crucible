@@ -1,8 +1,10 @@
-description: EXCEPT DISTINCT returns the distinct rows of the first query that are not in the second. See https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#set_operators.
+description: EXCEPT DISTINCT returns the distinct rows of the first query that are
+  not in the second. See https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#set_operators.
 tags:
 - probe
 - syntax
-query: SELECT x FROM UNNEST([1, 1, 2, 3]) AS x EXCEPT DISTINCT SELECT x FROM UNNEST([3]) AS x
+query: SELECT x FROM UNNEST([1, 1, 2, 3]) AS x EXCEPT DISTINCT SELECT x FROM UNNEST([3])
+  AS x
 ordered: false
 expected:
   columns:
@@ -11,3 +13,5 @@ expected:
   rows:
   - - 1
   - - 2
+verified: true
+recorded_at: '2026-10-21T12:41:28Z'

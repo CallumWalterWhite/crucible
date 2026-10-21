@@ -1,0 +1,53 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/datasets/<dataset>/tables/meta_t",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#table",
+    "etag": "<etag>",
+    "id": "<project>:<dataset>.meta_t",
+    "selfLink": "<self-link>",
+    "tableReference": {
+      "projectId": "<project>",
+      "datasetId": "<dataset>",
+      "tableId": "meta_t"
+    },
+    "description": "patched",
+    "labels": {
+      "team": "dbt"
+    },
+    "schema": {
+      "fields": [
+        {
+          "name": "k",
+          "type": "INTEGER",
+          "mode": "REQUIRED",
+          "description": "the key"
+        },
+        {
+          "name": "v",
+          "type": "STRING",
+          "description": "patched value"
+        }
+      ]
+    },
+    "numBytes": "0",
+    "numLongTermBytes": "0",
+    "numRows": "0",
+    "creationTime": "<time>",
+    "expirationTime": "<time>",
+    "lastModifiedTime": "<time>",
+    "type": "TABLE",
+    "location": "<location>",
+    "numTotalLogicalBytes": "0",
+    "numActiveLogicalBytes": "0",
+    "numLongTermLogicalBytes": "0"
+  }
+}

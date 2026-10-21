@@ -1,4 +1,5 @@
-description: INSERT ... SELECT writes the rows the query returns into the table. See https://cloud.google.com/bigquery/docs/reference/standard-sql/dml-syntax#insert_select_statement.
+description: INSERT ... SELECT writes the rows the query returns into the table. See
+  https://cloud.google.com/bigquery/docs/reference/standard-sql/dml-syntax#insert_select_statement.
 tags:
 - probe
 - statements
@@ -12,5 +13,7 @@ expected:
   - name: x
     type: INT64
   rows:
-  - - 1
   - - 2
+  - - 1
+verified: true
+recorded_at: '2026-10-21T12:39:54Z'

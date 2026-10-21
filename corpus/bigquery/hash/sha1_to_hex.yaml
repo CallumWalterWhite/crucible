@@ -1,4 +1,5 @@
-description: TO_HEX of the BYTES result of SHA1 returns the 40-character lowercase hexadecimal digest.
+description: TO_HEX of the BYTES result of SHA1 returns the 40-character lowercase
+  hexadecimal digest.
 tags:
 - probe
 - hash
@@ -10,3 +11,5 @@ expected:
     type: STRING
   rows:
   - - a9993e364706816aba3e25717850c26c9cd0d89d
+verified: true
+recorded_at: '2026-10-21T12:38:38Z'

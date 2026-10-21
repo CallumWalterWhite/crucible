@@ -1,0 +1,1212 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/queries",
+    "params": {},
+    "body": {
+      "query": "SELECT table_catalog, table_schema, table_name, column_name, ordinal_position, is_nullable, data_type, is_partitioning_column, clustering_ordinal_position FROM `<project>`.`<dataset>`.INFORMATION_SCHEMA.COLUMNS WHERE table_name IN ('all_types', 'opts', 'partitioned_day', 'partitioned_range', 'streamed') ORDER BY table_name, ordinal_position",
+      "useLegacySql": false,
+      "maximumBytesBilled": "104857600",
+      "defaultDataset": {
+        "projectId": "<project>",
+        "datasetId": "<dataset>"
+      },
+      "useQueryCache": false
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#queryResponse",
+    "schema": {
+      "fields": [
+        {
+          "name": "table_catalog",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "table_schema",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "table_name",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "column_name",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "ordinal_position",
+          "type": "INTEGER",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "is_nullable",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "data_type",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "is_partitioning_column",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "clustering_ordinal_position",
+          "type": "INTEGER",
+          "mode": "NULLABLE"
+        }
+      ]
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-74>",
+      "location": "<location>"
+    },
+    "totalRows": "36",
+    "rows": [
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "all_types"
+          },
+          {
+            "v": "id"
+          },
+          {
+            "v": "1"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "INT64"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "all_types"
+          },
+          {
+            "v": "i"
+          },
+          {
+            "v": "2"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "INT64"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "all_types"
+          },
+          {
+            "v": "f"
+          },
+          {
+            "v": "3"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "FLOAT64"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "all_types"
+          },
+          {
+            "v": "n"
+          },
+          {
+            "v": "4"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "NUMERIC"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "all_types"
+          },
+          {
+            "v": "b"
+          },
+          {
+            "v": "5"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "BOOL"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "all_types"
+          },
+          {
+            "v": "s"
+          },
+          {
+            "v": "6"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "STRING"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "all_types"
+          },
+          {
+            "v": "bt"
+          },
+          {
+            "v": "7"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "BYTES"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "all_types"
+          },
+          {
+            "v": "d"
+          },
+          {
+            "v": "8"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "DATE"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "all_types"
+          },
+          {
+            "v": "dt"
+          },
+          {
+            "v": "9"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "DATETIME"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "all_types"
+          },
+          {
+            "v": "t"
+          },
+          {
+            "v": "10"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "TIME"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "all_types"
+          },
+          {
+            "v": "ts"
+          },
+          {
+            "v": "11"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "TIMESTAMP"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "all_types"
+          },
+          {
+            "v": "j"
+          },
+          {
+            "v": "12"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "JSON"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "all_types"
+          },
+          {
+            "v": "arr"
+          },
+          {
+            "v": "13"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": "ARRAY<INT64>"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "all_types"
+          },
+          {
+            "v": "st"
+          },
+          {
+            "v": "14"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "STRUCT<x INT64, y ARRAY<STRING>>"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "all_types"
+          },
+          {
+            "v": "arr_st"
+          },
+          {
+            "v": "15"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": "ARRAY<STRUCT<k INT64, w STRING>>"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "all_types"
+          },
+          {
+            "v": "iv"
+          },
+          {
+            "v": "16"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "INTERVAL"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "all_types"
+          },
+          {
+            "v": "added"
+          },
+          {
+            "v": "17"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "STRING"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "opts"
+          },
+          {
+            "v": "a"
+          },
+          {
+            "v": "1"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "INT64"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": "1"
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "opts"
+          },
+          {
+            "v": "r"
+          },
+          {
+            "v": "2"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "STRUCT<x INT64, ys ARRAY<STRUCT<z STRING>>>"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "partitioned_day"
+          },
+          {
+            "v": "d"
+          },
+          {
+            "v": "1"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "DATE"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "partitioned_day"
+          },
+          {
+            "v": "s"
+          },
+          {
+            "v": "2"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "STRING"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": "1"
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "partitioned_day"
+          },
+          {
+            "v": "n"
+          },
+          {
+            "v": "3"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "INT64"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": "2"
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "partitioned_range"
+          },
+          {
+            "v": "n"
+          },
+          {
+            "v": "1"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "INT64"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "streamed"
+          },
+          {
+            "v": "k"
+          },
+          {
+            "v": "1"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "INT64"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "streamed"
+          },
+          {
+            "v": "f"
+          },
+          {
+            "v": "2"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "FLOAT64"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "streamed"
+          },
+          {
+            "v": "n"
+          },
+          {
+            "v": "3"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "NUMERIC"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "streamed"
+          },
+          {
+            "v": "b"
+          },
+          {
+            "v": "4"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "BOOL"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "streamed"
+          },
+          {
+            "v": "s"
+          },
+          {
+            "v": "5"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "STRING"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "streamed"
+          },
+          {
+            "v": "y"
+          },
+          {
+            "v": "6"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "BYTES"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "streamed"
+          },
+          {
+            "v": "d"
+          },
+          {
+            "v": "7"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "DATE"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "streamed"
+          },
+          {
+            "v": "dt"
+          },
+          {
+            "v": "8"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "DATETIME"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "streamed"
+          },
+          {
+            "v": "tm"
+          },
+          {
+            "v": "9"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "TIME"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "streamed"
+          },
+          {
+            "v": "ts"
+          },
+          {
+            "v": "10"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "TIMESTAMP"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "streamed"
+          },
+          {
+            "v": "j"
+          },
+          {
+            "v": "11"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "JSON"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "streamed"
+          },
+          {
+            "v": "a"
+          },
+          {
+            "v": "12"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": "ARRAY<INT64>"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "streamed"
+          },
+          {
+            "v": "r"
+          },
+          {
+            "v": "13"
+          },
+          {
+            "v": "YES"
+          },
+          {
+            "v": "STRUCT<x INT64, z STRING>"
+          },
+          {
+            "v": "NO"
+          },
+          {
+            "v": null
+          }
+        ]
+      }
+    ],
+    "totalBytesProcessed": "10485760",
+    "jobComplete": true,
+    "cacheHit": false,
+    "queryId": "<query-id>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    },
+    "totalBytesBilled": "10485760",
+    "totalSlotMs": "<duration>",
+    "location": "<location>",
+    "creationTime": "<time>",
+    "startTime": "<time>",
+    "endTime": "<time>",
+    "pageRowCount": "36",
+    "statementType": "SELECT"
+  }
+}

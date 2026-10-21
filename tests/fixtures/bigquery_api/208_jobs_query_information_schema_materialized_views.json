@@ -1,0 +1,63 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/queries",
+    "params": {},
+    "body": {
+      "query": "SELECT COUNT(*) AS n FROM `<project>`.`<dataset>`.INFORMATION_SCHEMA.MATERIALIZED_VIEWS",
+      "useLegacySql": false,
+      "maximumBytesBilled": "104857600",
+      "defaultDataset": {
+        "projectId": "<project>",
+        "datasetId": "<dataset>"
+      },
+      "useQueryCache": false
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#queryResponse",
+    "schema": {
+      "fields": [
+        {
+          "name": "n",
+          "type": "INTEGER",
+          "mode": "NULLABLE"
+        }
+      ]
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-76>",
+      "location": "<location>"
+    },
+    "totalRows": "1",
+    "rows": [
+      {
+        "f": [
+          {
+            "v": "0"
+          }
+        ]
+      }
+    ],
+    "totalBytesProcessed": "10485760",
+    "jobComplete": true,
+    "cacheHit": false,
+    "queryId": "<query-id>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    },
+    "totalBytesBilled": "10485760",
+    "totalSlotMs": "<duration>",
+    "location": "<location>",
+    "creationTime": "<time>",
+    "startTime": "<time>",
+    "endTime": "<time>",
+    "pageRowCount": "1",
+    "statementType": "SELECT"
+  }
+}

@@ -1,0 +1,171 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/queries",
+    "params": {},
+    "body": {
+      "query": "SELECT project_id, dataset_id, table_id, row_count, type FROM `<project>`.`<dataset>`.__TABLES__ WHERE table_id IN ('all_types', 'opts', 'partitioned_day', 'partitioned_range', 'streamed') ORDER BY table_id",
+      "useLegacySql": false,
+      "maximumBytesBilled": "104857600",
+      "defaultDataset": {
+        "projectId": "<project>",
+        "datasetId": "<dataset>"
+      },
+      "useQueryCache": false
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#queryResponse",
+    "schema": {
+      "fields": [
+        {
+          "name": "project_id",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "dataset_id",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "table_id",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "row_count",
+          "type": "INTEGER",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "type",
+          "type": "INTEGER",
+          "mode": "NULLABLE"
+        }
+      ]
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-72>",
+      "location": "<location>"
+    },
+    "totalRows": "5",
+    "rows": [
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "all_types"
+          },
+          {
+            "v": "5"
+          },
+          {
+            "v": "1"
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "opts"
+          },
+          {
+            "v": "0"
+          },
+          {
+            "v": "1"
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "partitioned_day"
+          },
+          {
+            "v": "1"
+          },
+          {
+            "v": "1"
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "partitioned_range"
+          },
+          {
+            "v": "1"
+          },
+          {
+            "v": "1"
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "<project>"
+          },
+          {
+            "v": "<dataset>"
+          },
+          {
+            "v": "streamed"
+          },
+          {
+            "v": "0"
+          },
+          {
+            "v": "1"
+          }
+        ]
+      }
+    ],
+    "totalBytesProcessed": "0",
+    "jobComplete": true,
+    "cacheHit": false,
+    "queryId": "<query-id>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    },
+    "totalBytesBilled": "0",
+    "totalSlotMs": "<duration>",
+    "location": "<location>",
+    "creationTime": "<time>",
+    "startTime": "<time>",
+    "endTime": "<time>",
+    "pageRowCount": "5",
+    "statementType": "SELECT"
+  }
+}

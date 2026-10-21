@@ -1,8 +1,10 @@
-description: SUM OVER ORDER BY with no frame is a running total up to the current row.
+description: SUM OVER ORDER BY with no frame is a running total up to the current
+  row.
 tags:
 - probe
 - window
-query: SELECT x, SUM(x) OVER (ORDER BY x) AS s FROM UNNEST([1, 2, 3]) AS x ORDER BY x
+query: SELECT x, SUM(x) OVER (ORDER BY x) AS s FROM UNNEST([1, 2, 3]) AS x ORDER BY
+  x
 ordered: true
 expected:
   columns:
@@ -17,3 +19,5 @@ expected:
     - 3
   - - 3
     - 6
+verified: true
+recorded_at: '2026-10-21T12:42:17Z'

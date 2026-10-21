@@ -1,0 +1,101 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/datasets/<dataset>/tables/streamed",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#table",
+    "etag": "<etag>",
+    "id": "<project>:<dataset>.streamed",
+    "selfLink": "<self-link>",
+    "tableReference": {
+      "projectId": "<project>",
+      "datasetId": "<dataset>",
+      "tableId": "streamed"
+    },
+    "schema": {
+      "fields": [
+        {
+          "name": "k",
+          "type": "INTEGER"
+        },
+        {
+          "name": "f",
+          "type": "FLOAT"
+        },
+        {
+          "name": "n",
+          "type": "NUMERIC"
+        },
+        {
+          "name": "b",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "s",
+          "type": "STRING"
+        },
+        {
+          "name": "y",
+          "type": "BYTES"
+        },
+        {
+          "name": "d",
+          "type": "DATE"
+        },
+        {
+          "name": "dt",
+          "type": "DATETIME"
+        },
+        {
+          "name": "tm",
+          "type": "TIME"
+        },
+        {
+          "name": "ts",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "j",
+          "type": "JSON"
+        },
+        {
+          "name": "a",
+          "type": "INTEGER",
+          "mode": "REPEATED"
+        },
+        {
+          "name": "r",
+          "type": "RECORD",
+          "fields": [
+            {
+              "name": "x",
+              "type": "INTEGER"
+            },
+            {
+              "name": "z",
+              "type": "STRING"
+            }
+          ]
+        }
+      ]
+    },
+    "numBytes": "0",
+    "numLongTermBytes": "0",
+    "numRows": "0",
+    "creationTime": "<time>",
+    "expirationTime": "<time>",
+    "lastModifiedTime": "<time>",
+    "type": "TABLE",
+    "location": "<location>",
+    "numTotalLogicalBytes": "0",
+    "numActiveLogicalBytes": "0",
+    "numLongTermLogicalBytes": "0"
+  }
+}

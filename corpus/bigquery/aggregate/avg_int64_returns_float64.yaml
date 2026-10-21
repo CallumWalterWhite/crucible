@@ -10,3 +10,5 @@ expected:
     type: FLOAT64
   rows:
   - - 1.5
+verified: true
+recorded_at: '2026-10-21T12:37:54Z'

@@ -1,0 +1,54 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/datasets/<dataset>/tables/streamed/insertAll",
+    "params": {},
+    "body": {
+      "rows": [
+        {
+          "json": {
+            "k": 3,
+            "f": "nan"
+          }
+        },
+        {
+          "json": {
+            "k": 3,
+            "f": "inf"
+          }
+        },
+        {
+          "json": {
+            "k": 3,
+            "f": "-inf"
+          }
+        },
+        {
+          "json": {
+            "k": 3,
+            "f": "NaN"
+          }
+        },
+        {
+          "json": {
+            "k": 3,
+            "f": "Infinity"
+          }
+        },
+        {
+          "json": {
+            "k": 3,
+            "f": "-Infinity"
+          }
+        }
+      ]
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#tableDataInsertAllResponse"
+  }
+}

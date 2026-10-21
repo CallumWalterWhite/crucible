@@ -81,9 +81,9 @@ def test_a_bad_row_stops_the_request_without_skip_invalid_rows(table):
     }
     unknown = {"reason": "invalid", "location": "nope", "message": "no such field: nope."}
     assert body["insertErrors"] == [
-        {"index": 0, "errors": [stopped]},
         {"index": 1, "errors": [stopped | bad_int]},
         {"index": 2, "errors": [stopped | unknown]},
+        {"index": 0, "errors": [stopped]},
     ]
     assert query_rows(table, "SELECT COUNT(*) FROM ds.t") == [["0"]]
 

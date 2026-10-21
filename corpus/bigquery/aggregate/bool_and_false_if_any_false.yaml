@@ -1,12 +1,13 @@
-description: BOOL_AND returns FALSE when any non-NULL input is FALSE.
+description: BOOL_AND is not a BigQuery function (LOGICAL_AND is), so it is not found.
 tags:
 - probe
 - aggregate
 query: SELECT BOOL_AND(x) AS v FROM UNNEST([TRUE, FALSE]) AS x
 ordered: false
 expected:
-  columns:
-  - name: v
-    type: BOOL
-  rows:
-  - - false
+  error:
+    kind: invalid_query
+    message: 'Function not found: BOOL_AND at [1:8]'
+    message_contains: 'Function not found: BOOL_AND'
+verified: false
+recorded_at: '2026-10-21T12:37:55Z'

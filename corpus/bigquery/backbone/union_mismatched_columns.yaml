@@ -3,4 +3,8 @@ query: SELECT 1,2 UNION ALL SELECT 3
 expected:
   error:
     kind: invalid_query
+    message: Queries in UNION ALL have mismatched column count; query 1 has 2 columns,
+      query 2 has 1 column at [1:22]
     message_contains: mismatched column
+verified: true
+recorded_at: '2026-10-21T12:38:05Z'

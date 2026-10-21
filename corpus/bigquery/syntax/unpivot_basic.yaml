@@ -1,4 +1,5 @@
-description: UNPIVOT turns each listed column into a row holding the column name and its value. See https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#unpivot_operator.
+description: UNPIVOT turns each listed column into a row holding the column name and
+  its value. See https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#unpivot_operator.
 tags:
 - probe
 - syntax
@@ -22,3 +23,5 @@ expected:
   - - 1
     - b
     - 20
+verified: true
+recorded_at: '2026-10-21T12:41:58Z'

@@ -1,8 +1,10 @@
-description: EXISTS keeps the rows for which a correlated subquery returns at least one row. See https://cloud.google.com/bigquery/docs/reference/standard-sql/subqueries#exists_subquery_concepts.
+description: EXISTS keeps the rows for which a correlated subquery returns at least
+  one row. See https://cloud.google.com/bigquery/docs/reference/standard-sql/subqueries#exists_subquery_concepts.
 tags:
 - probe
 - syntax
-query: SELECT x FROM UNNEST([1, 2, 3]) AS x WHERE EXISTS (SELECT 1 FROM UNNEST([2, 3]) AS y WHERE y = x)
+query: SELECT x FROM UNNEST([1, 2, 3]) AS x WHERE EXISTS (SELECT 1 FROM UNNEST([2,
+  3]) AS y WHERE y = x)
 ordered: false
 expected:
   columns:
@@ -11,3 +13,5 @@ expected:
   rows:
   - - 2
   - - 3
+verified: true
+recorded_at: '2026-10-21T12:41:31Z'
