@@ -11,6 +11,8 @@ and this project does not yet follow semantic versioning.
 
 - Query parameters (`queryParameters`, named and positional, including ARRAY and STRUCT) on `jobs.query`
   and `jobs.insert`, bound as DuckDB parameters.
+- `examples/ci/github-actions.yml`: a GitHub Actions recipe that runs the dbt example against Crucible as a service
+  container. CI runs the same dbt steps (`examples/ci/run-corner-cafe.sh`) against the image built from the PR.
 - `dryRun` on `jobs.insert` and `jobs.query`: the statement is planned, not run, and the response carries
   its schema and `statementType`; `totalBytesProcessed` is `"0"` (byte estimates are not emulated).
 - `docs/bigquery-features.md`: supported and unsupported BigQuery features, each linked to its test.

@@ -192,3 +192,41 @@ jobs:
           DIALECT: ${{ matrix.dialect }}
           CRUCIBLE_URL: http://127.0.0.1:${{ matrix.port }}
         run: uv run --with "$CORE_SPEC" --with "$ADAPTER_SPEC" pytest -m dbt tests/dbt -k "$DIALECT"
+
+  dbt-example:
+    # The same dbt steps as examples/ci/github-actions.yml, against the image built from this commit.
+    # That recipe runs the published image as a service container. This job starts the built image
+    # with docker run instead, as the jobs above do, so CI tests the PR's image.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/Dockerfile
+          tags: crucible:ci
+          load: true
+          push: false
+      - name: Start emulator and wait for health
+        run: |
+          docker run -d --name crucible -p 127.0.0.1:9050:9050 \
+            crucible:ci serve --dialect bigquery --port 9050
+          for _ in $(seq 60); do
+            if curl -fsS --max-time 2 "http://127.0.0.1:9050/_crucible/health" >/dev/null; then
+              echo "healthy on port 9050"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "not healthy after 60s" >&2
+          docker logs crucible >&2 || true
+          exit 1
+      - name: dbt seed, run and test (examples/ci/run-corner-cafe.sh)
+        env:
+          CRUCIBLE_URL: http://127.0.0.1:9050
+        run: examples/ci/run-corner-cafe.sh

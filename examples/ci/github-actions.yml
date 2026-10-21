@@ -1,0 +1,35 @@
+# GitHub Actions recipe: dbt seed, run and test against Crucible, started as a service container.
+# To use it in your own repository, copy this file to .github/workflows/ and replace the last step's
+# script with your dbt commands. The services block is what matters: it starts the published image
+# and waits for its health check before the steps run. Crucible holds no data between runs.
+name: dbt on Crucible
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  dbt:
+    runs-on: ubuntu-24.04
+    services:
+      crucible:
+        image: ghcr.io/callumwalterwhite/crucible-emulator:latest
+        ports:
+          - 9050:9050
+        # The image has python3 but no curl, so the health check uses urllib.
+        options: >-
+          --health-cmd "python3 -c 'import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:9050/_crucible/health\", timeout=1)'"
+          --health-interval 2s --health-timeout 3s --health-retries 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - name: dbt seed, run and test (examples/ci/run-corner-cafe.sh)
+        env:
+          CRUCIBLE_URL: http://127.0.0.1:9050
+        run: examples/ci/run-corner-cafe.sh
