@@ -487,6 +487,7 @@ class Recorder:
         self.record_dry_runs(p)
         self.record_query_parameters(p)
         self.record_scripts_and_copies(p)
+        self.record_udfs(p)
 
     def record_metadata(self, p: str, tables: str) -> None:
         """Table description, labels, field descriptions and REQUIRED columns: as tables.insert
@@ -826,6 +827,36 @@ class Recorder:
         )
         self.wait(target)
         self.call("get_query_results_copy_check", "GET", f"{API}/projects/{p}/queries/{target}")
+
+    def record_udfs(self, p: str) -> None:
+        """SQL functions: a temp function, a persistent one with routines.list and .get, and a
+        call with no matching signature."""
+        self.call(
+            "jobs_query_temp_function",
+            "POST",
+            f"{API}/projects/{p}/queries",
+            body=self.query_config("CREATE TEMP FUNCTION f(x INT64) AS (x * 3); SELECT f(2) AS v")[
+                "query"
+            ],
+            expect=None,
+        )
+        job = self.insert_job(
+            "jobs_insert_function",
+            "function",
+            self.query_config("CREATE FUNCTION half(x FLOAT64) RETURNS FLOAT64 AS (x / 2)"),
+        )
+        self.wait_ok(job, "CREATE FUNCTION")
+        self.call("jobs_get_function", "GET", f"{API}/projects/{p}/jobs/{job}")
+        routines = f"{API}/projects/{p}/datasets/{self.dataset}/routines"
+        self.call("routines_list_function", "GET", routines)
+        self.call("routines_get_function", "GET", f"{routines}/half")
+        self.call(
+            "jobs_query_function_signature_error",
+            "POST",
+            f"{API}/projects/{p}/queries",
+            body=self.query_config(f"SELECT `{self.dataset}`.half('a') AS v")["query"],
+            expect=None,
+        )
 
     def load(self, name: str, csv_text: str) -> None:
         """A dbt-seed-style load: resumable upload of a CSV with an explicit schema."""
