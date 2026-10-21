@@ -1,9 +1,8 @@
 description: ORDER BY ascending puts NULL first, then NaN, then -inf, as BigQuery orders FLOAT64
-  values. Crucible differs today (DuckDB sorts NaN last). See https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#order_by_clause.
+  values. See https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#order_by_clause.
 tags:
 - probe
 - ordering
-- known-divergence
 query: SELECT x FROM UNNEST([1.0, CAST('inf' AS FLOAT64), CAST('nan' AS FLOAT64), NULL, CAST('-inf' AS FLOAT64)]) AS x ORDER BY x
 ordered: true
 expected:

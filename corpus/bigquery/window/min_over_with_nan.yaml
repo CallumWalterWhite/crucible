@@ -1,0 +1,23 @@
+description: MIN as a window function returns NaN when the frame has a NaN. See https://cloud.google.com/bigquery/docs/reference/standard-sql/aggregate_functions#min.
+tags:
+- probe
+- window
+- nan
+setup:
+- CREATE TABLE t (k INT64, x FLOAT64)
+- INSERT INTO t VALUES (1, 1.0), (1, CAST('nan' AS FLOAT64)), (2, 3.0)
+query: SELECT k, MIN(x) OVER (PARTITION BY k) AS m FROM t
+ordered: false
+expected:
+  columns:
+  - name: k
+    type: INT64
+  - name: m
+    type: FLOAT64
+  rows:
+  - - 1
+    - NaN
+  - - 1
+    - NaN
+  - - 2
+    - 3.0

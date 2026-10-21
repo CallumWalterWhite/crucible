@@ -1,0 +1,17 @@
+description: ORDER BY ASC NULLS LAST keeps NaN before -inf and moves NULL to the end. See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#floating_point_semantics.
+tags:
+- probe
+- ordering
+- nan
+query: SELECT x FROM UNNEST([1.0, CAST('nan' AS FLOAT64), NULL, CAST('-inf' AS FLOAT64)]) AS x ORDER BY
+  x ASC NULLS LAST
+ordered: true
+expected:
+  columns:
+  - name: x
+    type: FLOAT64
+  rows:
+  - - NaN
+  - - -Infinity
+  - - 1.0
+  - - null

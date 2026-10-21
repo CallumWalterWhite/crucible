@@ -1,0 +1,13 @@
+description: NaN IN a list containing NaN is FALSE, since NaN = NaN is FALSE. See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#floating_point_semantics.
+tags:
+- probe
+- math
+- nan
+query: SELECT CAST('nan' AS FLOAT64) IN (1.0, CAST('nan' AS FLOAT64)) AS i
+ordered: false
+expected:
+  columns:
+  - name: i
+    type: BOOL
+  rows:
+  - - false
