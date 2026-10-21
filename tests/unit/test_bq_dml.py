@@ -64,7 +64,7 @@ def test_delete_removes_matching_rows(tables):
 
 def test_truncate_keeps_the_table(tables):
     result = tables("TRUNCATE TABLE t")
-    assert (result.statement_type, result.rowcount) == ("TRUNCATE_TABLE", None)
+    assert (result.statement_type, result.rowcount) == ("TRUNCATE_TABLE", 3)
     assert rows(tables) == []
     tables("INSERT INTO t VALUES (4, 40, 4.5)")
     assert rows(tables) == [[4, 40, 4.5]]

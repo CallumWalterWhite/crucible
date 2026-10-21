@@ -3,8 +3,8 @@
 `dbt docs generate` (dbt-bigquery 1.9 and 1.12, macros/catalog/catalog.sql) reads `__TABLES__`,
 MATERIALIZED_VIEWS, TABLE_OPTIONS, COLUMNS and COLUMN_FIELD_PATHS, dataset-qualified. Each is
 built here from the catalog as a typed inline relation, before qualification, so the rest of the
-query translates as usual. The region form (`region-us`.INFORMATION_SCHEMA.X) covers the
-project's datasets in that location. Columns are those of the BigQuery reference pages
+query translates as usual. The region form (`region-us`.INFORMATION_SCHEMA.X) is refused: its
+answer is unrecorded. Columns are those of the BigQuery reference pages
 (https://cloud.google.com/bigquery/docs/information-schema-intro); a column Crucible cannot fill
 exactly is listed as unsupported and refused when a query reads it, as is SELECT * and any other
 view.
@@ -24,7 +24,6 @@ from crucible.dialects.bigquery import metadata, types
 from crucible.engine import CrucibleUnsupportedError, ExecContext, TableInfo
 from crucible.engine.catalog import qualified
 
-DEFAULT_LOCATION = "US"  # the server's default dataset location (server/bigquery/jobs.py)
 Row = tuple[Any, ...]
 
 
@@ -33,7 +32,6 @@ class _View:
     columns: tuple[tuple[str, str], ...]  # (name, BigQuery type) Crucible fills
     unsupported: frozenset[str]  # documented columns it cannot fill exactly
     rows: Callable[[ExecContext, list[TableInfo]], list[Row]]
-    region: bool = True  # also offered as `region-<location>`.INFORMATION_SCHEMA.<view>
 
 
 def _key(info: TableInfo) -> Row:
@@ -47,6 +45,8 @@ def _tables_rows(ctx: ExecContext, infos: list[TableInfo]) -> list[Row]:
         if info.kind == "table":
             name = qualified(info.catalog, info.schema, info.name)
             count = int(ctx.run_sql(f"select count(*) from {name}").rows[0][0])
+            # Streamed rows are not counted until BigQuery flushes them (recorded: streamed).
+            count -= int(info.properties.get(metadata.STREAMING_BUFFER) or 0)
         # type: 1 table, 2 view (dbt catalog.sql). size_bytes is 0: storage size is not emulated.
         rows.append((*_key(info), count, 0, 1 if info.kind == "table" else 2))
     return rows
@@ -55,7 +55,19 @@ def _tables_rows(ctx: ExecContext, infos: list[TableInfo]) -> list[Row]:
 def _option_rows(ctx: ExecContext, infos: list[TableInfo]) -> list[Row]:
     rows: list[Row] = []
     for info in infos:
+        rest: dict[str, Any] = (
+            ctx.catalog.properties(info.catalog, info.schema, "").get("rest") or {}
+        )
+        if rest.get("defaultTableExpirationMs"):
+            # BigQuery lists each table's expiration_timestamp (recorded); object times are not
+            # tracked, so the answer is not known.
+            raise CrucibleUnsupportedError(
+                "INFORMATION_SCHEMA.TABLE_OPTIONS in a dataset with a default table expiration"
+            )
         options: dict[str, Any] = info.properties.get("options") or {}
+        if info.properties.get("partition_by") and "require_partition_filter" not in options:
+            # A partitioned table lists the option as false (recorded: partitioned_day).
+            rows.append((*_key(info), "require_partition_filter", "BOOL", "false"))
         for name, value in options.items():
             if value is None:
                 continue  # a cleared option
@@ -93,7 +105,8 @@ def _column_rows(ctx: ExecContext, infos: list[TableInfo]) -> list[Row]:
                     *_key(info),
                     column.name,
                     position,
-                    "YES" if column.nullable else "NO",
+                    # REQUIRED and ARRAY columns are not nullable (recorded: all_types.arr).
+                    "YES" if column.nullable and column.type.this != exp.DType.ARRAY else "NO",
                     types.type_name(column.type),
                     "YES" if name == partition else "NO",
                     clustering.index(name) + 1 if name in clustering else None,
@@ -152,7 +165,6 @@ VIEWS: dict[str, _View] = {
          ("size_bytes", _I), ("type", _I)),
         frozenset({"creation_time", "last_modified_time"}),
         _tables_rows,
-        region=False,
     ),
     "INFORMATION_SCHEMA.MATERIALIZED_VIEWS": _View(
         (*_KEYS, ("last_refresh_time", _T), ("refresh_watermark", _T)),
@@ -211,21 +223,13 @@ def _tables_in(table: exp.Table, view: _View, ctx: ExecContext) -> list[TableInf
     if not project or not where:
         raise CrucibleUnsupportedError(f"{table.name} without a dataset or region qualifier")
     if where.lower().startswith("region-"):
-        if not view.region:
-            raise CrucibleUnsupportedError(f"region-qualified {table.name}")
-        location = where[len("region-") :].lower()
-        datasets = [
-            d for d in ctx.catalog.schemas(project) if _location(ctx, project, d) == location
-        ]
+        # shortcut: the recording account was denied region-level views (403 in
+        # jobs_query_information_schema_columns_region), so their answer is unrecorded.
+        raise CrucibleUnsupportedError(f"region-qualified {table.name}")
     else:
         metadata.check_dataset(ctx, project, where)
         datasets = [where]
     return [info for d in datasets for info in ctx.catalog.tables(project, d)]
-
-
-def _location(ctx: ExecContext, project: str, dataset: str) -> str:
-    rest: dict[str, Any] = ctx.catalog.properties(project, dataset, "").get("rest") or {}
-    return str(rest.get("location") or DEFAULT_LOCATION).lower()
 
 
 def _relation(view: _View, rows: list[Row], alias: str) -> exp.Expr:

@@ -186,7 +186,7 @@ def test_not_null_insert_is_a_runtime_error(bq):
     with pytest.raises(CrucibleError) as info:
         bq("INSERT INTO t VALUES (NULL, 1)")
     assert info.value.kind is ErrorKind.RUNTIME
-    assert "NULL" in info.value.message
+    assert "cannot be null" in info.value.message
 
 
 def test_drop(bq):

@@ -14,6 +14,13 @@ from sqlglot import exp
 from crucible.dialects.bigquery import errors
 from crucible.engine import CrucibleUnsupportedError, ExecContext, TableInfo
 
+# A table property set by tabledata.insertAll to the number of rows streamed, and cleared by
+# TRUNCATE TABLE and CREATE OR REPLACE.
+# BigQuery refuses UPDATE and DELETE over rows still in the streaming buffer; Crucible has no
+# buffer to flush, so it refuses them until the table is truncated or replaced: a false error once
+# BigQuery has flushed, the safe side.
+STREAMING_BUFFER = "streaming_buffer"
+
 
 @dataclass(frozen=True)
 class Name:

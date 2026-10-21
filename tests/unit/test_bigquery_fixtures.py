@@ -92,6 +92,7 @@ OMITTED_KEYS = {
     "numLongTermLogicalBytes": "storage sizes are not emulated",
     "referencedTables": "not tracked",
     "dmlMode": "an internal execution mode",
+    "fineGrainedDmlUnusedReason": "an internal execution mode",
     "ddlOperationPerformed": "not tracked (CREATE vs REPLACE)",
     "completionRatio": "progress is not emulated",
 }
@@ -132,6 +133,17 @@ DIFFERENCES: list[tuple[str, str, str]] = [
         "object times are not tracked",
     ),
     (
+        "jobs_query_information_schema_table_options",
+        r"^(status|body)",
+        "object times are not tracked: BigQuery lists each table's expiration_timestamp, so "
+        "Crucible refuses TABLE_OPTIONS in a dataset with a default table expiration",
+    ),
+    (
+        "jobs_query_information_schema_columns_region",
+        r"^(status|body)",
+        "the recording account was denied region-level views (403), so Crucible refuses them",
+    ),
+    (
         "tables_get_partitioned_*",
         r"^body\.(creationTime|expirationTime|lastModifiedTime)$",
         "object times are not tracked",
@@ -156,6 +168,17 @@ DIFFERENCES: list[tuple[str, str, str]] = [
         r"^body\.rows",
         "a page of a stored table follows BigQuery's storage order, which it does not define",
     ),
+    (
+        "tables_*",
+        r"^body\.(creationTime|expirationTime|lastModifiedTime)$",
+        "object times are not tracked",
+    ),
+    (
+        "j*_[ai]*",
+        r"^body\.(id|jobReference\.jobId|configuration\.query\.destinationTable\.tableId)$",
+        "temporary, until the next recording: the refused TABLE_OPTIONS call came before these in "
+        "the Milestone 1 recording, so their job and table placeholders are numbered one higher",
+    ),
     ("load_*_initiate", r"^headers\.Content-Type$", "content type of an empty body"),
     ("tables_delete", r"^headers\.Content-Type$", "content type of an empty body"),
 ]
@@ -164,34 +187,8 @@ DIFFERENCES: list[tuple[str, str, str]] = [
 # Calls the recorder makes that the committed fixtures predate (Phase 4, Step A). The replay
 # makes them, so Crucible must answer; they are compared once the user records them.
 NOT_RECORDED_YET: list[str] = [
-    # UPDATE, DELETE and TRUNCATE TABLE (record_api.record_dml), to be recorded.
-    "jobs_insert_dml_setup",
-    "*_[a-z]*_update",
-    "jobs_*_delete",
-    "get_query_results_delete",
-    "*_truncate",
-    "tables_get_after_truncate",
-    "jobs_query_*_without_where",
-    # tabledata.insertAll (record_api.record_insert_all), to be recorded.
-    "tables_insert_streamed",
-    "insert_all_*",
-    "tables_get_streamed",
-    "*_select_streamed",
-    "get_query_results_streamed",
-    "jobs_query_update_streamed",
-    # INFORMATION_SCHEMA and __TABLES__ (record_api.record_information_schema), to be recorded.
-    "*_options_table",
-    "jobs_query_information_schema_*",
-    # Table description, labels, field descriptions, REQUIRED and ALTER ... SET OPTIONS
-    # (record_api.record_metadata), to be recorded.
-    "tables_insert_metadata",
-    "tables_get_metadata",
-    "tables_patch_metadata",
-    "tables_get_patched",
-    "jobs_insert_alter_options",
-    "jobs_get_alter_options",
-    "tables_get_altered",
-    "jobs_query_null_into_required",
+    # TABLE_OPTIONS in a dataset without a default table expiration (record_table_options).
+    "*_no_expiration",
 ]
 
 
@@ -324,6 +321,22 @@ def _compare(name: str, expected: dict[str, Any], actual: dict[str, Any]) -> lis
             index = names.index("iv")
             for row in want["body"].get("rows", []):
                 row["f"] = [c for i, c in enumerate(row["f"]) if i != index]
+    if name in (
+        "jobs_query_information_schema_columns",
+        "jobs_query_information_schema_column_field_paths",
+    ):
+        # The all-types table's INTERVAL column `iv` is left out of the replay (as above).
+        rows = want["body"].get("rows", [])
+        kept = [r for r in rows if not any(c.get("v") == "iv" for c in r["f"])]
+        if name.endswith("_columns"):  # later all_types columns move up one ordinal_position
+            iv = next(int(r["f"][4]["v"]) for r in rows if r["f"][3]["v"] == "iv")
+            for row in kept:
+                if row["f"][2]["v"] == "all_types" and int(row["f"][4]["v"]) > iv:
+                    row["f"][4]["v"] = str(int(row["f"][4]["v"]) - 1)
+        want["body"]["rows"] = kept
+        for key in ("totalRows", "pageRowCount"):
+            if key in want["body"]:
+                want["body"][key] = str(len(kept))
     if name in STORAGE_ORDER_PAGES:
         # A stored table's tabledata.list order is BigQuery's storage order, which it does not
         # define: compare the whole listing as a multiset.

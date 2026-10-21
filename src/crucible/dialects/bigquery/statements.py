@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import itertools
 from dataclasses import dataclass
 
 import sqlglot
 from sqlglot import exp
+from sqlglot.dialects.bigquery import BigQuery
 from sqlglot.errors import ParseError
 from sqlglot.optimizer.annotate_types import annotate_types
+from sqlglot.tokenizer_core import TokenType
 
 from crucible.dialects.bigquery import ddl, dml, errors, metadata, types
 from crucible.dialects.bigquery.keywords import RESERVED
@@ -47,13 +50,52 @@ def split(sql: str) -> list[object]:
             ErrorKind.INVALID_QUERY, f"Syntax error: {message}", location=location
         ) from exc
     statements: list[object] = []
-    for tree in trees:
+    _refuse_unknown_functions(sql)
+    starts = _statement_starts(sql)
+    for index, tree in enumerate(trees):
         if tree is not None:
             _check_reserved_aliases(tree, sql)
+            if index < len(starts):
+                tree.meta[errors.STATEMENT_START] = starts[index]
             statements.append(Statement(tree))
     if not statements:
         raise errors.invalid("Syntax error: the request has no statement")
     return statements
+
+
+# Functions SQLGlot parses into BigQuery nodes although BigQuery has no function by that name
+# (recorded: "Function not found: BOOL_AND at [1:8]"; LOGICAL_AND is BigQuery's).
+_NOT_BIGQUERY_FUNCTIONS = frozenset({"BOOL_AND", "BOOL_OR"})
+
+
+def _location_of(sql: str, start: int) -> Location:
+    line = sql.count("\n", 0, start) + 1
+    return Location(line, start - (sql.rfind("\n", 0, start) + 1) + 1)
+
+
+def _refuse_unknown_functions(sql: str) -> None:
+    tokens = BigQuery().tokenize(sql)
+    for token, after in itertools.pairwise(tokens):
+        if after.token_type == TokenType.L_PAREN and token.text.upper() in _NOT_BIGQUERY_FUNCTIONS:
+            raise CrucibleError(
+                ErrorKind.INVALID_QUERY,
+                f"Function not found: {token.text}",
+                location=_location_of(sql, token.start),
+            )
+
+
+def _statement_starts(sql: str) -> list[Location]:
+    """Where each statement's first token is, for errors BigQuery reports at the statement
+    (recorded: "UPDATE must have a WHERE clause at [1:1]")."""
+    starts: list[Location] = []
+    expecting = True
+    for token in BigQuery().tokenize(sql):
+        if token.token_type == TokenType.SEMICOLON:
+            expecting = True
+        elif expecting:
+            starts.append(_location_of(sql, token.start))
+            expecting = False
+    return starts
 
 
 def _check_reserved_aliases(tree: exp.Expr, sql: str) -> None:
@@ -97,7 +139,9 @@ def plan(statement: object, ctx: ExecContext) -> Plan:
 def _target(tree: exp.Expr, ctx: ExecContext) -> metadata.Name | None:
     """The table a CREATE TABLE / CREATE VIEW / INSERT / MERGE / UPDATE / DELETE writes."""
     creates = isinstance(tree, exp.Create) and (tree.kind or "").upper() in ("TABLE", "VIEW")
-    if not creates and not isinstance(tree, exp.Insert | exp.Merge | exp.Update | exp.Delete):
+    if not creates and not isinstance(
+        tree, exp.Insert | exp.Merge | exp.Update | exp.Delete | exp.Alter
+    ):
         return None
     target = tree.this
     if isinstance(tree, exp.Delete) and not isinstance(target, exp.Table):

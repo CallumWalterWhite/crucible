@@ -80,6 +80,9 @@ def now_ms() -> int:
     return time.time_ns() // 1_000_000
 
 
+SCHEMA_IN_RESULTS = ("UPDATE", "DELETE", "TRUNCATE_TABLE")
+
+
 @dataclass
 class Job:
     project: str
@@ -225,19 +228,25 @@ class Runner:
             return
         if len(results) > 1:
             return
-        if last.statement_type in ("INSERT", "MERGE", "UPDATE", "DELETE"):
+        if last.statement_type in ("INSERT", "MERGE", "UPDATE", "DELETE", "TRUNCATE_TABLE"):
             job.dml_affected_rows = last.rowcount
         target = last.info.get("target")
+        # The destinationTable BigQuery reports (recorded for each of these statement types).
         if isinstance(target, tuple) and last.statement_type in (
             "INSERT",
             "MERGE",
             "UPDATE",
             "DELETE",
+            "TRUNCATE_TABLE",
+            "CREATE_TABLE",
             "CREATE_TABLE_AS_SELECT",
+            "ALTER_TABLE",
         ):
             project, dataset, table = (str(part) for part in cast("tuple[Any, ...]", target))
             job.target = (project, dataset, table)
-            if last.statement_type == "CREATE_TABLE_AS_SELECT":
+            # getQueryResults of UPDATE, DELETE and TRUNCATE carries the table's schema
+            # (get_query_results_update / _delete / _truncate); CTAS statistics carry it too.
+            if last.statement_type in ("CREATE_TABLE_AS_SELECT", *SCHEMA_IN_RESULTS):
                 with self.engine.cursor(session) as cursor:
                     info = self.engine.catalog(cursor).table(project, dataset, table)
                 if info is not None:

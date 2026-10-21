@@ -33,6 +33,7 @@ def test_table_options_lists_description_and_labels(tables):
     assert values(tables(sql)) == [
         ["description", "STRING", '"Say \\"hi\\""'],
         ["labels", "ARRAY<STRUCT<STRING, STRING>>", '[STRUCT("team", "data")]'],
+        ["require_partition_filter", "BOOL", "false"],
     ]
 
 
@@ -58,14 +59,6 @@ def test_column_field_paths_include_nested_fields(tables):
     assert [r[0] for r in values(tables(sql))] == ["k", "r", "r.x", "r.ys", "r.ys.z", "s"]
 
 
-def test_the_region_form_covers_the_project_datasets_in_that_location(tables):
-    sql = (
-        f"SELECT DISTINCT table_name FROM `{PROJECT}`.`region-us`.INFORMATION_SCHEMA.COLUMNS "
-        f"WHERE table_schema = '{DATASET}' ORDER BY 1"
-    )
-    assert values(tables(sql)) == [["t"], ["v"]]
-
-
 def test_materialized_views_is_empty(tables):
     sql = f"SELECT COUNT(*) FROM {DATASET}.INFORMATION_SCHEMA.MATERIALIZED_VIEWS"
     assert values(tables(sql)) == [[0]]
@@ -80,6 +73,7 @@ def test_materialized_views_is_empty(tables):
         f"SELECT partition_id FROM {DATASET}.INFORMATION_SCHEMA.PARTITIONS",
         f"SELECT * FROM `{PROJECT}`.`region-us`.__TABLES__",
         "SELECT table_name FROM INFORMATION_SCHEMA.COLUMNS",
+        f"SELECT table_name FROM `{PROJECT}`.`region-us`.INFORMATION_SCHEMA.COLUMNS",
     ],
 )
 def test_other_views_columns_and_forms_are_unsupported(tables, sql):
