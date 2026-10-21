@@ -259,3 +259,27 @@ def test_bigquery_list_rows_pages_with_page_size(client, dataset):
     pages = list(client.list_rows(ref, page_size=10).pages)
     assert len(pages) == 3
     assert [row.x for page in pages for row in page] == list(range(1, 26))
+
+
+def test_bigquery_insert_rows_and_insert_rows_json(client, dataset):
+    """The streaming inserts Python test suites use to create fixture data (tabledata.insertAll)."""
+    schema = [
+        bigquery.SchemaField("id", "INTEGER"),
+        bigquery.SchemaField("name", "STRING"),
+        bigquery.SchemaField("day", "DATE"),
+        bigquery.SchemaField("at", "TIMESTAMP"),
+        bigquery.SchemaField("amount", "NUMERIC"),
+        bigquery.SchemaField("tags", "STRING", mode="REPEATED"),
+    ]
+    table = client.create_table(bigquery.Table(f"{PROJECT}.{dataset}.streamed", schema=schema))
+    at = datetime.datetime(2024, 1, 2, 3, 4, 5, 123456, tzinfo=datetime.UTC)
+    rows = [(1, "ada", datetime.date(2024, 1, 2), at, decimal.Decimal("1.5"), ["a", "b"])]
+    assert client.insert_rows(table, rows) == []
+    assert client.insert_rows_json(table, [{"id": 2, "name": "grace", "tags": []}]) == []
+    errors = client.insert_rows_json(table, [{"id": "abc"}])
+    assert errors[0]["errors"][0]["reason"] == "invalid"
+    got = list(client.query(f"SELECT * FROM `{table.full_table_id.replace(':', '.')}` ORDER BY id"))
+    assert [tuple(r.values()) for r in got] == [
+        (1, "ada", datetime.date(2024, 1, 2), at, decimal.Decimal("1.5"), ["a", "b"]),
+        (2, "grace", None, None, None, []),
+    ]

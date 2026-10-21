@@ -33,6 +33,11 @@ from crucible.engine import (
 from crucible.engine.catalog import qualified
 
 DUPLICATE_MATCH = "UPDATE/MERGE must match at most one source row for each target row"
+# A table property set by tabledata.insertAll and cleared by TRUNCATE TABLE and CREATE OR REPLACE.
+# BigQuery refuses UPDATE and DELETE over rows still in the streaming buffer; Crucible has no
+# buffer to flush, so it refuses them until the table is truncated or replaced: a false error once
+# BigQuery has flushed, the safe side.
+STREAMING_BUFFER = "streaming_buffer"
 
 
 @dataclass
@@ -222,6 +227,11 @@ def _dml_target(tree: exp.Update | exp.Delete, ctx: ExecContext, statement: str)
     info = metadata.find_table(ctx, metadata.name_of(target, ctx))
     if info.kind != "table":
         raise CrucibleUnsupportedError(f"{statement} of a view")
+    if info.properties.get(STREAMING_BUFFER):
+        raise errors.invalid(
+            f"{statement} statement over table {info.catalog}.{info.schema}.{info.name} would "
+            "affect rows in the streaming buffer, which is not supported"
+        )
     return target
 
 
@@ -284,6 +294,9 @@ def plan_truncate(tree: exp.TruncateTable, ctx: ExecContext) -> Plan:
 
     def run(c: ExecContext) -> Result:
         result = c.run_sql(sql, returns_rows=False)
+        props = c.catalog.properties(info.catalog, info.schema, info.name)
+        if props.pop(STREAMING_BUFFER, None):
+            c.catalog.set_properties(info.catalog, info.schema, info.name, props)
         result.statement_type = "TRUNCATE_TABLE"
         result.rowcount = None
         return result

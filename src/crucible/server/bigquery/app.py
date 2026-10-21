@@ -23,6 +23,7 @@ from starlette.routing import BaseRoute, Route
 
 from crucible.dialects.bigquery import ddl, metadata, types
 from crucible.dialects.bigquery.dialect import DIALECT
+from crucible.dialects.bigquery.dml import STREAMING_BUFFER
 from crucible.engine import (
     CrucibleError,
     CrucibleUnsupportedError,
@@ -33,7 +34,7 @@ from crucible.engine import (
     TableInfo,
 )
 from crucible.engine.catalog import qualified
-from crucible.server.bigquery import encoding
+from crucible.server.bigquery import encoding, stream
 from crucible.server.bigquery.errors import error_response, http_error, job_error_response
 from crucible.server.bigquery.jobs import (
     ANONYMOUS_DATASET,
@@ -145,6 +146,11 @@ class BigQueryServer:
             route(f"{API}/datasets/{{dataset}}/tables/{{table}}", self.tables_patch, "PATCH"),
             route(f"{API}/datasets/{{dataset}}/tables/{{table}}", self.tables_delete, "DELETE"),
             route(f"{API}/datasets/{{dataset}}/tables/{{table}}/data", self.tabledata_list, "GET"),
+            route(
+                f"{API}/datasets/{{dataset}}/tables/{{table}}/insertAll",
+                self.tabledata_insert_all,
+                "POST",
+            ),
             route(f"{API}/datasets/{{dataset}}/routines", self.routines_list, "GET"),
             route(f"{API}/datasets/{{dataset}}/routines/{{routine}}", self.routines_get, "GET"),
             route(UPLOAD, self.upload_initiate, "POST"),
@@ -679,6 +685,68 @@ class BigQueryServer:
         except CrucibleError as exc:
             return http_error(exc)
 
+    async def tabledata_insert_all(self, request: Request) -> Response:
+        """tabledata.insertAll (streaming insert). Response: TableDataInsertAllResponse
+        (https://cloud.google.com/bigquery/docs/reference/rest/v2/tabledata/insertAll)."""
+        p = request.path_params
+        project, dataset, table = p["project"], p["dataset"], p["table"]
+        body: dict[str, Any] = await request.json()
+
+        def insert(ctx: ExecContext) -> dict[str, Any]:
+            _check_fields(
+                body,
+                ("kind", "rows", "skipInvalidRows", "ignoreUnknownValues", "traceId"),
+                "tabledata.insertAll",
+            )
+            info = self._find(ctx, project, dataset, table)
+            if info.kind == "view":
+                raise CrucibleUnsupportedError("tabledata.insertAll into a view")
+            fields: list[dict[str, Any]] = encoding.schema(
+                [(c.name, c.type) for c in info.columns]
+            )["fields"]
+            ignore = bool(body.get("ignoreUnknownValues"))
+            parsed: list[list[Any] | None] = []
+            errors: dict[int, list[dict[str, str]]] = {}
+            rows: list[Any] = body.get("rows") or []
+            for index, row in enumerate(rows):
+                if set(obj(row)) - {"insertId", "json"}:
+                    raise CrucibleUnsupportedError("insertAll row fields other than insertId, json")
+                try:
+                    values = stream.parse_row(obj(row).get("json"), fields, ignore_unknown=ignore)
+                    parsed.append(values)
+                except stream.RowError as exc:
+                    parsed.append(None)
+                    errors[index] = [_insert_error("invalid", exc.location, exc.message)]
+            if errors and not body.get("skipInvalidRows"):
+                # Without skipInvalidRows nothing is inserted; valid rows are reported as stopped.
+                stopped = [_insert_error("stopped", "", "")]
+                return _insert_all_response({i: errors.get(i, stopped) for i in range(len(rows))})
+            inserted = [r for r in parsed if r is not None]
+            if inserted:
+                full = qualified(info.catalog, info.schema, info.name)
+                staging = qualified(f"crucible_stream_{uuid.uuid4().hex}")
+                storage = ", ".join(
+                    f"{qualified(c.name)} {types.storage_type(c.type).sql('duckdb')}"
+                    for c in info.columns
+                )
+                try:
+                    ctx.run_sql(f"CREATE TEMP TABLE {staging} ({storage})", returns_rows=False)
+                    marks = ", ".join("?" for _ in info.columns)
+                    ctx.cursor.executemany(f"INSERT INTO {staging} VALUES ({marks})", inserted)
+                    ctx.run_sql(f"INSERT INTO {full} SELECT * FROM {staging}", returns_rows=False)
+                finally:
+                    ctx.cursor.execute(f"DROP TABLE IF EXISTS {staging}")
+                props = ctx.catalog.properties(info.catalog, info.schema, info.name)
+                ctx.catalog.set_properties(
+                    info.catalog, info.schema, info.name, props | {STREAMING_BUFFER: True}
+                )
+            return _insert_all_response(errors)
+
+        try:
+            return JSONResponse(await run_in_threadpool(self._context_run, project, insert))
+        except CrucibleError as exc:
+            return http_error(exc)
+
     def _anonymous_table(self, project: str, table: str, base: str) -> Response:
         """A SELECT job's result table, from the job store (tables_get_anonymous: modes are
         NULLABLE here)."""
@@ -970,6 +1038,19 @@ def multipart_related(content_type: str, body: bytes) -> tuple[dict[str, Any], b
     if not isinstance(metadata, dict):
         raise CrucibleError(ErrorKind.INVALID_QUERY, "The upload's job must be a JSON object")
     return cast("dict[str, Any]", metadata), contents[1]
+
+
+def _insert_error(reason: str, location: str, message: str) -> dict[str, str]:
+    # ErrorProto, as insertAll's insertErrors[].errors[] carries it.
+    return {"reason": reason, "location": location, "debugInfo": "", "message": message}
+
+
+def _insert_all_response(errors: dict[int, list[dict[str, str]]]) -> dict[str, Any]:
+    # TableDataInsertAllResponse: insertErrors is omitted when every row was inserted.
+    body: dict[str, Any] = {"kind": "bigquery#tableDataInsertAllResponse"}
+    if errors:
+        body["insertErrors"] = [{"index": i, "errors": e} for i, e in sorted(errors.items())]
+    return body
 
 
 def _check_fields(body: dict[str, Any], allowed: tuple[str, ...], call: str) -> None:

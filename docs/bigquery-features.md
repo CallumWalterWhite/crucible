@@ -361,6 +361,16 @@ The client and dbt suites (`tests/clients`, `tests/dbt`) need a running server; 
 | `tabledata.list` of a view | Not supported | [`test_tabledata_list_of_a_view_is_unsupported`](../tests/unit/test_bigquery_server.py) | `Not supported by Crucible: tabledata.list of a view`. |
 | `tabledata.list` of an anonymous table | Verified | [`24_tabledata_list_anonymous.json`](../tests/fixtures/bigquery_api/24_tabledata_list_anonymous.json)<br>[`test_tabledata_list_of_an_anonymous_table_reads_the_job_result`](../tests/unit/test_bigquery_server.py) | |
 
+### REST: tabledata.insertAll (streaming inserts)
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| `tabledata.insertAll` (`insert_rows`, `insert_rows_json`) | Tested | [`test_every_type_in_the_client_spellings_round_trips`](../tests/unit/test_bigquery_insert_all.py)<br>[`test_plain_json_values_from_insert_rows_json`](../tests/unit/test_bigquery_insert_all.py)<br>[`test_bigquery_insert_rows_and_insert_rows_json`](../tests/clients/test_bigquery_client.py) | Values are accepted in the spellings the Python client sends and as plain JSON numbers and booleans; any other spelling is refused. `insertId` deduplication is not emulated (BigQuery's is best effort). |
+| Per-row `insertErrors`, `skipInvalidRows` | Tested | [`test_a_bad_row_stops_the_request_without_skip_invalid_rows`](../tests/unit/test_bigquery_insert_all.py)<br>[`test_skip_invalid_rows_inserts_the_valid_ones`](../tests/unit/test_bigquery_insert_all.py) | Without `skipInvalidRows`, nothing is inserted and valid rows are reported as `stopped`. Known bad values: an unknown field, and an INT64 string that is not a number. |
+| `ignoreUnknownValues` | Tested | [`test_ignore_unknown_values_drops_unknown_fields`](../tests/unit/test_bigquery_insert_all.py) | |
+| `templateSuffix` | Not supported | [`test_a_template_suffix_is_unsupported`](../tests/unit/test_bigquery_insert_all.py) | |
+| UPDATE or DELETE over streamed rows | Partial | [`test_dml_over_streamed_rows_is_refused_until_truncate`](../tests/unit/test_bigquery_insert_all.py)<br>[`test_create_or_replace_clears_the_streaming_buffer`](../tests/unit/test_bigquery_insert_all.py) | Refused with BigQuery's streaming-buffer error until `TRUNCATE TABLE` or `CREATE OR REPLACE`. BigQuery allows it once its buffer flushes, so Crucible errs on the safe side. |
+
 ### REST: routines
 
 | Feature | Status | Evidence | Notes |

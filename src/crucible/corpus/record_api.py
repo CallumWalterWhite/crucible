@@ -477,6 +477,7 @@ class Recorder:
             self.call(f"tables_get_{name}", "GET", f"{tables}/{name}")
         self.call("tables_list_partitioned", "GET", tables)
         self.record_dml(p, tables)
+        self.record_insert_all(p, tables)
         self.call("tables_delete", "DELETE", f"{tables}/all_types", expect=(200, 204))
 
     def record_dml(self, p: str, tables: str) -> None:
@@ -508,6 +509,41 @@ class Recorder:
                 body=self.query_config(sql)["query"],
                 expect=None,
             )
+
+    def record_insert_all(self, p: str, tables: str) -> None:
+        """tabledata.insertAll: each spelling stream.py accepts, a bad row with and without
+        skipInvalidRows, ignoreUnknownValues, then the rows as stored and DML over the buffer."""
+        self.call(
+            "tables_insert_streamed",
+            "POST",
+            tables,
+            body={
+                "tableReference": {
+                    "projectId": p,
+                    "datasetId": self.dataset,
+                    "tableId": "streamed",
+                },
+                "schema": {"fields": STREAMED_FIELDS},
+            },
+        )
+        url = f"{tables}/streamed/insertAll"
+        for name, rows, flags in INSERT_ALL_CALLS:
+            self.call(f"insert_all_{name}", "POST", url, body={"rows": rows, **flags}, expect=None)
+        self.call("tables_get_streamed", "GET", f"{tables}/streamed")
+        select = self.insert_job(
+            "jobs_insert_select_streamed",
+            "select_streamed",
+            self.query_config(f"SELECT {STREAMED_COLUMNS} FROM streamed ORDER BY k, f"),
+        )
+        self.wait_ok(select, "SELECT streamed")
+        self.call("get_query_results_streamed", "GET", f"{API}/projects/{p}/queries/{select}")
+        self.call(
+            "jobs_query_update_streamed",
+            "POST",
+            f"{API}/projects/{p}/queries",
+            body=self.query_config("UPDATE streamed SET s = 'u' WHERE TRUE")["query"],
+            expect=None,
+        )
 
     def load(self, name: str, csv_text: str) -> None:
         """A dbt-seed-style load: resumable upload of a CSV with an explicit schema."""
@@ -610,6 +646,64 @@ LOAD_SCHEMA: list[dict[str, str]] = [
 # the other fields, which BigQuery rejects, so those cases measured nothing else).
 _HEADER = "id,b,ts,d,n,f,s\n"
 _TS = "2024-01-02 03:04:05"
+
+
+# tabledata.insertAll (stream.py): one column per scalar type, an array and a record.
+STREAMED_FIELDS = [
+    {"name": "k", "type": "INTEGER"},
+    {"name": "f", "type": "FLOAT"},
+    {"name": "n", "type": "NUMERIC"},
+    {"name": "b", "type": "BOOLEAN"},
+    {"name": "s", "type": "STRING"},
+    {"name": "y", "type": "BYTES"},
+    {"name": "d", "type": "DATE"},
+    {"name": "dt", "type": "DATETIME"},
+    {"name": "tm", "type": "TIME"},
+    {"name": "ts", "type": "TIMESTAMP"},
+    {"name": "j", "type": "JSON"},
+    {"name": "a", "type": "INTEGER", "mode": "REPEATED"},
+    {
+        "name": "r",
+        "type": "RECORD",
+        "fields": [{"name": "x", "type": "INTEGER"}, {"name": "z", "type": "STRING"}],
+    },
+]
+STREAMED_COLUMNS = "k, f, n, b, s, y, d, dt, tm, ts, TO_JSON_STRING(j) AS j, a, r"
+_CLIENT_ROW = {  # what insert_rows sends (google/cloud/bigquery/_helpers.py)
+    "k": "1",
+    "f": 1.5,
+    "n": "1.25",
+    "b": "true",
+    "s": "x",
+    "y": "Af8=",
+    "d": "2024-02-29",
+    "dt": "2024-01-02T03:04:05.123456",
+    "tm": "04:05:06.500000",
+    "ts": "2024-01-02T03:04:05.123456Z",
+    "j": '{"a": 1}',
+    "a": ["1", "2"],
+    "r": {"x": "3", "z": "q"},
+}
+INSERT_ALL_CALLS: list[tuple[str, list[dict[str, Any]], dict[str, Any]]] = [
+    ("client_spellings", [{"json": _CLIENT_ROW}], {}),
+    # What insert_rows_json passes through: JSON numbers and booleans, epoch seconds, no array.
+    (
+        "plain_json",
+        [{"json": {"k": 2, "f": 2, "n": 3, "b": False, "ts": 1704164645.5, "s": "plain"}}],
+        {},
+    ),
+    (
+        "non_finite",
+        [
+            {"json": {"k": 3, "f": f}}
+            for f in ("nan", "inf", "-inf", "NaN", "Infinity", "-Infinity")
+        ],
+        {},
+    ),
+    ("bad_row", [{"json": {"k": 4}}, {"json": {"k": "abc"}}, {"json": {"k": 5, "nope": 1}}], {}),
+    ("skip_invalid", [{"json": {"k": 6}}, {"json": {"k": "abc"}}], {"skipInvalidRows": True}),
+    ("ignore_unknown", [{"json": {"k": 7, "nope": 1}}], {"ignoreUnknownValues": True}),
+]
 
 
 def _row(**changes: str) -> str:
