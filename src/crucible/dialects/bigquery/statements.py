@@ -142,6 +142,8 @@ def _plan(tree: exp.Expr, ctx: ExecContext) -> Plan:
         return dml.plan_truncate(tree, ctx)
     if isinstance(tree, exp.Insert):
         return _insert(tree, ctx)
+    if isinstance(tree, exp.Command) and tree.name.upper() == "ALTER":
+        return ddl.plan_alter_column(str(tree.args.get("expression") or ""), ctx)
     if isinstance(tree, exp.Command):
         raise CrucibleUnsupportedError(f"{tree.name.upper()} statement")
     raise CrucibleUnsupportedError(f"{type(tree).__name__.upper()} statement")

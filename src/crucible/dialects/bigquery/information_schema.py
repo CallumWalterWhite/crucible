@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import sqlglot
 from sqlglot import exp
@@ -57,27 +57,27 @@ def _option_rows(ctx: ExecContext, infos: list[TableInfo]) -> list[Row]:
     for info in infos:
         options: dict[str, Any] = info.properties.get("options") or {}
         for name, value in options.items():
+            if value is None:
+                continue  # a cleared option
             if name.lower() == "description":
                 rows.append((*_key(info), "description", "STRING", json.dumps(str(value))))
+            elif name.lower() == "labels" and not value:
+                continue  # no labels, no row
             elif name.lower() == "labels":
                 rows.append(
-                    (*_key(info), "labels", "ARRAY<STRUCT<STRING, STRING>>", _labels(str(value)))
+                    (*_key(info), "labels", "ARRAY<STRUCT<STRING, STRING>>", _labels(value))
                 )
             else:
                 raise CrucibleUnsupportedError(f"INFORMATION_SCHEMA.TABLE_OPTIONS option {name}")
     return rows
 
 
-def _labels(text: str) -> str:
-    """`[('k', 'v')]` as stored from OPTIONS(labels = ...), in BigQuery's option_value form."""
-    node = sqlglot.parse_one(text, read="bigquery")
-    pairs: list[str] = []
-    for item in node.expressions if isinstance(node, exp.Array) else []:
-        parts = item.expressions if isinstance(item, exp.Tuple | exp.Struct) else []
-        if len(parts) != 2 or not all(isinstance(p, exp.Literal) for p in parts):
-            raise CrucibleUnsupportedError(f"INFORMATION_SCHEMA.TABLE_OPTIONS labels {text}")
-        pairs.append(f"STRUCT({json.dumps(parts[0].this)}, {json.dumps(parts[1].this)})")
-    return f"[{', '.join(pairs)}]"
+def _labels(labels: Any) -> str:
+    """The labels map OPTIONS(labels = ...) and tables.insert store, as BigQuery's option_value."""
+    if not isinstance(labels, dict):
+        raise CrucibleUnsupportedError(f"INFORMATION_SCHEMA.TABLE_OPTIONS labels {labels!r}")
+    pairs = cast("dict[str, str]", labels).items()
+    return "[" + ", ".join(f"STRUCT({json.dumps(k)}, {json.dumps(v)})" for k, v in pairs) + "]"
 
 
 def _column_rows(ctx: ExecContext, infos: list[TableInfo]) -> list[Row]:
@@ -93,7 +93,7 @@ def _column_rows(ctx: ExecContext, infos: list[TableInfo]) -> list[Row]:
                     *_key(info),
                     column.name,
                     position,
-                    "YES",  # shortcut: REQUIRED columns are not stored yet; all are nullable
+                    "YES" if column.nullable else "NO",
                     types.type_name(column.type),
                     "YES" if name == partition else "NO",
                     clustering.index(name) + 1 if name in clustering else None,

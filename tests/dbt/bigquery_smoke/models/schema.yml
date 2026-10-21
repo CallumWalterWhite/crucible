@@ -14,18 +14,30 @@ seeds:
 
 models:
   - name: vip_customers
+    description: Customers flagged as VIP, with their credit limit.
     columns:
       - name: customer_id
+        description: The customer's id, as in the customers seed.
         data_tests:
           - relationships:
               to: ref('customers')
               field: customer_id
+      - name: name
+        description: The customer's name.
+      - name: credit_limit
+        description: The credit limit in dollars.
   - name: customer_signups
+    description: The signup date of each customer, merged on customer_id.
     columns:
       - name: customer_id
+        description: The customer's id, as in the customers seed.
         data_tests:
           - unique
           - not_null
+      - name: name
+        description: The customer's name.
+      - name: signup_date
+        description: The day the customer signed up.
 
 unit_tests:
   - name: vip_customers_keeps_only_vips

@@ -1,0 +1,9 @@
+description: INSERT of NULL into a REQUIRED (NOT NULL) column is an error. See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-definition-language#column_name_and_column_schema. The message is not recorded yet.
+tags: [dml, statements]
+setup:
+- CREATE TABLE t (k INT64 NOT NULL, v INT64)
+query: INSERT INTO t VALUES (NULL, 1)
+expected:
+  error:
+    kind: runtime
+    message_contains: "NULL"

@@ -589,9 +589,15 @@ class BigQueryServer:
             "id": f"{project}:{dataset}.{table}",
             "selfLink": f"{base}/bigquery/v2/projects/{project}/datasets/{dataset}/tables/{table}",
             "tableReference": {"projectId": project, "datasetId": dataset, "tableId": table},
-            "schema": encoding.schema([(c.name, c.type) for c in info.columns], with_mode=False),
+            "schema": {"fields": _schema(info, with_mode=False)},
             **ddl.rest_partitioning(info.properties),
         }
+        options: dict[str, Any] = info.properties.get("options", {})
+        # REST reference, Table: description and labels, omitted when empty.
+        if options.get("description"):
+            resource["description"] = options["description"]
+        if options.get("labels"):
+            resource["labels"] = options["labels"]
         if rows is not None:
             resource["numRows"] = str(rows)
         return resource | {"type": "VIEW" if info.kind == "view" else "TABLE", "location": location}
@@ -818,7 +824,11 @@ class BigQueryServer:
         base = self._base(request)
 
         def create(ctx: ExecContext) -> dict[str, Any]:
-            _check_fields(body, ("tableReference", "schema", "kind"), "tables.insert")
+            _check_fields(
+                body,
+                ("tableReference", "schema", "kind", "description", "labels"),
+                "tables.insert",
+            )
             table = obj(body.get("tableReference")).get("tableId")
             if not table:
                 raise CrucibleError(ErrorKind.INVALID_QUERY, "Table ID must be specified")
@@ -833,6 +843,8 @@ class BigQueryServer:
                 f"CREATE TABLE `{project}`.`{dataset}`.`{table}` ({columns})"
             ):
                 ctx.execute(statement)
+            props = _set_metadata({}, body) | {"field_descriptions": _field_descriptions(fields)}
+            ctx.catalog.set_properties(project, dataset, table, props)
             return self._describe(ctx, self._find(ctx, project, dataset, table), base)
 
         try:
@@ -848,22 +860,34 @@ class BigQueryServer:
         base = self._base(request)
 
         def patch(ctx: ExecContext) -> dict[str, Any]:
-            _check_fields(body, ("schema", "tableReference", "kind"), "tables.patch")
+            _check_fields(
+                body,
+                ("schema", "tableReference", "kind", "description", "labels"),
+                "tables.patch",
+            )
             info = self._find(ctx, project, dataset, table)
             fields: list[dict[str, Any]] = fields_of(obj(body.get("schema")))
-            existing = [(c.name, encoding.schema_field(c.name, c.type)) for c in info.columns]
+            existing = _schema(info, with_mode=True)
+            props = _set_metadata(info.properties, body)
             if "schema" in body:
                 if len(fields) < len(existing):
                     raise CrucibleUnsupportedError("tables.patch that removes columns")
-                for (name, current), wanted in zip(existing, fields, strict=False):
-                    if not _same_field(current, wanted) or name != wanted.get("name"):
-                        raise CrucibleUnsupportedError(f"tables.patch that changes column {name}")
+                for current, wanted in zip(existing, fields, strict=False):
+                    _check_field(wanted)
+                    if not _same_field(current, wanted) or current["name"] != wanted.get("name"):
+                        raise CrucibleUnsupportedError(
+                            f"tables.patch that changes column {current['name']}"
+                        )
                 full = f"`{project}`.`{dataset}`.`{table}`"
                 for added in fields[len(existing) :]:
+                    if _mode(added) == "REQUIRED":
+                        raise CrucibleUnsupportedError("tables.patch that adds a REQUIRED column")
                     for statement in DIALECT.split(
                         f"ALTER TABLE {full} ADD COLUMN {_column_sql(added)}"
                     ):
                         ctx.execute(statement)
+                props["field_descriptions"] = _field_descriptions(fields)
+            ctx.catalog.set_properties(project, dataset, table, props)
             return self._describe(ctx, self._find(ctx, project, dataset, table), base)
 
         try:
@@ -1111,24 +1135,79 @@ def _table_data(
     return body
 
 
+def _mode(field: dict[str, Any]) -> str:
+    return str(field.get("mode", "NULLABLE")).upper()
+
+
+def _check_field(field: dict[str, Any], *, nested: bool = False) -> None:
+    """Refuse schema field options Crucible does not store. A top-level column keeps its
+    description and REQUIRED mode; anything else non-empty is refused. Empty values change nothing,
+    and dbt sends `policyTags: {names: []}` for every column it documents."""
+    for key, value in field.items():
+        if key in ("name", "type", "mode", "fields") or value in (None, "", {}, []):
+            continue
+        if key == "description" and not nested:
+            continue
+        if key == "policyTags" and not obj(value).get("names"):
+            continue
+        raise CrucibleUnsupportedError(f"schema field options on column {field.get('name')}: {key}")
+    if nested and _mode(field) == "REQUIRED":
+        raise CrucibleUnsupportedError(f"a REQUIRED field inside a RECORD ({field.get('name')})")
+    for sub in field.get("fields", []):
+        _check_field(sub, nested=True)
+
+
 def _column_sql(field: dict[str, Any]) -> str:
-    if field.get("mode", "NULLABLE").upper() == "REQUIRED":
-        raise CrucibleUnsupportedError("a REQUIRED column in a REST schema")
-    if field.get("description") or field.get("policyTags") or field.get("defaultValueExpression"):
-        raise CrucibleUnsupportedError(f"schema field options on column {field.get('name')}")
+    _check_field(field)
     data_type = encoding.warehouse_type_from_field(field)
     name = str(field["name"]).replace("`", "")
-    return f"`{name}` {types.type_name(data_type)}"
+    not_null = " NOT NULL" if _mode(field) == "REQUIRED" else ""
+    return f"`{name}` {types.type_name(data_type)}{not_null}"
+
+
+def _schema(info: TableInfo, *, with_mode: bool) -> list[dict[str, Any]]:
+    """A table's REST schema fields. A NOT NULL column is REQUIRED; a stored column description
+    is returned (REST reference, TableFieldSchema: mode, description)."""
+    fields: list[dict[str, Any]] = encoding.schema(
+        [(c.name, c.type) for c in info.columns], with_mode=with_mode
+    )["fields"]
+    descriptions: dict[str, str] = info.properties.get("field_descriptions", {})
+    for field, column in zip(fields, info.columns, strict=True):
+        if not column.nullable and _mode(field) == "NULLABLE":
+            field["mode"] = "REQUIRED"
+        if column.name in descriptions:
+            field["description"] = descriptions[column.name]
+    return fields
+
+
+def _field_descriptions(fields: list[dict[str, Any]]) -> dict[str, str]:
+    return {str(f["name"]): f["description"] for f in fields if f.get("description")}
+
+
+def _set_metadata(props: dict[str, Any], body: dict[str, Any]) -> dict[str, Any]:
+    """The table description and labels a tables.insert or tables.patch body sets (REST
+    reference, Table). A field the body leaves out keeps its stored value; labels replace the
+    stored map, and a null label removes it. The options are the ones OPTIONS(...) sets."""
+    options: dict[str, Any] = dict(props.get("options", {}))
+    if "description" in body:
+        options["description"] = body["description"]
+        if not body["description"]:
+            del options["description"]  # an empty or null description clears it
+    if "labels" in body:
+        options["labels"] = {k: v for k, v in obj(body["labels"]).items() if v is not None}
+    return props | {"options": options}
 
 
 def _same_field(current: dict[str, Any], wanted: dict[str, Any]) -> bool:
-    """A patched field equals the stored one (legacy or standard type names, NULLABLE default)."""
+    """A patched field equals the stored one: the same type (legacy or standard names) and mode
+    (NULLABLE by default). Its description may change; see `_field_descriptions`."""
     try:
-        return types.type_name(encoding.warehouse_type_from_field(current)) == types.type_name(
+        same_type = types.type_name(encoding.warehouse_type_from_field(current)) == types.type_name(
             encoding.warehouse_type_from_field(wanted)
         )
     except CrucibleError:
         return False
+    return same_type and _mode(current) == _mode(wanted)
 
 
 def _label_filter(text: str | None) -> dict[str, str | None]:

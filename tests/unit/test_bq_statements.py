@@ -164,6 +164,31 @@ def test_alter_table(bq):
     assert info.value.kind is ErrorKind.ALREADY_EXISTS
 
 
+def test_alter_view_and_column_options(bq):
+    bq("CREATE VIEW v AS SELECT 1 AS a")
+    bq("ALTER VIEW v SET OPTIONS (description = 'x')")
+    with pytest.raises(CrucibleUnsupportedError):
+        bq("ALTER VIEW v ADD COLUMN b INT64")
+    bq("CREATE TABLE t (a INT64)")
+    bq("ALTER TABLE t ALTER COLUMN a SET OPTIONS (description = 'col')")
+    bq("ALTER TABLE t ALTER COLUMN `a` SET OPTIONS (description = NULL)")
+    with pytest.raises(CrucibleError) as info:
+        bq("ALTER TABLE t ALTER COLUMN nope SET OPTIONS (description = 'x')")
+    assert info.value.kind is ErrorKind.INVALID_QUERY
+    with pytest.raises(CrucibleUnsupportedError):
+        bq("ALTER TABLE t ALTER COLUMN a SET OPTIONS (policy_tags = [])")
+    assert values(bq("SELECT a FROM t")) == []
+
+
+def test_not_null_insert_is_a_runtime_error(bq):
+    bq("CREATE TABLE t (k INT64 NOT NULL, v INT64)")
+    bq("INSERT INTO t VALUES (1, NULL)")
+    with pytest.raises(CrucibleError) as info:
+        bq("INSERT INTO t VALUES (NULL, 1)")
+    assert info.value.kind is ErrorKind.RUNTIME
+    assert "NULL" in info.value.message
+
+
 def test_drop(bq):
     bq("CREATE TABLE t (a INT64)")
     assert bq("DROP TABLE t").statement_type == "DROP_TABLE"
@@ -206,7 +231,9 @@ def test_properties_are_recorded_replaced_and_cleared():
         "options": {"description": "x"},
     }
     run("ALTER TABLE t SET OPTIONS (labels = [('a', 'b')])")
-    assert props(engine, "t")["options"] == {"description": "x", "labels": "[('a', 'b')]"}
+    assert props(engine, "t")["options"] == {"description": "x", "labels": {"a": "b"}}
+    run("ALTER TABLE t SET OPTIONS (description = NULL)")
+    assert props(engine, "t")["options"] == {"labels": {"a": "b"}}
     run("CREATE OR REPLACE TABLE t AS SELECT 1 AS a")
     assert props(engine, "t") == {}
     run("DROP TABLE t")

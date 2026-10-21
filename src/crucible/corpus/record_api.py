@@ -480,6 +480,56 @@ class Recorder:
         self.record_insert_all(p, tables)
         self.record_information_schema(p, self.dataset)
         self.call("tables_delete", "DELETE", f"{tables}/all_types", expect=(200, 204))
+        self.record_metadata(p, tables)
+
+    def record_metadata(self, p: str, tables: str) -> None:
+        """Table description, labels, field descriptions and REQUIRED columns: as tables.insert
+        and tables.patch send them, as tables.get returns them, and as ALTER ... SET OPTIONS sets
+        them. Last, after the dataset's other tables."""
+        fields = [
+            {"name": "k", "type": "INTEGER", "mode": "REQUIRED", "description": "the key"},
+            {"name": "v", "type": "STRING", "description": "the value"},
+        ]
+        self.call(
+            "tables_insert_metadata",
+            "POST",
+            tables,
+            body={
+                "tableReference": {"projectId": p, "datasetId": self.dataset, "tableId": "meta_t"},
+                "schema": {"fields": fields},
+                "description": "a table with metadata",
+                "labels": {"team": "data"},
+            },
+        )
+        self.call("tables_get_metadata", "GET", f"{tables}/meta_t")
+        self.call(
+            "tables_patch_metadata",
+            "PATCH",
+            f"{tables}/meta_t",
+            body={
+                "description": "patched",
+                "labels": {"team": "dbt"},
+                "schema": {"fields": [fields[0], {**fields[1], "description": "patched value"}]},
+            },
+        )
+        self.call("tables_get_patched", "GET", f"{tables}/meta_t")
+        alter = self.insert_job(
+            "jobs_insert_alter_options",
+            "alter_options",
+            self.query_config(
+                "ALTER TABLE meta_t SET OPTIONS (description = 'altered', labels = [('a', 'b')])"
+            ),
+        )
+        self.wait_ok(alter, "ALTER TABLE SET OPTIONS")
+        self.call("jobs_get_alter_options", "GET", f"{API}/projects/{p}/jobs/{alter}")
+        self.call("tables_get_altered", "GET", f"{tables}/meta_t")
+        self.call(
+            "jobs_query_null_into_required",
+            "POST",
+            f"{API}/projects/{p}/queries",
+            body=self.query_config("INSERT INTO meta_t (k, v) VALUES (NULL, 'x')")["query"],
+            expect=None,
+        )
 
     def record_dml(self, p: str, tables: str) -> None:
         """UPDATE, DELETE and TRUNCATE TABLE: statistics, results, and the missing-WHERE errors."""

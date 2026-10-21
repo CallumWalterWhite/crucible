@@ -404,6 +404,17 @@ def make_table(client: TestClient, table: str = "t", schema: dict[str, Any] | No
     )
 
 
+def make_table_with(client: TestClient, schema: dict[str, Any], **metadata: Any) -> Any:
+    return client.post(
+        f"{API}/datasets/ds/tables",
+        json={
+            "tableReference": {"projectId": PROJECT, "datasetId": "ds", "tableId": "t"},
+            "schema": schema,
+            **metadata,
+        },
+    )
+
+
 def test_a_table_round_trips_its_rest_schema_without_nullable_modes(client):
     make_dataset(client)
     assert make_table(client).status_code == 200
@@ -485,6 +496,108 @@ def test_a_view_lists_as_a_view_and_deletes_through_tables_delete(client):
     assert client.get(f"{API}/datasets/ds/tables/v").json()["type"] == "VIEW"
     assert client.delete(f"{API}/datasets/ds/tables/v").status_code == 204
     assert client.get(f"{API}/datasets/ds/tables/v").status_code == 404
+
+
+def test_description_labels_and_field_descriptions_are_stored_and_returned(client):
+    make_dataset(client)
+    schema = {
+        "fields": [
+            {"name": "k", "type": "INTEGER", "mode": "REQUIRED", "description": "the key"},
+            {"name": "s", "type": "STRING", "description": "the label"},
+        ]
+    }
+    created = make_table_with(client, schema, description="a table", labels={"team": "data"})
+    assert created.status_code == 200
+    got = client.get(f"{API}/datasets/ds/tables/t").json()
+    assert got["description"] == "a table"
+    assert got["labels"] == {"team": "data"}
+    assert got["schema"]["fields"] == [
+        {"name": "k", "type": "INTEGER", "mode": "REQUIRED", "description": "the key"},
+        {"name": "s", "type": "STRING", "description": "the label"},
+    ]
+    refused = run_query(client, "INSERT INTO ds.t (k, s) VALUES (NULL, 'x')")
+    assert refused.status_code == 400
+    assert "NULL" in refused.json()["error"]["message"]
+
+
+def test_patch_sets_description_labels_and_field_descriptions(client):
+    make_dataset(client)
+    make_table(client, "t", {"fields": [{"name": "x", "type": "INTEGER"}]})
+    described = client.patch(
+        f"{API}/datasets/ds/tables/t",
+        json={
+            "description": "new",
+            "labels": {"env": "dev", "gone": None},
+            "schema": {
+                "fields": [
+                    {
+                        "name": "x",
+                        "type": "INTEGER",
+                        "description": "col",
+                        "policyTags": {"names": []},
+                    }
+                ]
+            },
+        },
+    ).json()
+    assert described["description"] == "new"
+    assert described["labels"] == {"env": "dev"}
+    assert described["schema"]["fields"] == [{"name": "x", "type": "INTEGER", "description": "col"}]
+    kept = client.patch(f"{API}/datasets/ds/tables/t", json={"labels": {}}).json()
+    assert kept["description"] == "new"
+    assert "labels" not in kept
+    cleared = client.patch(
+        f"{API}/datasets/ds/tables/t",
+        json={"description": "", "schema": {"fields": [{"name": "x", "type": "INTEGER"}]}},
+    ).json()
+    assert "description" not in cleared
+    assert "description" not in cleared["schema"]["fields"][0]
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        [{"name": "x", "type": "INTEGER", "mode": "REQUIRED"}],  # a relaxed or tightened mode
+        [{"name": "x", "type": "INTEGER", "policyTags": {"names": ["p"]}}],
+        [{"name": "x", "type": "INTEGER"}, {"name": "y", "type": "INT64", "mode": "REQUIRED"}],
+    ],
+)
+def test_patch_that_changes_a_mode_or_adds_a_required_column_is_unsupported(client, fields):
+    make_dataset(client)
+    make_table(client, "t", {"fields": [{"name": "x", "type": "INTEGER"}]})
+    response = client.patch(f"{API}/datasets/ds/tables/t", json={"schema": {"fields": fields}})
+    assert response.status_code == 400
+    assert response.json()["error"]["message"].startswith("Not supported by Crucible")
+
+
+def test_a_description_inside_a_record_is_unsupported(client):
+    make_dataset(client)
+    schema = {
+        "fields": [
+            {
+                "name": "rec",
+                "type": "RECORD",
+                "fields": [{"name": "a", "type": "INTEGER", "description": "inner"}],
+            }
+        ]
+    }
+    response = make_table(client, "t", schema)
+    assert response.status_code == 400
+    assert response.json()["error"]["message"].startswith("Not supported by Crucible")
+
+
+def test_alter_statements_set_options_that_tables_get_returns(client):
+    make_dataset(client)
+    insert_query(client, "CREATE TABLE ds.t (a INT64)")
+    insert_query(client, "CREATE VIEW ds.v AS SELECT a FROM ds.t")
+    run_query(client, "ALTER TABLE ds.t SET OPTIONS (description = 'table', labels = [('k', 'v')])")
+    run_query(client, "ALTER VIEW ds.v SET OPTIONS (description = 'view')")
+    run_query(client, "ALTER TABLE ds.t ALTER COLUMN a SET OPTIONS (description = 'col')")
+    table = client.get(f"{API}/datasets/ds/tables/t").json()
+    assert table["description"] == "table"
+    assert table["labels"] == {"k": "v"}
+    assert table["schema"]["fields"] == [{"name": "a", "type": "INTEGER", "description": "col"}]
+    assert client.get(f"{API}/datasets/ds/tables/v").json()["description"] == "view"
 
 
 # --- 11. routines ------------------------------------------------------------------------------

@@ -15,6 +15,7 @@ from sqlglot import exp
 class Column:
     name: str
     type: exp.DataType
+    nullable: bool = True  # a stored column's NOT NULL constraint; result columns are nullable
 
 
 def parse_type(duckdb_type: str) -> exp.DataType:

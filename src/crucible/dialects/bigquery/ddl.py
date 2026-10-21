@@ -8,11 +8,13 @@ ignored (require_partition_filter = TRUE) raises CrucibleUnsupportedError instea
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from typing import Any, cast
 
 import sqlglot
 from sqlglot import exp
+from sqlglot.errors import ParseError
 
 from crucible.dialects.bigquery import errors, metadata, types
 from crucible.dialects.bigquery.translate import translate_query
@@ -64,9 +66,26 @@ def _options(properties: list[exp.Expr]) -> dict[str, Any]:
             raise CrucibleUnsupportedError("OPTIONS(require_partition_filter = TRUE)")
         if isinstance(value, exp.Literal) and value.is_string:
             options[prop.name] = value.this
+        elif isinstance(value, exp.Null):
+            options[prop.name] = None  # OPTIONS(x = NULL) clears x in ALTER ... SET OPTIONS
+        elif prop.name.lower() == "labels" and isinstance(value, exp.Array):
+            options[prop.name] = _labels(value)
+        elif prop.name.lower() == "description":
+            raise CrucibleUnsupportedError("OPTIONS(description) that is not a string")
         else:
             options[prop.name] = value.sql("bigquery") if isinstance(value, exp.Expr) else value
     return options
+
+
+def _labels(array: exp.Array) -> dict[str, str]:
+    """OPTIONS(labels = [(key, value), ...]): the labels as a map (BigQuery reference, labels)."""
+    labels: dict[str, str] = {}
+    for pair in array.expressions:
+        items = pair.expressions if isinstance(pair, exp.Tuple) else []
+        if len(items) != 2 or not all(isinstance(i, exp.Literal) and i.is_string for i in items):
+            raise CrucibleUnsupportedError("OPTIONS(labels) that is not (key, value) string pairs")
+        labels[items[0].this] = items[1].this
+    return labels
 
 
 def table_properties(tree: exp.Create, columns: list[str]) -> dict[str, Any]:
@@ -273,7 +292,8 @@ def column_def(column: exp.Expr) -> str:
 
 
 def plan_alter(tree: exp.Alter, ctx: ExecContext) -> Plan:
-    if (tree.args.get("kind") or "").upper() != "TABLE":
+    kind = (tree.args.get("kind") or "").upper()
+    if kind not in ("TABLE", "VIEW"):
         raise CrucibleUnsupportedError(f"ALTER {tree.args.get('kind')}")
     table = tree.this
     assert isinstance(table, exp.Table)
@@ -283,6 +303,8 @@ def plan_alter(tree: exp.Alter, ctx: ExecContext) -> Plan:
     options: dict[str, Any] = {}
     actions: list[exp.Expr] = tree.args.get("actions") or []
     for action in actions:
+        if kind == "VIEW" and not isinstance(action, exp.AlterSet):
+            raise CrucibleUnsupportedError(f"ALTER VIEW action {action.sql('bigquery')}")
         if isinstance(action, exp.ColumnDef):
             if action.args.get("constraints"):
                 raise errors.invalid(
@@ -307,9 +329,54 @@ def plan_alter(tree: exp.Alter, ctx: ExecContext) -> Plan:
         if options:
             properties = c.catalog.properties(info.catalog, info.schema, info.name)
             merged = {**properties.get("options", {}), **options}
+            # Labels given in SET OPTIONS replace the whole map; NULL clears an option.
+            kept = {k: v for k, v in merged.items() if v is not None}
             c.catalog.set_properties(
-                info.catalog, info.schema, info.name, {**properties, "options": merged}
+                info.catalog, info.schema, info.name, {**properties, "options": kept}
             )
+
+    return _command("ALTER_TABLE", run)
+
+
+# SQLGlot has no node for ALTER COLUMN ... SET OPTIONS and parses it as a Command.
+_ALTER_COLUMN_OPTIONS = re.compile(
+    r"TABLE\s+(?P<table>.+?)\s+ALTER\s+COLUMN\s+(?P<column>\S+)"
+    r"\s+SET\s+OPTIONS\s*(?P<options>\(.*\))",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def plan_alter_column(text: str, ctx: ExecContext) -> Plan:
+    """ALTER TABLE t ALTER COLUMN c SET OPTIONS (description = ...): the column description."""
+    match = _ALTER_COLUMN_OPTIONS.fullmatch(text.strip())
+    if match is None:
+        raise CrucibleUnsupportedError("ALTER statement")
+    try:
+        table = sqlglot.parse_one(match["table"], into=exp.Table, read="bigquery")
+        alter = sqlglot.parse_one(f"ALTER TABLE t SET OPTIONS {match['options']}", read="bigquery")
+    except ParseError as exc:
+        raise errors.invalid(f"Syntax error: {exc}") from exc
+    info = metadata.find_table(ctx, metadata.name_of(table, ctx))
+    column = match["column"].strip("`")
+    _check_columns([column], [c.name for c in info.columns], "ALTER COLUMN")
+    stored = next(c.name for c in info.columns if c.name.lower() == column.lower())
+    options = _options(list(alter.find_all(exp.Property)))
+    if set(options) - {"description"}:
+        raise CrucibleUnsupportedError(f"ALTER COLUMN option {sorted(set(options))[0]}")
+
+    def run(c: ExecContext) -> None:
+        properties = c.catalog.properties(info.catalog, info.schema, info.name)
+        descriptions: dict[str, str] = dict(properties.get("field_descriptions", {}))
+        if "description" in options:
+            descriptions.pop(stored, None)
+            if options["description"] is not None:
+                descriptions[stored] = options["description"]
+        c.catalog.set_properties(
+            info.catalog,
+            info.schema,
+            info.name,
+            {**properties, "field_descriptions": descriptions},
+        )
 
     return _command("ALTER_TABLE", run)
 
