@@ -104,7 +104,24 @@ def _target(tree: exp.Expr, ctx: ExecContext) -> metadata.Name | None:
     return metadata.name_of(table, ctx) if isinstance(table, exp.Table) else None
 
 
+# Functions SQLGlot parses without modelling them; a transform handles each of these by name.
+_HANDLED_ANONYMOUS = frozenset({"IEEE_DIVIDE"})
+_ML = (exp.Predict, exp.MLForecast, exp.MLTranslate, exp.GenerateEmbedding, exp.GenerateText)
+
+
+def _refuse_unmodelled(tree: exp.Expr) -> None:
+    """Refuse functions Crucible does not emulate before DuckDB runs its own namesake (RANGE)."""
+    for node in tree.find_all(exp.Anonymous, exp.SHA2Digest, *_ML):
+        if isinstance(node, exp.Anonymous) and node.name.upper() not in _HANDLED_ANONYMOUS:
+            raise CrucibleUnsupportedError(f"function {node.name.upper()}")
+        if isinstance(node, exp.SHA2Digest) and node.text("length") not in ("", "256"):
+            raise CrucibleUnsupportedError(f"function SHA{node.text('length')}")
+        if isinstance(node, _ML):
+            raise CrucibleUnsupportedError("BigQuery ML functions")
+
+
 def _plan(tree: exp.Expr, ctx: ExecContext) -> Plan:
+    _refuse_unmodelled(tree)
     if isinstance(tree, exp.Query):
         return run_sql(translate_query(tree, ctx).sql, "SELECT", ctx)
     if isinstance(tree, exp.Create):

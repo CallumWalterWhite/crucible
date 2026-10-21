@@ -156,6 +156,8 @@ def plan_create(tree: exp.Create, ctx: ExecContext) -> Plan:
     if kind == "TABLE":
         return _create_table(tree, ctx)
     if kind == "VIEW":
+        if tree.find(exp.MaterializedProperty):
+            raise CrucibleUnsupportedError("CREATE MATERIALIZED VIEW")
         return _create_view(tree, ctx)
     raise CrucibleUnsupportedError(f"CREATE {kind}")
 

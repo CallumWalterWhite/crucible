@@ -288,6 +288,10 @@ def test_create_table_options_are_accepted(run):
         "DECLARE x INT64",
         "SELECT * FROM ds.t FOR SYSTEM_TIME AS OF CURRENT_TIMESTAMP()",
         "SELECT ST_GEOGPOINT(1, 2)",
+        "SELECT RANGE(DATE '2024-01-01', NULL)",
+        "SELECT * FROM ML.PREDICT(MODEL ds.m, (SELECT 1 AS x))",
+        "SELECT SHA512('a')",
+        "CREATE MATERIALIZED VIEW mv AS SELECT 1 AS a",
     ],
 )
 def test_out_of_scope_constructs_raise_unsupported(run, sql):

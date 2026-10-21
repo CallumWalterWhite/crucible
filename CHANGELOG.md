@@ -7,6 +7,17 @@ and this project does not yet follow semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+- `docs/bigquery-features.md`: supported and unsupported BigQuery features, each linked to its test.
+- README roadmap.
+
+### Fixed
+
+- `CREATE MATERIALIZED VIEW` was accepted and created nothing; it now raises `Not supported by Crucible`.
+- Functions SQLGlot does not model (such as `RANGE`), BigQuery ML functions and `SHA512` raise
+  `Not supported by Crucible` instead of running DuckDB's namesake or leaking a DuckDB error.
+
 ## [0.1.0a2] - 2026-10-20
 
 ### Added
