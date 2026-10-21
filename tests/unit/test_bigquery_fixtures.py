@@ -182,6 +182,16 @@ NOT_RECORDED_YET: list[str] = [
     # INFORMATION_SCHEMA and __TABLES__ (record_api.record_information_schema), to be recorded.
     "*_options_table",
     "jobs_query_information_schema_*",
+    # Table description, labels, field descriptions, REQUIRED and ALTER ... SET OPTIONS
+    # (record_api.record_metadata), to be recorded.
+    "tables_insert_metadata",
+    "tables_get_metadata",
+    "tables_patch_metadata",
+    "tables_get_patched",
+    "jobs_insert_alter_options",
+    "jobs_get_alter_options",
+    "tables_get_altered",
+    "jobs_query_null_into_required",
 ]
 
 

@@ -34,6 +34,10 @@ def reword(exc: CrucibleError) -> CrucibleError:
         message = f"integer overflow ({first})"
     elif first.startswith("Conversion Error: Date out of range"):
         message = f"Out-of-range datetime field in parsing function ({first})"
+    elif first.startswith("Constraint Error: NOT NULL constraint failed: "):
+        # A REQUIRED column. BigQuery's wording is unverified (no recording yet): shortcut: the
+        # text is a guess that keeps the word NULL; upgrade when the REQUIRED case is recorded.
+        message = f"Column {first.rsplit('.', 1)[-1]} cannot be NULL"
     else:
         return exc
     return CrucibleError(ErrorKind.RUNTIME, message, location=exc.location)

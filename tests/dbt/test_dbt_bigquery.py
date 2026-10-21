@@ -2,9 +2,9 @@
 
 Marked `dbt`; CI runs `pytest -m dbt tests/dbt -k bigquery` against dbt-bigquery 1.9.0 and the
 latest. The project in bigquery_smoke/ is invented: a seed, a table, a view, an incremental merge
-model, generic tests and one unit test. Every run uses the dummy token and the endpoint from
-BIGQUERY_EMULATOR_HOST (read by google-cloud-bigquery in both adapter versions), and writes its
-target/ and logs/ to a temporary directory.
+model, generic tests, one unit test, and persist_docs with labels. Every run uses the dummy token
+and the endpoint from BIGQUERY_EMULATOR_HOST (read by google-cloud-bigquery in both adapter
+versions), and writes its target/ and logs/ to a temporary directory.
 """
 
 from __future__ import annotations
@@ -172,3 +172,22 @@ def test_bigquery_docs_generate_reads_the_catalog(dbt_workdir):
     ]
     assert customers["columns"]["customer_id"]["type"] == "INT64"
     assert customers["stats"]["num_rows"]["value"] == 6
+
+
+def test_persist_docs_and_labels_are_returned_by_get_table(dbt_workdir):
+    assert_all_ok(dbt(dbt_workdir, "seed"), "seed")
+    assert_all_ok(dbt(dbt_workdir, "run"), "run")
+    client = bigquery_client()
+    table = client.get_table(f"{PROJECT}.{DATASET}.vip_customers")
+    assert table.description == "Customers flagged as VIP, with their credit limit."
+    assert table.labels == {"team": "data"}
+    assert {field.name: field.description for field in table.schema} == {
+        "customer_id": "The customer's id, as in the customers seed.",
+        "name": "The customer's name.",
+        "credit_limit": "The credit limit in dollars.",
+    }
+    signups = client.get_table(f"{PROJECT}.{DATASET}.customer_signups")
+    assert signups.labels == {"team": "data"}
+    assert {field.name: field.description for field in signups.schema}["signup_date"] == (
+        "The day the customer signed up."
+    )

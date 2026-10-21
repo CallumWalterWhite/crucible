@@ -18,6 +18,10 @@ and this project does not yet follow semantic versioning.
   `ignoreUnknownValues`. UPDATE and DELETE over streamed rows give BigQuery's streaming-buffer error.
 - `UPDATE` (including `UPDATE ... FROM`), `DELETE` and `TRUNCATE TABLE`, with `numDmlAffectedRows` and
   `dmlStats`. UPDATE and DELETE require a WHERE clause, as in BigQuery.
+- Table and column metadata that dbt `persist_docs` and `labels` send: table `description` and
+  `labels` (`tables.insert`, `tables.patch`, `OPTIONS`, `ALTER ... SET OPTIONS`), column descriptions
+  (`ALTER COLUMN ... SET OPTIONS`, and `tables.patch`), `REQUIRED` columns (NOT NULL), and `ALTER VIEW
+  ... SET OPTIONS`. `tables.get` returns them. Other field options stay refused.
 
 ### Fixed
 

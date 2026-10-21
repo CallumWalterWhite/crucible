@@ -7,3 +7,13 @@ profile: bigquery_smoke
 model-paths: ["models"]
 seed-paths: ["seeds"]
 test-paths: ["tests"]
+
+# Descriptions go to the warehouse (persist_docs) and labels into each relation's OPTIONS, so
+# tests/dbt/test_dbt_bigquery.py can read them back with get_table.
+models:
+  bigquery_smoke:
+    +persist_docs:
+      relation: true
+      columns: true
+    +labels:
+      team: data

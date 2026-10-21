@@ -113,7 +113,7 @@ class Catalog:
         rows = self._rows(
             "select c.schema_name, c.table_name, c.column_name, c.data_type, "
             "  exists(select 1 from duckdb_views() v where v.database_name = c.database_name "
-            "    and v.schema_name = c.schema_name and v.view_name = c.table_name) "
+            "    and v.schema_name = c.schema_name and v.view_name = c.table_name), c.is_nullable "
             "from duckdb_columns() c where c.database_name = ? "
             "and lower(c.schema_name) = lower(?) and lower(c.table_name) = lower(?) "
             "order by c.column_index",
@@ -127,7 +127,7 @@ class Catalog:
             schema=stored_schema,
             name=stored_name,
             kind="view" if rows[0][4] else "table",
-            columns=[Column(r[2], parse_type(r[3])) for r in rows],
+            columns=[Column(r[2], parse_type(r[3]), bool(r[5])) for r in rows],
             properties=self.properties(catalog, stored_schema, stored_name),
         )
 
