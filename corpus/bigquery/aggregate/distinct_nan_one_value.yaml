@@ -1,0 +1,14 @@
+description: SELECT DISTINCT keeps one NaN. See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#floating_point_semantics.
+tags:
+- probe
+- aggregate
+- nan
+query: SELECT DISTINCT x FROM UNNEST([CAST('nan' AS FLOAT64), CAST('nan' AS FLOAT64), 1.0]) AS x
+ordered: false
+expected:
+  columns:
+  - name: x
+    type: FLOAT64
+  rows:
+  - - NaN
+  - - 1.0

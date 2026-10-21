@@ -1,0 +1,21 @@
+description: A window ORDER BY sorts NaN before -inf. See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#floating_point_semantics.
+tags:
+- probe
+- window
+- nan
+query: SELECT x, ROW_NUMBER() OVER (ORDER BY x) AS n FROM UNNEST([2.0, CAST('nan' AS FLOAT64), CAST('-inf'
+  AS FLOAT64)]) AS x
+ordered: false
+expected:
+  columns:
+  - name: x
+    type: FLOAT64
+  - name: n
+    type: INT64
+  rows:
+  - - NaN
+    - 1
+  - - -Infinity
+    - 2
+  - - 2.0
+    - 3

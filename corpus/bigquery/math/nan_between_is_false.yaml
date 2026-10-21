@@ -1,0 +1,13 @@
+description: NaN BETWEEN two numbers is FALSE. See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#floating_point_semantics.
+tags:
+- probe
+- math
+- nan
+query: SELECT CAST('nan' AS FLOAT64) BETWEEN -1.0 AND 1.0 AS b
+ordered: false
+expected:
+  columns:
+  - name: b
+    type: BOOL
+  rows:
+  - - false

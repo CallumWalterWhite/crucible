@@ -20,6 +20,7 @@ from crucible.dialects.bigquery.transforms import (
     errors,
     json,
     literals,
+    nan,
     regexp,
     safe,
     strings,
@@ -35,11 +36,13 @@ class TransformContext:
 
 Transform = Callable[[exp.Expr, TransformContext], exp.Expr]
 
-# Order matters: structure first (unnest), then functions, then literal typing last so every
-# literal a transform introduces is typed by BigQuery rules too. `safe` runs after `errors`
+# Order matters: structure first (unnest), then NaN rules on the user's comparisons, then
+# functions, then literal typing last so every literal a transform introduces is typed by
+# BigQuery rules too. `safe` runs after `errors`
 # because SAFE. turns the checks `errors` adds into NULLs.
 PIPELINE: tuple[tuple[str, Transform], ...] = (
     ("unnest", unnest.transform),
+    ("nan", nan.transform),
     ("json", json.transform),
     ("regexp", regexp.transform),
     ("strings", strings.transform),

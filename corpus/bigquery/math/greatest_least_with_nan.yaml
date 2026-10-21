@@ -1,0 +1,20 @@
+description: GREATEST and LEAST return NaN when an argument is NaN. See https://cloud.google.com/bigquery/docs/reference/standard-sql/mathematical_functions#greatest.
+tags:
+- probe
+- math
+- nan
+query: SELECT GREATEST(1.0, CAST('nan' AS FLOAT64)) AS g, LEAST(1.0, CAST('nan' AS FLOAT64)) AS l, LEAST(CAST(NULL
+  AS FLOAT64), CAST('nan' AS FLOAT64)) AS n
+ordered: false
+expected:
+  columns:
+  - name: g
+    type: FLOAT64
+  - name: l
+    type: FLOAT64
+  - name: n
+    type: FLOAT64
+  rows:
+  - - NaN
+    - NaN
+    - null

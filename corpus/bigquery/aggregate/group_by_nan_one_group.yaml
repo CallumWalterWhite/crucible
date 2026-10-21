@@ -1,0 +1,19 @@
+description: GROUP BY puts every NaN in one group. See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#floating_point_semantics.
+tags:
+- probe
+- aggregate
+- nan
+query: SELECT x, COUNT(*) AS c FROM UNNEST([CAST('nan' AS FLOAT64), CAST('nan' AS FLOAT64), 1.0]) AS x
+  GROUP BY x
+ordered: false
+expected:
+  columns:
+  - name: x
+    type: FLOAT64
+  - name: c
+    type: INT64
+  rows:
+  - - NaN
+    - 2
+  - - 1.0
+    - 1

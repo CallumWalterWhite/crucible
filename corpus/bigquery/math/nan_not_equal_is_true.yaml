@@ -1,0 +1,13 @@
+description: NaN != NaN is TRUE (IEEE-754). See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#floating_point_semantics.
+tags:
+- probe
+- math
+- nan
+query: SELECT CAST('nan' AS FLOAT64) != CAST('nan' AS FLOAT64) AS ne
+ordered: false
+expected:
+  columns:
+  - name: ne
+    type: BOOL
+  rows:
+  - - true

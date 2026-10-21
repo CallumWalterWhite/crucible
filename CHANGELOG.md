@@ -25,6 +25,10 @@ and this project does not yet follow semantic versioning.
 
 ### Fixed
 
+- NaN follows BigQuery's rules instead of DuckDB's: comparisons with NaN are false (`!=` true), NaN sorts
+  between NULL and -inf in every ORDER BY, and MIN, LEAST and GREATEST return NaN. Comparisons Crucible
+  cannot prove for FLOAT64 (IN subqueries, IS DISTINCT FROM, NULLIF, simple CASE, RANGE-offset frames)
+  are refused.
 - `LIKE` now treats a backslash as BigQuery's escape character (`'a%' LIKE 'a\\%'` was false).
 - `EXTRACT(WEEK(<weekday>))` is supported instead of refused.
 - `MERGE ... USING s` with an unaliased source table now resolves `s.column`.
