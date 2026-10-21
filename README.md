@@ -76,6 +76,13 @@ Name each dataset with `--dataset`; there is no all-datasets mode. `--to` sets t
 cannot hold exactly are skipped with a warning. Rerunning leaves existing tables alone and replaces views. It needs
 the `record-bigquery` extra (`uv sync --all-extras` installs it).
 
+## Use in CI
+
+[examples/ci/github-actions.yml](examples/ci/github-actions.yml) is a GitHub Actions workflow that runs the
+`corner_cafe` dbt project (seed, run, test) against Crucible. It starts the published image as a service container
+and waits for its health check. To use it in your own repository, copy it to `.github/workflows/` and replace the
+last step with your dbt commands.
+
 ## dbt versions
 
 Use **dbt-core 1.x with dbt-bigquery**. dbt Fusion (the `dbt` 2.x binary) works for only part of a project:
