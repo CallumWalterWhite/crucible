@@ -478,6 +478,7 @@ class Recorder:
         self.call("tables_list_partitioned", "GET", tables)
         self.record_dml(p, tables)
         self.record_insert_all(p, tables)
+        self.record_information_schema(p, self.dataset)
         self.call("tables_delete", "DELETE", f"{tables}/all_types", expect=(200, 204))
 
     def record_dml(self, p: str, tables: str) -> None:
@@ -544,6 +545,61 @@ class Recorder:
             body=self.query_config("UPDATE streamed SET s = 'u' WHERE TRUE")["query"],
             expect=None,
         )
+
+    def record_information_schema(self, p: str, d: str) -> None:
+        """The __TABLES__ and INFORMATION_SCHEMA columns dbt docs generate reads (catalog.sql)."""
+        setup = self.insert_job(
+            "jobs_insert_options_table",
+            "options_table",
+            self.query_config(
+                "CREATE TABLE opts (a INT64, r STRUCT<x INT64, ys ARRAY<STRUCT<z STRING>>>) "
+                "CLUSTER BY a OPTIONS (description = 'Say \"hi\"', labels = [('team', 'data')])"
+            ),
+        )
+        self.wait_ok(setup, "CREATE TABLE opts")
+        names = "('all_types', 'opts', 'partitioned_day', 'partitioned_range', 'streamed')"
+        for name, sql in (
+            (
+                "tables",
+                f"SELECT project_id, dataset_id, table_id, row_count, type "
+                f"FROM `{p}`.`{d}`.__TABLES__ WHERE table_id IN {names} ORDER BY table_id",
+            ),
+            (
+                "table_options",
+                f"SELECT table_name, option_name, option_type, option_value "
+                f"FROM `{p}`.`{d}`.INFORMATION_SCHEMA.TABLE_OPTIONS "
+                f"WHERE table_name IN {names} ORDER BY table_name, option_name",
+            ),
+            (
+                "columns",
+                f"SELECT table_catalog, table_schema, table_name, column_name, ordinal_position, "
+                f"is_nullable, data_type, is_partitioning_column, clustering_ordinal_position "
+                f"FROM `{p}`.`{d}`.INFORMATION_SCHEMA.COLUMNS "
+                f"WHERE table_name IN {names} ORDER BY table_name, ordinal_position",
+            ),
+            (
+                "column_field_paths",
+                f"SELECT table_name, column_name, field_path, data_type, description "
+                f"FROM `{p}`.`{d}`.INFORMATION_SCHEMA.COLUMN_FIELD_PATHS "
+                f"WHERE table_name IN {names} ORDER BY table_name, field_path",
+            ),
+            (
+                "materialized_views",
+                f"SELECT COUNT(*) AS n FROM `{p}`.`{d}`.INFORMATION_SCHEMA.MATERIALIZED_VIEWS",
+            ),
+            (
+                "columns_region",
+                f"SELECT table_name, column_name FROM `{p}`.`region-us`.INFORMATION_SCHEMA.COLUMNS "
+                f"WHERE table_schema = '{d}' AND table_name = 'opts' ORDER BY ordinal_position",
+            ),
+        ):
+            self.call(
+                f"jobs_query_information_schema_{name}",
+                "POST",
+                f"{API}/projects/{p}/queries",
+                body=self.query_config(sql)["query"],
+                expect=None,
+            )
 
     def load(self, name: str, csv_text: str) -> None:
         """A dbt-seed-style load: resumable upload of a CSV with an explicit schema."""
