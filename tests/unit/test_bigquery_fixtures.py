@@ -172,6 +172,13 @@ NOT_RECORDED_YET: list[str] = [
     "*_truncate",
     "tables_get_after_truncate",
     "jobs_query_*_without_where",
+    # tabledata.insertAll (record_api.record_insert_all), to be recorded.
+    "tables_insert_streamed",
+    "insert_all_*",
+    "tables_get_streamed",
+    "*_select_streamed",
+    "get_query_results_streamed",
+    "jobs_query_update_streamed",
 ]
 
 
