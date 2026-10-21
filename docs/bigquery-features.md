@@ -1,0 +1,504 @@
+# BigQuery feature support
+
+What Crucible supports for BigQuery today, and what it refuses. Every row links to the test or recorded case
+that proves it, so you can check a claim by running that test.
+
+Crucible is pre-alpha. Anything not listed here is untested: it may work, or it may fail with
+`Not supported by Crucible: ...`. Crucible never returns a guessed answer for something it cannot match.
+over
+## Status
+
+| Status | Meaning |
+|---|---|
+| Verified | Matches real BigQuery. A corpus case (`corpus/bigquery/...yaml`, `verified: true`) or a recorded REST response (`tests/fixtures/bigquery_api/`) holds BigQuery's own answer, and CI checks Crucible against it. |
+| Tested | Covered by a Crucible test (unit, client or dbt), but not compared with a BigQuery recording. |
+| Partial | Works with the limit given in Notes. |
+| Not supported | Refused with an explicit error. Notes give the message where it is stable. |
+
+To check a row yourself:
+
+```sh
+uv run pytest tests/unit/<file>.py -k <test_name>
+uv run crucible corpus run --dialect bigquery --path corpus/bigquery/<area>/<case>.yaml
+```
+
+The client and dbt suites (`tests/clients`, `tests/dbt`) need a running server; see `.github/workflows/ci.yml`.
+
+## SQL
+### Types and literals
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| Column types INT64, FLOAT64, NUMERIC, BOOL, STRING, BYTES, DATE, DATETIME, TIME, TIMESTAMP, JSON, ARRAY<T>, STRUCT: insert, store, read back | Verified | [`backbone/insert_and_select_types`](../corpus/bigquery/backbone/insert_and_select_types.yaml)<br>[`test_storage_type`](../tests/unit/test_bigquery_backbone.py) | Types come back with BigQuery names. |
+| Literal types: `2.5` is FLOAT64, integer arithmetic stays INT64 | Verified | [`backbone/float_literal_is_float64`](../corpus/bigquery/backbone/float_literal_is_float64.yaml)<br>[`backbone/integer_literal_arithmetic_is_int64`](../corpus/bigquery/backbone/integer_literal_arithmetic_is_int64.yaml)<br>[`test_literals_follow_bigquery_types`](../tests/unit/test_bigquery_backbone.py) | |
+| NUMERIC (precision 38, scale 9) | Verified | [`backbone/numeric_literal_keeps_precision`](../corpus/bigquery/backbone/numeric_literal_keeps_precision.yaml)<br>[`backbone/numeric_multiplication_keeps_scale_9`](../corpus/bigquery/backbone/numeric_multiplication_keeps_scale_9.yaml)<br>[`test_numeric_is_decimal_38_9`](../tests/unit/test_bigquery_backbone.py) | A NUMERIC literal with more than 9 decimals is an error (see Errors). |
+| BIGNUMERIC | Not supported | [`test_bignumeric_raises_unsupported`](../tests/unit/test_bigquery_backbone.py)<br>[`test_storage_type_unsupported`](../tests/unit/test_bigquery_backbone.py) | `Not supported by Crucible: BIGNUMERIC (precision 76 exceeds DuckDB's 38)`, for `CAST(1 AS BIGNUMERIC)` and `CREATE TABLE ds.big (a BIGNUMERIC)`. |
+| GEOGRAPHY, and ST_GEOGPOINT | Not supported | [`test_storage_type_unsupported`](../tests/unit/test_bigquery_backbone.py)<br>[`test_out_of_scope_constructs_raise_unsupported`](../tests/unit/test_bigquery_backbone.py) | `Not supported by Crucible: GEOGRAPHY` for `CREATE TABLE g (x GEOGRAPHY)`. `Not supported by Crucible: function ST_GEOGPOINT` for the function. |
+| INTERVAL as a result value, e.g. `SELECT INTERVAL 1 DAY` | Not supported | [`test_bigquery_interval_is_not_supported`](../tests/clients/test_bigquery_client.py) | Refused when an INTERVAL is returned. INTERVAL inside date arithmetic works (see Dates). |
+| Table names are case-sensitive | Verified | [`backbone/table_name_is_case_sensitive`](../corpus/bigquery/backbone/table_name_is_case_sensitive.yaml)<br>[`test_table_names_are_case_sensitive`](../tests/unit/test_bigquery_backbone.py) | `SELECT * FROM casetable` for `CaseTable` gives `Not found: Table ...`. |
+| Column names keep their case; `SELECT *` keeps stored case | Verified | [`backbone/column_name_case_preserved`](../corpus/bigquery/backbone/column_name_case_preserved.yaml)<br>[`backbone/select_star_keeps_stored_case`](../corpus/bigquery/backbone/select_star_keeps_stored_case.yaml) | |
+| Anonymous output columns are named as BigQuery names them | Verified | [`backbone/anonymous_column_names`](../corpus/bigquery/backbone/anonymous_column_names.yaml)<br>[`test_output_names_keep_case_and_number_anonymous_columns`](../tests/unit/test_bigquery_backbone.py) | |
+| Identifiers that are DuckDB keywords (e.g. `similar`) | Tested | [`test_reserved_word_identifiers_are_quoted`](../tests/unit/test_bigquery_backbone.py) | Quoted internally. BigQuery reserved words used as aliases are a syntax error (see Query syntax). |
+
+### CAST and SAFE_CAST
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| CAST FLOAT64 to INT64: rounds half away from zero, from literals and from data | Verified | [`cast/cast_float_halfway_to_int64_literals`](../corpus/bigquery/cast/cast_float_halfway_to_int64_literals.yaml)<br>[`cast/cast_float_halfway_to_int64_column`](../corpus/bigquery/cast/cast_float_halfway_to_int64_column.yaml)<br>[`test_float_to_int64_rounds_half_away_from_zero`](../tests/unit/test_bq_errors_and_safe.py) | |
+| CAST FLOAT64 out of INT64 range, or NaN to INT64: error | Verified | [`cast/cast_1e20_to_int64_error`](../corpus/bigquery/cast/cast_1e20_to_int64_error.yaml)<br>[`cast/cast_nan_to_int64_error`](../corpus/bigquery/cast/cast_nan_to_int64_error.yaml)<br>[`test_recorded_runtime_messages`](../tests/unit/test_bq_errors_and_safe.py) | `int64 out of range: 1e+20`; `Illegal conversion of non-finite floating point number to an integer: nan`. |
+| CAST FLOAT64 to NUMERIC: rounds to 9 places; out of range is an error | Verified | [`cast/cast_float_to_numeric_rounds_nine_places`](../corpus/bigquery/cast/cast_float_to_numeric_rounds_nine_places.yaml)<br>[`cast/cast_float_1e30_to_numeric_error`](../corpus/bigquery/cast/cast_float_1e30_to_numeric_error.yaml) | `numeric out of range: 1e+30`. |
+| CAST NUMERIC to INT64 (half away from zero) and to FLOAT64 | Verified | [`cast/cast_numeric_to_int64_rounding`](../corpus/bigquery/cast/cast_numeric_to_int64_rounding.yaml)<br>[`cast/cast_numeric_0_1_to_float64`](../corpus/bigquery/cast/cast_numeric_0_1_to_float64.yaml) | |
+| CAST STRING to INT64 (hex, sign, whitespace, exponent and empty input) | Verified | [`errors/cast_string_to_int64_hex`](../corpus/bigquery/errors/cast_string_to_int64_hex.yaml)<br>[`errors/cast_string_to_int64_exponent`](../corpus/bigquery/errors/cast_string_to_int64_exponent.yaml)<br>[`test_string_to_int64_accepts_bigquery_syntax`](../tests/unit/test_bq_errors_and_safe.py) | `1e3` gives `Bad int64 value: 1e3`. Also [`test_string_to_int64_rejects_the_rest`](../tests/unit/test_bq_errors_and_safe.py). |
+| CAST STRING to FLOAT64 | Partial | [`cast_string/cast_string_float_decimal`](../corpus/bigquery/cast_string/cast_string_float_decimal.yaml)<br>[`cast_string/cast_string_float_inf`](../corpus/bigquery/cast_string/cast_string_float_inf.yaml)<br>[`cast_string/cast_string_float_nan`](../corpus/bigquery/cast_string/cast_string_float_nan.yaml)<br>[`test_unrecorded_float_spellings_are_unsupported`](../tests/unit/test_bq_errors_and_safe.py) | Limit: only the recorded spellings work. `CAST('Infinity' AS FLOAT64)` is refused: `Not supported by Crucible: CAST of this spelling of inf or NaN to FLOAT64`. Bad input is an error: `Bad double value: 1,5`. |
+| CAST STRING to NUMERIC | Verified | [`cast_string/cast_string_numeric_decimal`](../corpus/bigquery/cast_string/cast_string_numeric_decimal.yaml)<br>[`cast_string/cast_string_numeric_round_nine_places`](../corpus/bigquery/cast_string/cast_string_numeric_round_nine_places.yaml)<br>[`cast_string/cast_string_numeric_nan_error`](../corpus/bigquery/cast_string/cast_string_numeric_nan_error.yaml)<br>[`test_recorded_runtime_messages`](../tests/unit/test_bq_errors_and_safe.py) | `Invalid NUMERIC value: NaN`. |
+| CAST STRING to DATE | Verified | [`cast_string/cast_string_date_iso`](../corpus/bigquery/cast_string/cast_string_date_iso.yaml)<br>[`cast_string/cast_string_date_one_digit_fields`](../corpus/bigquery/cast_string/cast_string_date_one_digit_fields.yaml)<br>[`cast_string/cast_string_date_leading_space`](../corpus/bigquery/cast_string/cast_string_date_leading_space.yaml)<br>[`test_string_to_temporal_canonical_formats`](../tests/unit/test_bq_errors_and_safe.py) | `Invalid date: '20240102'` for compact form. [`test_string_to_temporal_rejects_non_canonical`](../tests/unit/test_bq_errors_and_safe.py) also covers this. |
+| CAST STRING to TIMESTAMP: ISO forms, fraction up to 6 digits, `T` separator, `Z`, `UTC`, zone names, numeric offsets | Verified | [`cast_string/cast_string_timestamp_offset`](../corpus/bigquery/cast_string/cast_string_timestamp_offset.yaml)<br>[`cast_string/cast_string_timestamp_zone_name`](../corpus/bigquery/cast_string/cast_string_timestamp_zone_name.yaml)<br>[`cast_string/cast_string_timestamp_z_suffix`](../corpus/bigquery/cast_string/cast_string_timestamp_z_suffix.yaml)<br>[`cast_string/cast_string_timestamp_t_separator`](../corpus/bigquery/cast_string/cast_string_timestamp_t_separator.yaml) | Errors: `Invalid timestamp: '2024-01-02 03:04:05.1234567'` (7 fraction digits), `Invalid timestamp: 'not a time'`. The TIMESTAMP() function is stricter; see Dates. |
+| SAFE_CAST: NULL on failure | Verified | [`cast/safe_cast_invalid_string`](../corpus/bigquery/cast/safe_cast_invalid_string.yaml)<br>[`cast/safe_cast_float`](../corpus/bigquery/cast/safe_cast_float.yaml)<br>[`errors/safe_cast_string_with_fraction_to_int64`](../corpus/bigquery/errors/safe_cast_string_with_fraction_to_int64.yaml) | |
+
+### Operators and conditionals
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| `/` on INT64 operands returns FLOAT64 | Verified | [`math/divide_integers`](../corpus/bigquery/math/divide_integers.yaml) | `5 / 2` gives `2.5`. |
+| `||` string concatenation; literal NULL operand is refused | Verified | [`string/concat_operator_null`](../corpus/bigquery/string/concat_operator_null.yaml)<br>[`backbone/array_concat_operator_type`](../corpus/bigquery/backbone/array_concat_operator_type.yaml)<br>[`test_concat_operator_rejects_literal_null`](../tests/unit/test_bq_arrays_unnest.py) | `Operands of || cannot be literal NULL at [1:15]`. |
+| IN UNNEST | Verified | [`syntax/in_unnest`](../corpus/bigquery/syntax/in_unnest.yaml) | |
+| IS DISTINCT FROM | Verified | [`conditional/is_distinct_from_null`](../corpus/bigquery/conditional/is_distinct_from_null.yaml) | |
+| IF, NULLIF, GREATEST, LEAST with NULL | Verified | [`conditional/if_null_condition`](../corpus/bigquery/conditional/if_null_condition.yaml)<br>[`conditional/nullif`](../corpus/bigquery/conditional/nullif.yaml)<br>[`conditional/greatest_null`](../corpus/bigquery/conditional/greatest_null.yaml)<br>[`conditional/least_null`](../corpus/bigquery/conditional/least_null.yaml) | |
+| COALESCE | Verified | [`backbone/float_literal_is_float64`](../corpus/bigquery/backbone/float_literal_is_float64.yaml) | Only as a literal argument in that case. |
+| String comparison order | Verified | [`string/string_compare_collation`](../corpus/bigquery/string/string_compare_collation.yaml) | `'B' < 'a'` is TRUE. |
+| NULL ordering in ORDER BY | Verified | [`ordering/null_ordering_asc`](../corpus/bigquery/ordering/null_ordering_asc.yaml)<br>[`ordering/null_ordering_desc`](../corpus/bigquery/ordering/null_ordering_desc.yaml) | |
+| Division by zero is an error for `/`, `DIV`, `MOD` | Verified | [`math/divide_by_zero_error`](../corpus/bigquery/math/divide_by_zero_error.yaml)<br>[`errors/div_by_zero_error`](../corpus/bigquery/errors/div_by_zero_error.yaml)<br>[`errors/mod_by_zero_error`](../corpus/bigquery/errors/mod_by_zero_error.yaml) | `division by zero: 1 / 0`; `division by zero: 5 / 0`; `division by zero: MOD(5, 0)`. |
+| `1 / RAND()` (non-deterministic divisor) | Not supported | [`test_volatile_divisor_is_unsupported`](../tests/unit/test_bq_errors_and_safe.py) | `Not supported by Crucible: a non-deterministic divisor in 1 / RAND()`. |
+
+### Math
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| ABS, POWER | Verified | [`math/abs`](../corpus/bigquery/math/abs.yaml)<br>[`math/power`](../corpus/bigquery/math/power.yaml) | |
+| ROUND: half away from zero, and ROUND(NUMERIC, n) | Verified | [`math/round_half`](../corpus/bigquery/math/round_half.yaml)<br>[`math/round_negative_half`](../corpus/bigquery/math/round_negative_half.yaml)<br>[`math/round_numeric`](../corpus/bigquery/math/round_numeric.yaml) | |
+| SAFE_DIVIDE | Verified | [`math/safe_divide_by_zero`](../corpus/bigquery/math/safe_divide_by_zero.yaml)<br>[`errors/safe_divide_by_zero_with_data`](../corpus/bigquery/errors/safe_divide_by_zero_with_data.yaml)<br>[`test_division_from_data_and_safe_divide`](../tests/unit/test_bq_errors_and_safe.py) | |
+| IEEE_DIVIDE: never raises | Verified | [`errors/ieee_divide_by_zero`](../corpus/bigquery/errors/ieee_divide_by_zero.yaml)<br>[`test_ieee_divide_never_raises`](../tests/unit/test_bq_errors_and_safe.py) | |
+
+### Strings
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| CONCAT | Verified | [`string/concat_null`](../corpus/bigquery/string/concat_null.yaml) | NULL in gives NULL out. |
+| LENGTH | Verified | [`string/length`](../corpus/bigquery/string/length.yaml) | |
+| LOWER | Partial | [`string/lower`](../corpus/bigquery/string/lower.yaml)<br>[`string/lower_dotted_capital_i`](../corpus/bigquery/string/lower_dotted_capital_i.yaml)<br>[`test_lower_uses_full_case_mapping_for_dotted_capital_i`](../tests/unit/test_bq_strings.py)<br>[`test_non_ascii_letters_without_multi_character_mapping`](../tests/unit/test_bq_strings.py) | Limit: LOWER of a capital sigma is refused: `Not supported by Crucible: LOWER of a capital sigma (its lowercase depends on context)`. Test: [`test_multi_character_case_mappings_are_unsupported`](../tests/unit/test_bq_strings.py). |
+| UPPER | Partial | [`string/upper`](../corpus/bigquery/string/upper.yaml)<br>[`test_multi_character_case_mappings_are_unsupported`](../tests/unit/test_bq_strings.py)<br>[`test_one_special_row_refuses_the_whole_column`](../tests/unit/test_bq_strings.py) | Known divergence: `UPPER('ß')` is refused with `Not supported by Crucible: UPPER of a character with a multi-character case mapping`. The refusal is explicit. A column with one such row fails the whole column. Nested calls are guarded too ([`test_a_nested_call_is_guarded_too`](../tests/unit/test_bq_strings.py)). |
+| INITCAP | Partial | [`string/initcap`](../corpus/bigquery/string/initcap.yaml)<br>[`test_multi_character_case_mappings_are_unsupported`](../tests/unit/test_bq_strings.py) | Limit: `INITCAP('ß')` is refused: `Not supported by Crucible: INITCAP of a character with a multi-character case mapping`. The delimiter argument has only an unverified corpus case. |
+| SPLIT | Verified | [`string/split`](../corpus/bigquery/string/split.yaml)<br>[`string/split_empty_string`](../corpus/bigquery/string/split_empty_string.yaml) | |
+| STARTS_WITH | Verified | [`string/starts_with`](../corpus/bigquery/string/starts_with.yaml) | |
+| SUBSTR | Verified | [`string/substr`](../corpus/bigquery/string/substr.yaml)<br>[`string/substr_negative_position`](../corpus/bigquery/string/substr_negative_position.yaml) | |
+| TRIM with optional characters | Verified | [`string/trim`](../corpus/bigquery/string/trim.yaml)<br>[`string/trim_characters`](../corpus/bigquery/string/trim_characters.yaml) | LTRIM and RTRIM are not covered. |
+| FORMAT with `%d`, `%s`, `%f`, `%.Nf`, `%i`, `%%` | Verified | [`string/format`](../corpus/bigquery/string/format.yaml)<br>[`string/format_float_two_places`](../corpus/bigquery/string/format_float_two_places.yaml)<br>[`string/format_integer_and_string`](../corpus/bigquery/string/format_integer_and_string.yaml)<br>[`string/format_null_argument`](../corpus/bigquery/string/format_null_argument.yaml)<br>[`test_format_substitutes_arguments`](../tests/unit/test_bq_strings.py)<br>[`test_format_float_defaults_to_six_decimals`](../tests/unit/test_bq_strings.py) | NULL argument gives NULL for that row. Also [`test_format_escaped_percent_is_one_percent`](../tests/unit/test_bq_strings.py) and [`test_format_i_is_decimal`](../tests/unit/test_bq_strings.py). |
+| FORMAT specifiers and argument types outside that set | Not supported | [`test_unsupported_specifiers_and_argument_types`](../tests/unit/test_bq_strings.py)<br>[`test_non_literal_format_string_is_unsupported`](../tests/unit/test_bq_strings.py)<br>[`test_format_numeric_that_needs_rounding_is_unsupported_at_run_time`](../tests/unit/test_bq_strings.py) | Exact messages: `FORMAT specifier '%5d'`, `FORMAT specifier '%F'`, `FORMAT specifier '%e'`, `FORMAT %d with a FLOAT64 argument`, `FORMAT %s with a INT64 argument`. A non-literal format string and a NUMERIC that needs rounding are also refused. |
+| TO_HEX of BYTES | Verified | [`string/to_hex`](../corpus/bigquery/string/to_hex.yaml) | Also used for hashes (see Hashing). |
+
+### Regular expressions
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| REGEXP_CONTAINS | Verified | [`regexp/regexp_contains`](../corpus/bigquery/regexp/regexp_contains.yaml) | |
+| REGEXP_EXTRACT | Partial | [`regexp/regexp_extract`](../corpus/bigquery/regexp/regexp_extract.yaml)<br>[`regexp/regexp_extract_group`](../corpus/bigquery/regexp/regexp_extract_group.yaml)<br>[`regexp/regexp_extract_no_match`](../corpus/bigquery/regexp/regexp_extract_no_match.yaml)<br>[`regexp/regexp_extract_empty_match`](../corpus/bigquery/regexp/regexp_extract_empty_match.yaml)<br>[`test_one_capturing_group_returns_the_match_of_the_pattern`](../tests/unit/test_bq_regexp.py) | Limits: the pattern must be a literal. `Not supported by Crucible: REGEXP_EXTRACT with a non-literal pattern` ([`test_a_pattern_from_a_column_is_unsupported`](../tests/unit/test_bq_regexp.py)). Position and occurrence arguments are refused, `Not supported by Crucible: REGEXP_EXTRACT with position/occurrence` ([`test_position_or_occurrence_is_unsupported`](../tests/unit/test_bq_regexp.py)). A pattern Python cannot parse is refused ([`test_a_pattern_python_cannot_parse_is_unsupported`](../tests/unit/test_bq_regexp.py)). More than one capturing group is an invalid query: `must not have more than 1 capturing group` ([`test_two_capturing_groups_are_an_invalid_query`](../tests/unit/test_bq_regexp.py)). No match is NULL; an empty match is an empty string. |
+| REGEXP_EXTRACT_ALL | Verified | [`regexp/regexp_extract_all`](../corpus/bigquery/regexp/regexp_extract_all.yaml) | |
+| REGEXP_REPLACE, including `\1` backreferences | Verified | [`regexp/regexp_replace_all`](../corpus/bigquery/regexp/regexp_replace_all.yaml)<br>[`regexp/regexp_replace_backreference`](../corpus/bigquery/regexp/regexp_replace_backreference.yaml) | |
+| REGEXP_SUBSTR | Partial | [`test_regexp_substr_is_the_same_function`](../tests/unit/test_bq_regexp.py) | Same function as REGEXP_EXTRACT, so the same limits apply. No corpus case. |
+| Match semantics: whole match, non-capturing groups, NULL subject | Tested | [`test_whole_match`](../tests/unit/test_bq_regexp.py)<br>[`test_non_capturing_group_is_allowed`](../tests/unit/test_bq_regexp.py)<br>[`test_null_subject_is_null`](../tests/unit/test_bq_regexp.py)<br>[`test_no_match_is_null`](../tests/unit/test_bq_regexp.py) | |
+
+### Dates, times and timestamps
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| DATE_ADD, DATE_SUB, DATE_DIFF, DATE_TRUNC (month, week), DATE(y, m, d), DATE(timestamp) | Verified | [`date_time/date_add_month_end`](../corpus/bigquery/date_time/date_add_month_end.yaml)<br>[`date_time/date_diff_month`](../corpus/bigquery/date_time/date_diff_month.yaml)<br>[`date_time/date_trunc_month`](../corpus/bigquery/date_time/date_trunc_month.yaml)<br>[`date_time/date_trunc_week`](../corpus/bigquery/date_time/date_trunc_week.yaml)<br>[`date_time/date_from_parts`](../corpus/bigquery/date_time/date_from_parts.yaml)<br>[`date_time/date_from_timestamp`](../corpus/bigquery/date_time/date_from_timestamp.yaml) | Month-end clamping is covered by `date_add_month_end`. |
+| DATETIME_DIFF, DATETIME_SUB, DATETIME(timestamp) | Verified | [`date_time/datetime_diff_day_across_midnight`](../corpus/bigquery/date_time/datetime_diff_day_across_midnight.yaml)<br>[`date_time/datetime_sub_day`](../corpus/bigquery/date_time/datetime_sub_day.yaml)<br>[`date_time/datetime_from_timestamp`](../corpus/bigquery/date_time/datetime_from_timestamp.yaml) | |
+| TIMESTAMP_ADD, TIMESTAMP_SUB, TIMESTAMP_DIFF | Verified | [`date_time/timestamp_add_minute`](../corpus/bigquery/date_time/timestamp_add_minute.yaml)<br>[`date_time/timestamp_sub_hour`](../corpus/bigquery/date_time/timestamp_sub_hour.yaml)<br>[`date_time/timestamp_diff_hour`](../corpus/bigquery/date_time/timestamp_diff_hour.yaml)<br>[`date_time/timestamp_diff_day`](../corpus/bigquery/date_time/timestamp_diff_day.yaml) | |
+| GENERATE_DATE_ARRAY | Verified | [`date_time/generate_date_array`](../corpus/bigquery/date_time/generate_date_array.yaml) | |
+| EXTRACT(DAYOFWEEK) and EXTRACT(WEEK) (Sunday start) | Verified | [`date_time/extract_dayofweek`](../corpus/bigquery/date_time/extract_dayofweek.yaml)<br>[`date_time/extract_week_sunday_start`](../corpus/bigquery/date_time/extract_week_sunday_start.yaml)<br>[`test_dayofweek_sunday_is_one`](../tests/unit/test_bq_dates.py)<br>[`test_week_starts_on_sunday`](../tests/unit/test_bq_dates.py) | |
+| ISOWEEK and ISOYEAR | Tested | [`test_isoweek_and_isoyear_match_iso_8601`](../tests/unit/test_bq_dates.py)<br>[`test_isoweek_and_isoyear_of_the_year_boundary_cases`](../tests/unit/test_bq_dates.py) | No corpus case. |
+| EXTRACT(WEEK(<weekday>)) | Not supported | [`test_week_with_a_weekday_is_unsupported`](../tests/unit/test_bq_dates.py) | `Not supported by Crucible: EXTRACT(WEEK(<weekday>))`. The same WEEK(MONDAY) form inside DATE_TRUNC is accepted and gives the right value. |
+| Date part names outside the supported set | Not supported | [`test_an_unsupported_date_part_is_an_invalid_query`](../tests/unit/test_bq_dates.py) | Invalid query, not an unsupported refusal. |
+| FORMAT_DATE, FORMAT_DATETIME, FORMAT_TIMESTAMP | Partial | [`date_time/format_date`](../corpus/bigquery/date_time/format_date.yaml)<br>[`test_format_without_a_dash_element_is_unchanged`](../tests/unit/test_bq_dates.py)<br>[`test_format_timestamp_applies_the_zone`](../tests/unit/test_bq_dates.py)<br>[`test_format_null_value_is_null`](../tests/unit/test_bq_dates.py) | Limits: `%-` elements are refused, e.g. `Not supported by Crucible: format element %-d` ([`test_percent_dash_elements_are_refused`](../tests/unit/test_bq_dates.py); [`test_other_percent_dash_elements_are_refused`](../tests/unit/test_bq_dates.py)). `%e` is a known divergence: [`date_time/format_date_space_padded_day`](../corpus/bigquery/date_time/format_date_space_padded_day.yaml) is tagged known-divergence and refused as `format element %-d`. FORMAT_DATE and FORMAT_DATETIME with a third (zone) argument are invalid queries ([`test_format_date_and_datetime_with_a_third_argument_are_invalid_queries`](../tests/unit/test_bq_dates.py)). `%Z` and `%z` with a zone argument are refused ([`test_zone_names_and_offsets_with_a_zone_are_unsupported`](../tests/unit/test_bq_dates.py)). |
+| PARSE_DATE | Verified | [`cast_string/cast_string_parse_date_compact`](../corpus/bigquery/cast_string/cast_string_parse_date_compact.yaml)<br>[`cast_string/cast_string_parse_date_year_month`](../corpus/bigquery/cast_string/cast_string_parse_date_year_month.yaml)<br>[`date_time/parse_date`](../corpus/bigquery/date_time/parse_date.yaml)<br>[`cast_string/cast_string_parse_date_invalid_day_error`](../corpus/bigquery/cast_string/cast_string_parse_date_invalid_day_error.yaml) | Invalid day is an error: `Out-of-range datetime field in parsing function`. |
+| PARSE_TIMESTAMP with a zone argument | Partial | [`test_parse_timestamp_reads_the_wall_clock_in_the_zone`](../tests/unit/test_bq_dates.py)<br>[`test_parse_timestamp_with_an_offset_element_and_a_zone_is_unsupported`](../tests/unit/test_bq_dates.py) | Limit: an offset element together with a zone argument is refused: `with a time zone argument`. No corpus case. |
+| TIMESTAMP(string) and TIMESTAMP(string, zone) | Partial | [`date_time/timestamp_from_string`](../corpus/bigquery/date_time/timestamp_from_string.yaml)<br>[`test_timestamp_of_a_plain_string_applies_the_zone`](../tests/unit/test_bq_dates.py)<br>[`test_timestamp_of_a_string_with_an_offset_is_unsupported_at_run_time`](../tests/unit/test_bq_dates.py) | Limit: a string with an offset or zone name is refused at run time: `offset or zone name`. CAST of such strings works (see CAST). |
+| STRING(timestamp, zone) | Not supported | [`test_string_of_a_timestamp_with_a_zone_is_unsupported`](../tests/unit/test_bq_dates.py) | Refused with the `STRING(timestamp, time_zone)` construct in the message. |
+| Zone conversions for the TIMESTAMP and DATETIME functions | Tested | [`test_zone_conversions_match_zoneinfo`](../tests/unit/test_bq_dates.py) | Checked against Python's zoneinfo, not BigQuery. |
+| CURRENT_DATE, CURRENT_DATETIME, with and without a zone | Tested | [`test_current_date_with_a_zone_is_the_local_date`](../tests/unit/test_bq_dates.py)<br>[`test_current_datetime_without_a_zone_is_utc`](../tests/unit/test_bq_dates.py)<br>[`test_current_datetime_is_now_in_the_zone`](../tests/unit/test_bq_dates.py) | |
+| NULL input gives NULL for date and time functions | Tested | [`test_null_input_is_null`](../tests/unit/test_bq_dates.py)<br>[`test_dayofweek_null_is_null`](../tests/unit/test_bq_dates.py)<br>[`test_isoweek_null_is_null`](../tests/unit/test_bq_dates.py) | |
+
+### JSON
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| PARSE_JSON and TO_JSON_STRING of STRUCT, ARRAY and scalar values | Verified | [`json/parse_json`](../corpus/bigquery/json/parse_json.yaml)<br>[`json/to_json_string`](../corpus/bigquery/json/to_json_string.yaml)<br>[`json/to_json_string_null`](../corpus/bigquery/json/to_json_string_null.yaml)<br>[`json/to_json_string_bytes`](../corpus/bigquery/json/to_json_string_bytes.yaml)<br>[`json/to_json_string_struct_field_case`](../corpus/bigquery/json/to_json_string_struct_field_case.yaml) | Struct field names keep their case. |
+| TO_JSON_STRING formatting of DATETIME, TIME and TIMESTAMP fractions (0, 3, 6 digits, trailing zeros dropped) | Verified | [`json/to_json_string_datetime`](../corpus/bigquery/json/to_json_string_datetime.yaml)<br>[`json/to_json_string_datetime_fraction_123456`](../corpus/bigquery/json/to_json_string_datetime_fraction_123456.yaml)<br>[`json/to_json_string_time`](../corpus/bigquery/json/to_json_string_time.yaml)<br>[`json/to_json_string_time_fraction_5`](../corpus/bigquery/json/to_json_string_time_fraction_5.yaml)<br>[`json/to_json_string_timestamp_fraction`](../corpus/bigquery/json/to_json_string_timestamp_fraction.yaml)<br>[`json/to_json_string_timestamp_fraction_000001`](../corpus/bigquery/json/to_json_string_timestamp_fraction_000001.yaml) | |
+| TO_JSON_STRING of NUMERIC | Verified | [`json/to_json_string_numeric`](../corpus/bigquery/json/to_json_string_numeric.yaml)<br>[`json/to_json_string_numeric_integer`](../corpus/bigquery/json/to_json_string_numeric_integer.yaml)<br>[`json/to_json_string_numeric_large`](../corpus/bigquery/json/to_json_string_numeric_large.yaml)<br>[`json/to_json_string_numeric_tiny`](../corpus/bigquery/json/to_json_string_numeric_tiny.yaml) | |
+| TO_JSON_STRING of NaN and infinity | Verified | [`json/to_json_string_nan_infinity`](../corpus/bigquery/json/to_json_string_nan_infinity.yaml) | |
+| JSON_VALUE (scalar, object, string), JSON_VALUE_ARRAY | Verified | [`json/json_value_string`](../corpus/bigquery/json/json_value_string.yaml)<br>[`json/json_value_number`](../corpus/bigquery/json/json_value_number.yaml)<br>[`json/json_value_object`](../corpus/bigquery/json/json_value_object.yaml)<br>[`json/json_value_array`](../corpus/bigquery/json/json_value_array.yaml) | |
+| JSON_EXTRACT_ARRAY, JSON_QUERY_ARRAY | Verified | [`json/json_extract_array`](../corpus/bigquery/json/json_extract_array.yaml)<br>[`json/json_query_array`](../corpus/bigquery/json/json_query_array.yaml) | |
+| JSON_TYPE | Verified | [`json/json_type_all_kinds`](../corpus/bigquery/json/json_type_all_kinds.yaml)<br>[`json/json_type_array`](../corpus/bigquery/json/json_type_array.yaml)<br>[`json/json_type_number`](../corpus/bigquery/json/json_type_number.yaml) | |
+| JSON column type and JSON literal (`JSON '...'`) | Verified | [`backbone/insert_and_select_types`](../corpus/bigquery/backbone/insert_and_select_types.yaml)<br>[`json/json_type_all_kinds`](../corpus/bigquery/json/json_type_all_kinds.yaml) | |
+| JSON value kinds and NULL handling in tables | Tested | [`test_each_json_kind`](../tests/unit/test_bq_json.py)<br>[`test_json_null_literal_is_null_not_sql_null`](../tests/unit/test_bq_json.py)<br>[`test_sql_null_in_a_table_gives_null_per_row`](../tests/unit/test_bq_json.py) | |
+| Unmapped JSON type names from DuckDB | Tested | [`test_unmapped_names_raise_naming_the_json_type`](../tests/unit/test_bq_json.py)<br>[`test_every_name_duckdb_reports_is_mapped`](../tests/unit/test_bq_json.py) | Refused with a message naming the type. |
+| SAFE.PARSE_JSON: NULL on invalid input | Verified | [`json/safe_parse_json`](../corpus/bigquery/json/safe_parse_json.yaml)<br>[`errors/safe_parse_json_valid`](../corpus/bigquery/errors/safe_parse_json_valid.yaml) | |
+
+### Arrays and UNNEST
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| ARRAY_CONCAT and array `||` | Verified | [`array/array_concat`](../corpus/bigquery/array/array_concat.yaml)<br>[`backbone/array_concat_operator_type`](../corpus/bigquery/backbone/array_concat_operator_type.yaml)<br>[`test_array_concat_operator_keeps_array_type`](../tests/unit/test_bigquery_backbone.py) | |
+| ARRAY_LENGTH, including NULL input | Verified | [`array/array_length`](../corpus/bigquery/array/array_length.yaml)<br>[`array/array_length_null`](../corpus/bigquery/array/array_length_null.yaml)<br>[`errors/null_array_length_is_null`](../corpus/bigquery/errors/null_array_length_is_null.yaml) | |
+| ARRAY_TO_STRING, with NULL element and NULL-text argument | Verified | [`array/array_to_string`](../corpus/bigquery/array/array_to_string.yaml)<br>[`array/array_to_string_null_text`](../corpus/bigquery/array/array_to_string_null_text.yaml) | |
+| GENERATE_ARRAY | Verified | [`array/generate_array`](../corpus/bigquery/array/generate_array.yaml) | |
+| ARRAY(subquery) | Verified | [`array/array_subquery`](../corpus/bigquery/array/array_subquery.yaml) | |
+| Subscripts: OFFSET, SAFE_OFFSET, ORDINAL, SAFE_ORDINAL | Verified | [`array/offset_zero`](../corpus/bigquery/array/offset_zero.yaml)<br>[`array/safe_offset_out_of_range`](../corpus/bigquery/array/safe_offset_out_of_range.yaml)<br>[`errors/ordinal_out_of_range`](../corpus/bigquery/errors/ordinal_out_of_range.yaml)<br>[`errors/safe_ordinal_out_of_range`](../corpus/bigquery/errors/safe_ordinal_out_of_range.yaml)<br>[`test_offset_and_ordinal_in_range`](../tests/unit/test_bq_errors_and_safe.py) | Out of range: `Array index 5 is out of bounds (overflow)`. Negative: `Array index -1 is out of bounds (underflow)` ([`errors/offset_negative`](../corpus/bigquery/errors/offset_negative.yaml)). |
+| Array with a NULL element: error when the result is written | Verified | [`errors/array_with_null_element_in_result`](../corpus/bigquery/errors/array_with_null_element_in_result.yaml)<br>[`aggregate/array_agg_null_element`](../corpus/bigquery/aggregate/array_agg_null_element.yaml)<br>[`test_null_element_in_a_result_array_raises`](../tests/unit/test_bq_errors_and_safe.py) | `Array cannot have a null element; error in writing field v`. |
+| NULL arrays: written and read back as empty arrays | Verified | [`errors/null_array_in_result_is_empty`](../corpus/bigquery/errors/null_array_in_result_is_empty.yaml)<br>[`errors/null_array_in_struct_is_empty`](../corpus/bigquery/errors/null_array_in_struct_is_empty.yaml)<br>[`test_null_arrays_are_written_as_empty_arrays`](../tests/unit/test_bq_errors_and_safe.py)<br>[`test_stored_null_arrays_read_back_empty`](../tests/unit/test_bq_errors_and_safe.py) | |
+| UNNEST of data arrays, with and without alias, with WITH OFFSET | Verified | [`unnest/unnest_with_offset_from_data`](../corpus/bigquery/unnest/unnest_with_offset_from_data.yaml)<br>[`syntax/unnest_with_offset`](../corpus/bigquery/syntax/unnest_with_offset.yaml)<br>[`syntax/unnest_struct_no_alias`](../corpus/bigquery/syntax/unnest_struct_no_alias.yaml)<br>[`test_unnest_with_offset_is_zero_based_int64`](../tests/unit/test_bq_arrays_unnest.py)<br>[`test_unnest_with_bare_offset_names_it_offset`](../tests/unit/test_bq_arrays_unnest.py) | Offset is zero-based INT64. |
+| UNNEST of arrays of STRUCTs, aliased and cross join | Verified | [`unnest/unnest_struct_array_aliased`](../corpus/bigquery/unnest/unnest_struct_array_aliased.yaml)<br>[`unnest/unnest_struct_array_cross_join`](../corpus/bigquery/unnest/unnest_struct_array_cross_join.yaml)<br>[`test_unaliased_unnest_of_structs_exposes_fields`](../tests/unit/test_bq_arrays_unnest.py) | |
+| LEFT JOIN UNNEST, with and without WITH OFFSET; alias wins over a joined column | Verified | [`unnest/unnest_alias_wins_over_joined_column`](../corpus/bigquery/unnest/unnest_alias_wins_over_joined_column.yaml)<br>[`test_left_join_unnest_with_offset_keeps_empty_arrays`](../tests/unit/test_bq_arrays_unnest.py)<br>[`test_unnest_alias_wins_over_joined_column`](../tests/unit/test_bq_arrays_unnest.py) | |
+| UNNEST WITH OFFSET over an array of STRUCTs | Not supported | [`test_unnest_with_offset_over_struct_array_is_unsupported`](../tests/unit/test_bq_arrays_unnest.py) | `Not supported by Crucible: UNNEST WITH OFFSET over an array of STRUCTs`. |
+| Scalar UNNEST WITH OFFSET with no FROM | Tested | [`test_unnest_expression_with_offset_without_alias`](../tests/unit/test_bq_arrays_unnest.py) | |
+
+### Structs
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| STRUCT literal and typed STRUCT constructor, field access (`x.m`) | Verified | [`backbone/insert_and_select_types`](../corpus/bigquery/backbone/insert_and_select_types.yaml)<br>[`unnest/unnest_struct_array_aliased`](../corpus/bigquery/unnest/unnest_struct_array_aliased.yaml)<br>[`json/to_json_string_struct_field_case`](../corpus/bigquery/json/to_json_string_struct_field_case.yaml) | Typed form: `STRUCT<Ab INT64>(2)`. |
+| STRUCT results and NULL struct fields | Verified | [`errors/null_array_in_struct_is_empty`](../corpus/bigquery/errors/null_array_in_struct_is_empty.yaml) | |
+
+### Aggregates
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| ANY_VALUE | Verified | [`aggregate/any_value`](../corpus/bigquery/aggregate/any_value.yaml) | |
+| COUNTIF | Verified | [`aggregate/countif`](../corpus/bigquery/aggregate/countif.yaml) | |
+| COUNT(*) with GROUP BY ordinal | Verified | [`aggregate/group_by_ordinal`](../corpus/bigquery/aggregate/group_by_ordinal.yaml) | |
+| STRING_AGG with ORDER BY | Verified | [`aggregate/string_agg`](../corpus/bigquery/aggregate/string_agg.yaml) | |
+| ARRAY_AGG: empty input, IGNORE NULLS, DISTINCT, ORDER BY, LIMIT, OFFSET | Verified | [`aggregate/array_agg_empty_input`](../corpus/bigquery/aggregate/array_agg_empty_input.yaml)<br>[`aggregate/array_agg_ignore_nulls`](../corpus/bigquery/aggregate/array_agg_ignore_nulls.yaml)<br>[`aggregate/array_agg_ignore_nulls_distinct`](../corpus/bigquery/aggregate/array_agg_ignore_nulls_distinct.yaml)<br>[`aggregate/array_agg_order_limit`](../corpus/bigquery/aggregate/array_agg_order_limit.yaml)<br>[`aggregate/array_agg_ignore_nulls_order_limit_offset`](../corpus/bigquery/aggregate/array_agg_ignore_nulls_order_limit_offset.yaml)<br>[`test_array_agg_distinct_ignore_nulls`](../tests/unit/test_bq_arrays_unnest.py)<br>[`test_array_agg_order_by_limit`](../tests/unit/test_bq_arrays_unnest.py) | |
+| ARRAY_AGG with LIMIT used as a window function | Not supported | [`test_array_agg_limit_as_window_function_is_unsupported`](../tests/unit/test_bq_arrays_unnest.py) | `Not supported by Crucible: ARRAY_AGG with LIMIT as a window function`. |
+| SUM over INT64: INT64 result; overflow is an error | Verified | [`backbone/sum_int64_is_int64`](../corpus/bigquery/backbone/sum_int64_is_int64.yaml)<br>[`backbone/sum_int64_overflow_error`](../corpus/bigquery/backbone/sum_int64_overflow_error.yaml)<br>[`test_sum_int64_is_int64_not_hugeint`](../tests/unit/test_bigquery_backbone.py) | `Error in SUM aggregation: integer overflow`. |
+| SAFE. prefix on an aggregate | Not supported | [`test_safe_prefix_on_aggregate_is_unsupported`](../tests/unit/test_bq_errors_and_safe.py) | `Not supported by Crucible: SAFE. on an aggregate: SAFE.SUM(...)`. |
+
+### Window functions
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| LAG | Verified | [`window/lag`](../corpus/bigquery/window/lag.yaml) | |
+| LAST_VALUE(x IGNORE NULLS) with an explicit ROWS frame | Verified | [`window/last_value_ignore_nulls`](../corpus/bigquery/window/last_value_ignore_nulls.yaml) | |
+| ROW_NUMBER, used in QUALIFY | Verified | [`syntax/qualify`](../corpus/bigquery/syntax/qualify.yaml) | Other uses of ROW_NUMBER are not checked by a test. |
+| ARRAY_AGG with LIMIT as a window function | Not supported | [`test_array_agg_limit_as_window_function_is_unsupported`](../tests/unit/test_bq_arrays_unnest.py) | `Not supported by Crucible: ARRAY_AGG with LIMIT as a window function`. |
+
+### Query syntax
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| QUALIFY | Verified | [`syntax/qualify`](../corpus/bigquery/syntax/qualify.yaml) | |
+| SELECT * EXCEPT | Verified | [`syntax/select_star_except`](../corpus/bigquery/syntax/select_star_except.yaml) | |
+| SELECT * REPLACE | Verified | [`syntax/select_star_replace`](../corpus/bigquery/syntax/select_star_replace.yaml) | |
+| Subquery inside ARRAY() | Verified | [`array/array_subquery`](../corpus/bigquery/array/array_subquery.yaml) | |
+| UNION ALL, with column names and types from the first query | Tested | [`test_union_takes_names_and_types_from_annotation`](../tests/unit/test_bigquery_backbone.py)<br>[`test_empty_array_in_a_set_operation_takes_the_typed_side`](../tests/unit/test_bigquery_backbone.py) | |
+| GROUP BY ordinal | Verified | [`aggregate/group_by_ordinal`](../corpus/bigquery/aggregate/group_by_ordinal.yaml) | |
+| Reserved keyword as an alias is a syntax error | Verified | [`syntax/reserved_keyword_alias_error`](../corpus/bigquery/syntax/reserved_keyword_alias_error.yaml) | `Syntax error: Unexpected keyword BY at [1:13]`. |
+| Syntax errors carry a location | Tested | [`test_syntax_error_has_location`](../tests/unit/test_bigquery_backbone.py) | |
+| Unknown column name | Tested | [`test_unknown_column_is_invalid_query`](../tests/unit/test_bigquery_backbone.py) | `Unrecognized name: nope`. |
+| Dataset that does not exist | Tested | [`test_missing_dataset_is_not_found`](../tests/unit/test_bigquery_backbone.py) | Not found. |
+| Leading `/* {json} */` comment (dbt) | Verified | [`statements/leading_json_comment`](../corpus/bigquery/statements/leading_json_comment.yaml)<br>[`test_leading_json_comment`](../tests/unit/test_bq_statements.py) | |
+| `IN UNNEST`, `FROM UNNEST` | Verified | [`syntax/in_unnest`](../corpus/bigquery/syntax/in_unnest.yaml)<br>[`unnest/unnest_struct_array_aliased`](../corpus/bigquery/unnest/unnest_struct_array_aliased.yaml) | |
+| INFORMATION_SCHEMA views | Not supported | [`test_out_of_scope_constructs_raise_unsupported`](../tests/unit/test_bigquery_backbone.py) | `Not supported by Crucible: INFORMATION_SCHEMA`. |
+| Wildcard tables, e.g. `` `ds.t_*` `` | Not supported | [`test_out_of_scope_constructs_raise_unsupported`](../tests/unit/test_bigquery_backbone.py) | `Not supported by Crucible: wildcard table` `` `ds.t_*` `` (and the project-qualified form). |
+| FOR SYSTEM_TIME AS OF (time travel) | Not supported | [`test_out_of_scope_constructs_raise_unsupported`](../tests/unit/test_bigquery_backbone.py) | `Not supported by Crucible: FOR SYSTEM_TIME AS OF`. |
+| BigQuery ML (`ML.PREDICT` and other `ML.` functions) | Not supported | no test yet | Refused, but the error is a generic name or table error, not yet a `Not supported by Crucible` message. |
+| HLL_COUNT functions | Not supported | no test yet | `Not supported by Crucible: function INIT`. |
+| RANGE type and `RANGE(...)` constructor | Not supported | no test yet | Refused, but with a raw DuckDB error, not yet a `Not supported by Crucible` message. |
+| ST_GEOGPOINT | Not supported | [`test_out_of_scope_constructs_raise_unsupported`](../tests/unit/test_bigquery_backbone.py) | `Not supported by Crucible: function ST_GEOGPOINT`. |
+
+### Hashing
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| MD5, SHA256 with TO_HEX | Verified | [`hash/to_hex_md5`](../corpus/bigquery/hash/to_hex_md5.yaml)<br>[`hash/to_hex_sha256`](../corpus/bigquery/hash/to_hex_sha256.yaml) | |
+| SHA512 | Not supported | no test yet | Refused with a DuckDB message (`DuckDB only supports SHA256 hashing algorithm`). |
+| FARM_FINGERPRINT | Not supported | [`hash/farm_fingerprint`](../corpus/bigquery/hash/farm_fingerprint.yaml)<br>[`test_farm_fingerprint_is_unsupported_at_plan_time`](../tests/unit/test_bq_strings.py) | Known divergence. The function is refused today: `Not supported by Crucible: FARM_FINGERPRINT`. |
+
+### Errors and SAFE. prefix
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| Division by zero is a runtime error | Verified | [`errors/division_by_zero_from_data`](../corpus/bigquery/errors/division_by_zero_from_data.yaml)<br>[`errors/div_by_zero_error`](../corpus/bigquery/errors/div_by_zero_error.yaml)<br>[`test_division_by_zero_raises`](../tests/unit/test_bq_errors_and_safe.py) | `division by zero: 1 / 0`. |
+| INT64 multiplication overflow is an error | Verified | [`errors/int64_multiplication_overflow`](../corpus/bigquery/errors/int64_multiplication_overflow.yaml)<br>[`test_int64_overflow_uses_bigquery_wording`](../tests/unit/test_bq_errors_and_safe.py) | `Integer Overflow`. |
+| Array index out of range is a runtime error | Verified | [`array/offset_out_of_range`](../corpus/bigquery/array/offset_out_of_range.yaml)<br>[`errors/offset_negative`](../corpus/bigquery/errors/offset_negative.yaml)<br>[`test_offset_out_of_range_raises`](../tests/unit/test_bq_errors_and_safe.py) | `Array index 5 is out of bounds (overflow)`. |
+| SAFE. prefix suppresses a function's own error | Verified | [`errors/safe_prefix_suppresses_function_error`](../corpus/bigquery/errors/safe_prefix_suppresses_function_error.yaml)<br>[`test_safe_prefix_suppresses_the_functions_own_error`](../tests/unit/test_bq_errors_and_safe.py) | `SAFE.LOG(-1)` gives NULL. |
+| SAFE. prefix does not suppress errors from its arguments | Verified | [`errors/safe_prefix_keeps_argument_error`](../corpus/bigquery/errors/safe_prefix_keeps_argument_error.yaml)<br>[`test_safe_prefix_keeps_errors_from_arguments`](../tests/unit/test_bq_errors_and_safe.py) | `SAFE.LOG(1 / 0)` still raises `division by zero`. |
+| Nested SAFE. | Tested | [`test_nested_safe`](../tests/unit/test_bq_errors_and_safe.py)<br>[`test_nested_checks_are_applied`](../tests/unit/test_bq_errors_and_safe.py) | |
+| SAFE_OFFSET, SAFE_ORDINAL | Verified | [`array/safe_offset_out_of_range`](../corpus/bigquery/array/safe_offset_out_of_range.yaml)<br>[`errors/safe_ordinal_out_of_range`](../corpus/bigquery/errors/safe_ordinal_out_of_range.yaml) | |
+| SAFE_DIVIDE, SAFE_CAST, SAFE.PARSE_JSON | Verified | [`math/safe_divide_by_zero`](../corpus/bigquery/math/safe_divide_by_zero.yaml)<br>[`cast/safe_cast_float`](../corpus/bigquery/cast/safe_cast_float.yaml)<br>[`json/safe_parse_json`](../corpus/bigquery/json/safe_parse_json.yaml) | |
+| Recorded runtime error messages | Tested | [`test_recorded_runtime_messages`](../tests/unit/test_bq_errors_and_safe.py)<br>[`test_recorded_string_casts`](../tests/unit/test_bq_errors_and_safe.py) | Messages are compared as substrings. |
+| Integer overflow in SUM | Verified | [`backbone/sum_int64_overflow_error`](../corpus/bigquery/backbone/sum_int64_overflow_error.yaml) | `Error in SUM aggregation: integer overflow`. |
+
+### Scripting and unsupported statements
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| DECLARE | Not supported | [`test_out_of_scope_constructs_raise_unsupported`](../tests/unit/test_bigquery_backbone.py) | `Not supported by Crucible: DECLARE statement`. |
+| BEGIN ... END | Not supported | no test yet | `Not supported by Crucible: BEGIN statement`. |
+| CREATE TEMP FUNCTION, CREATE FUNCTION | Not supported | [`test_options_that_would_change_results_are_unsupported`](../tests/unit/test_bq_statements.py) | `Not supported by Crucible: CREATE FUNCTION`. |
+| CREATE TEMP TABLE | Not supported | [`test_options_that_would_change_results_are_unsupported`](../tests/unit/test_bq_statements.py) | `Not supported by Crucible: CREATE TEMP TABLE (BigQuery scripting)`. |
+
+### DDL and DML
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| CREATE TABLE with BigQuery column types; CTAS keeps types | Verified | [`backbone/ctas_types`](../corpus/bigquery/backbone/ctas_types.yaml)<br>[`test_ctas_stores_bigquery_types_and_records_properties`](../tests/unit/test_bigquery_backbone.py) | |
+| CREATE TABLE OPTIONS (e.g. description) | Partial | [`test_create_table_options_are_accepted`](../tests/unit/test_bigquery_backbone.py)<br>[`test_properties_are_recorded_replaced_and_cleared`](../tests/unit/test_bq_statements.py) | Limit: options are recorded as table properties, not applied. Options that would change results are refused (next rows). |
+| Options that would change results: `require_partition_filter`, `PARTITION BY _PARTITIONDATE`, and similar | Not supported | [`test_options_that_would_change_results_are_unsupported`](../tests/unit/test_bq_statements.py) | `Not supported by Crucible: OPTIONS(require_partition_filter = TRUE)`; `Not supported by Crucible: ingestion-time partitioning`. |
+| CTAS with PARTITION BY, CLUSTER BY and OPTIONS | Verified | [`statements/ctas_month_partition`](../corpus/bigquery/statements/ctas_month_partition.yaml)<br>[`statements/ctas_range_bucket_partition`](../corpus/bigquery/statements/ctas_range_bucket_partition.yaml)<br>[`statements/ctas_partition_cluster_options`](../corpus/bigquery/statements/ctas_partition_cluster_options.yaml)<br>[`test_ctas_records_partition_cluster_and_options`](../tests/unit/test_bq_statements.py) | Partitioning and clustering are recorded as properties. They do not change query results. Columns must exist: [`test_partition_and_cluster_columns_must_exist`](../tests/unit/test_bq_statements.py). |
+| Partitioning and clustering reported as table metadata | Tested | [`test_partitioning_and_clustering_are_reported`](../tests/unit/test_bq_partitioning.py) | |
+| CREATE SCHEMA, IF NOT EXISTS, already-exists error | Tested | [`test_create_schema`](../tests/unit/test_bq_statements.py) | `ALREADY_EXISTS` kind. |
+| Dataset names differing only by case | Not supported | [`test_create_schema`](../tests/unit/test_bq_statements.py) | `Not supported by Crucible: dataset Other next to other: names that differ only by case`. |
+| CREATE VIEW with OPTIONS | Verified | [`statements/view_with_options`](../corpus/bigquery/statements/view_with_options.yaml)<br>[`test_view_with_options`](../tests/unit/test_bq_statements.py) | |
+| CREATE SNAPSHOT TABLE | Not supported | no test yet | `Not supported by Crucible: CREATE statement`. |
+| INSERT VALUES with coercion (INT64 into FLOAT64) | Verified | [`backbone/insert_int64_into_float64_coerces`](../corpus/bigquery/backbone/insert_int64_into_float64_coerces.yaml)<br>[`backbone/insert_string_literal_into_date`](../corpus/bigquery/backbone/insert_string_literal_into_date.yaml)<br>[`test_insert_coerces_like_bigquery`](../tests/unit/test_bigquery_backbone.py)<br>[`test_insert_reports_rowcount`](../tests/unit/test_bigquery_backbone.py) | |
+| INSERT refuses a type mismatch | Verified | [`backbone/insert_float_into_int64_error`](../corpus/bigquery/backbone/insert_float_into_int64_error.yaml)<br>[`statements/insert_int64_array_into_float64_array`](../corpus/bigquery/statements/insert_int64_array_into_float64_array.yaml)<br>[`test_insert_refuses_float_into_int64`](../tests/unit/test_bigquery_backbone.py) | `Value has type FLOAT64 which cannot be inserted into column a, which has type INT64`. |
+| MERGE with keyed updates and inserts | Verified | [`statements/merge_keyed_updates_and_inserts`](../corpus/bigquery/statements/merge_keyed_updates_and_inserts.yaml)<br>[`statements/merge_on_false_inserts`](../corpus/bigquery/statements/merge_on_false_inserts.yaml)<br>[`test_dbt_keyed_merge`](../tests/unit/test_bq_statements.py) | |
+| MERGE duplicate source match is an error and changes nothing | Verified | [`statements/merge_duplicate_source_match_error`](../corpus/bigquery/statements/merge_duplicate_source_match_error.yaml)<br>[`test_merge_duplicate_source_match_raises_and_changes_nothing`](../tests/unit/test_bq_statements.py) | `UPDATE/MERGE must match at most one source row for each target row`. |
+| MERGE conditions, WHEN MATCHED DELETE, no WHEN MATCHED clause, assignment type checks | Tested | [`test_merge_conditions_and_delete`](../tests/unit/test_bq_statements.py)<br>[`test_merge_without_matched_clause_allows_duplicates`](../tests/unit/test_bq_statements.py)<br>[`test_merge_checks_assignment_types`](../tests/unit/test_bq_statements.py) | |
+| UPDATE | Not supported | no test yet | `Not supported by Crucible: UPDATE statement`. Only MERGE can update rows. |
+| DELETE | Not supported | no test yet | `Not supported by Crucible: DELETE statement`. |
+| TRUNCATE TABLE | Not supported | no test yet | `Not supported by Crucible: TRUNCATETABLE statement`. |
+| ALTER TABLE ADD COLUMN IF NOT EXISTS; SET OPTIONS | Verified | [`statements/alter_table_add_column_if_not_exists`](../corpus/bigquery/statements/alter_table_add_column_if_not_exists.yaml)<br>[`statements/alter_table_set_options`](../corpus/bigquery/statements/alter_table_set_options.yaml)<br>[`test_alter_table`](../tests/unit/test_bq_statements.py) | Empty SET OPTIONS() is accepted. |
+| DROP TABLE, and then reads fail | Verified | [`statements/drop_table_then_select`](../corpus/bigquery/statements/drop_table_then_select.yaml)<br>[`test_drop`](../tests/unit/test_bq_statements.py) | `Not found: Table`. |
+| EXPORT DATA | Not supported | no test yet | `Not supported by Crucible: EXPORT statement`. |
+| LOAD DATA | Not supported | no test yet | `Not supported by Crucible: LOADDATA statement`. Use a load job over the REST API instead (see CSV load jobs). |
+
+## REST API, loads and clients
+
+### REST: jobs and queries
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| `jobs.insert`, query job (CTAS, SELECT, DML) | Verified | [`01_jobs_insert_ctas.json`](../tests/fixtures/bigquery_api/01_jobs_insert_ctas.json)<br>[`03_jobs_insert_select.json`](../tests/fixtures/bigquery_api/03_jobs_insert_select.json)<br>[`25_jobs_insert_dml.json`](../tests/fixtures/bigquery_api/25_jobs_insert_dml.json) | Job runs inside the insert request and is returned `DONE`. The RUNNING-to-DONE and `endTime`/`statistics.query` differences are listed in the fixture replay's `DIFFERENCES` (`jobs_insert_*`). |
+| `jobs.get` | Verified | [`02_jobs_get_ctas.json`](../tests/fixtures/bigquery_api/02_jobs_get_ctas.json)<br>[`04_jobs_get_select.json`](../tests/fixtures/bigquery_api/04_jobs_get_select.json)<br>[`26_jobs_get_dml.json`](../tests/fixtures/bigquery_api/26_jobs_get_dml.json) | Same DIFFERENCES as `jobs.insert`. |
+| `jobs.insert` with a duplicate `jobId` | Verified | [`168_jobs_insert_conflict.json`](../tests/fixtures/bigquery_api/168_jobs_insert_conflict.json)<br>[`test_a_duplicate_job_id_is_refused_and_the_first_job_is_kept`](../tests/unit/test_bigquery_server.py) | HTTP 409, reason `duplicate`, `Already Exists: Job <project>:<location>.<job>`. |
+| Failed query job (runtime error) | Verified | [`163_jobs_insert_runtime_error.json`](../tests/fixtures/bigquery_api/163_jobs_insert_runtime_error.json)<br>[`164_jobs_get_runtime_error.json`](../tests/fixtures/bigquery_api/164_jobs_get_runtime_error.json)<br>[`165_get_query_results_runtime_error.json`](../tests/fixtures/bigquery_api/165_get_query_results_runtime_error.json) | Failure is `status.errorResult` on a `DONE` job, not an HTTP error. Test: `test_a_failed_select_is_a_failed_job_with_invalid_query`. |
+| `jobs.query` (synchronous query) | Verified | [`11_jobs_query.json`](../tests/fixtures/bigquery_api/11_jobs_query.json)<br>[`12_jobs_query_job_creation_optional.json`](../tests/fixtures/bigquery_api/12_jobs_query_job_creation_optional.json) | |
+| `jobs.query` syntax error | Verified | [`166_jobs_query_syntax_error.json`](../tests/fixtures/bigquery_api/166_jobs_query_syntax_error.json)<br>[`test_jobs_query_of_a_failed_select_is_a_400_on_the_query_parameter`](../tests/unit/test_bigquery_server.py) | HTTP 400, `invalidQuery`, `location: q`. |
+| `jobCreationMode=JOB_CREATION_OPTIONAL` | Verified | [`12_jobs_query_job_creation_optional.json`](../tests/fixtures/bigquery_api/12_jobs_query_job_creation_optional.json)<br>[`test_job_creation_optional_with_a_one_row_result_has_no_job_reference`](../tests/unit/test_bigquery_server.py)<br>[`test_job_creation_optional_with_a_paged_result_has_a_job_and_large_results`](../tests/unit/test_bigquery_server.py) | One-row results return no job reference; paged results create a job with `LARGE_RESULTS`. |
+| `jobs.query` paging (`maxResults`, `pageToken`), continued via getQueryResults | Verified | [`07_get_query_results_page_1.json`](../tests/fixtures/bigquery_api/07_get_query_results_page_1.json)<br>[`08_get_query_results_page_2.json`](../tests/fixtures/bigquery_api/08_get_query_results_page_2.json)<br>[`test_jobs_query_pages_and_the_token_continues_through_get_query_results`](../tests/unit/test_bigquery_server.py) | |
+| `getQueryResults` (`queries/{job}`) | Verified | [`05_get_query_results.json`](../tests/fixtures/bigquery_api/05_get_query_results.json)<br>[`10_get_query_results_wait.json`](../tests/fixtures/bigquery_api/10_get_query_results_wait.json)<br>[`test_get_query_results_pages_through_25_rows_in_order`](../tests/unit/test_bigquery_server.py) | `timeoutMs` wait is answered from the completed job. |
+| `getQueryResults` paging (`maxResults`, `pageToken`) | Verified | [`07_get_query_results_page_1.json`](../tests/fixtures/bigquery_api/07_get_query_results_page_1.json)<br>[`08_get_query_results_page_2.json`](../tests/fixtures/bigquery_api/08_get_query_results_page_2.json) | |
+| `getQueryResults` `startIndex` | Verified | [`09_get_query_results_start_index.json`](../tests/fixtures/bigquery_api/09_get_query_results_start_index.json)<br>[`test_start_index_20_returns_the_last_5_rows_and_no_token`](../tests/unit/test_bigquery_server.py) | |
+| `maxResults=0` on getQueryResults | Tested | [`test_max_results_zero_gives_no_rows_and_a_token`](../tests/unit/test_bigquery_server.py) | No rows and a page token. |
+| Job location (`jobReference.location`) | Tested | [`test_a_location_is_echoed_in_the_reference_the_id_and_jobs_get`](../tests/unit/test_bigquery_server.py) | Echoed in the reference, the id and `jobs.get`. Default location is `US`. |
+| Anonymous destination table of a SELECT | Verified | [`14_tables_get_anonymous.json`](../tests/fixtures/bigquery_api/14_tables_get_anonymous.json)<br>[`24_tabledata_list_anonymous.json`](../tests/fixtures/bigquery_api/24_tabledata_list_anonymous.json)<br>[`test_the_anonymous_destination_of_a_select_is_a_table_with_nullable_fields`](../tests/unit/test_bigquery_server.py) | |
+| CTAS statistics (`schema`, `ddlTargetTable`) | Verified | [`02_jobs_get_ctas.json`](../tests/fixtures/bigquery_api/02_jobs_get_ctas.json)<br>[`test_create_table_as_select_reports_its_statement_and_target`](../tests/unit/test_bigquery_server.py) | |
+| DDL job has no rows and no schema in results | Tested | [`test_a_ddl_job_has_no_total_rows_and_no_schema_in_its_results`](../tests/unit/test_bigquery_server.py) | |
+| DML job reports affected rows (`numDmlAffectedRows`) | Verified | [`25_jobs_insert_dml.json`](../tests/fixtures/bigquery_api/25_jobs_insert_dml.json)<br>[`26_jobs_get_dml.json`](../tests/fixtures/bigquery_api/26_jobs_get_dml.json)<br>[`test_an_insert_job_reports_the_affected_rows`](../tests/unit/test_bigquery_server.py) | |
+| Jobs are never `RUNNING` when returned | Partial | [`test_every_fixture_matches_or_the_difference_is_listed`](../tests/unit/test_bigquery_fixtures.py)<br>[`test_job_results_are_published_with_the_destination_table`](../tests/unit/test_bigquery_job_lifecycle.py) | Limit: ADR 0004, jobs finish inside the request that creates them. Clients never observe a running job. The replay lists the difference. |
+| `totalBytesProcessed` / `totalBytesBilled` | Partial | [source: `app.py`](../src/crucible/server/bigquery/app.py)<br>[`test_every_fixture_matches_or_the_difference_is_listed`](../tests/unit/test_bigquery_fixtures.py) | Always `"0"`. Byte counts are not emulated; the replay compares only the key's presence. Do not use them for cost estimates. |
+| `jobs.insert` of a copy job | Not supported | [source: `app.py`](../src/crucible/server/bigquery/app.py) | Exact text: `Not supported by Crucible: jobs.insert of a copy job (only query jobs; load jobs use the resumable upload)`. HTTP 400, `invalidQuery`. |
+| `jobs.insert` of an extract job | Not supported | [source: `app.py`](../src/crucible/server/bigquery/app.py) | Exact text: `Not supported by Crucible: jobs.insert of a extract job (only query jobs; load jobs use the resumable upload)`. HTTP 400. |
+| `jobs.insert` with `dryRun` | Not supported | [`test_dry_run_in_jobs_insert_is_unsupported`](../tests/unit/test_bigquery_server.py)<br>[source: `app.py`](../src/crucible/server/bigquery/app.py) | `Not supported by Crucible: dry-run jobs`. HTTP 400. |
+| `jobs.query` with `dryRun` | Not supported | [source: `app.py`](../src/crucible/server/bigquery/app.py) | `Not supported by Crucible: jobs.query request field dryRun`. HTTP 400, `location: q`. |
+| Named or positional query parameters (`queryParameters`) on `jobs.query` | Not supported | [`test_jobs_query_with_query_parameters_is_unsupported`](../tests/unit/test_bigquery_server.py)<br>[source: `app.py`](../src/crucible/server/bigquery/app.py) | `Not supported by Crucible: jobs.query request field queryParameters`. On `jobs.insert` the same field fails the job with `Not supported by Crucible: query job configuration field queryParameters`. |
+| `useLegacySql: true` | Not supported | [`test_jobs_query_without_use_legacy_sql_is_unsupported`](../tests/unit/test_bigquery_server.py)<br>[`test_jobs_insert_without_use_legacy_sql_fails_the_job_with_the_same_message`](../tests/unit/test_bigquery_server.py) | `Not supported by Crucible: legacy SQL (useLegacySql is not false)`. |
+| Concurrent queries and CTAS through one client | Tested | [`test_concurrent_queries_and_ctas_through_one_client_all_succeed`](../tests/unit/test_bigquery_server.py)<br>[`test_bigquery_concurrent_clients_return_correct_rows`](../tests/clients/test_bigquery_client.py) | |
+| Job ID conflict, then attach (client) | Tested | [`test_bigquery_job_id_conflict_then_attach`](../tests/clients/test_bigquery_client.py) | |
+
+### REST: datasets
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| `datasets.insert` | Verified | [`00_datasets_insert.json`](../tests/fixtures/bigquery_api/00_datasets_insert.json)<br>[`test_inserting_a_dataset_twice_is_a_duplicate`](../tests/unit/test_bigquery_server.py) | Accepted fields: `labels`, `description`, `defaultTableExpirationMs`, `location`. Any other field: `Not supported by Crucible: datasets.insert field <name>`. |
+| `datasets.insert` duplicate | Verified | [`169_datasets_insert_conflict.json`](../tests/fixtures/bigquery_api/169_datasets_insert_conflict.json) | HTTP 409, reason `duplicate`. |
+| `datasets.get` | Verified | [`16_datasets_get.json`](../tests/fixtures/bigquery_api/16_datasets_get.json)<br>[`test_dataset_labels_and_location_are_echoed_by_get`](../tests/unit/test_bigquery_server.py) | Labels and location are echoed. |
+| `datasets.list` | Verified | [`17_datasets_list.json`](../tests/fixtures/bigquery_api/17_datasets_list.json) | |
+| `datasets.list` label filter (`filter=labels.key:value`) | Tested | [`test_datasets_list_filters_on_a_label_key_and_value`](../tests/unit/test_bigquery_server.py) | |
+| `datasets.list` filter other than a label key/value | Not supported | [`test_a_malformed_dataset_filter_is_unsupported`](../tests/unit/test_bigquery_server.py) | `Not supported by Crucible: datasets.list filter <term>`. |
+| `datasets.delete` with `deleteContents=true` | Tested | [`test_deleting_a_dataset_with_delete_contents_removes_it`](../tests/unit/test_bigquery_server.py) | An empty dataset also returns HTTP 204. |
+| `datasets.delete` of a non-empty dataset without `deleteContents` | Not supported | [`test_deleting_a_non_empty_dataset_without_delete_contents_is_unsupported`](../tests/unit/test_bigquery_server.py)<br>[source: `app.py`](../src/crucible/server/bigquery/app.py) | Exact text: `Not supported by Crucible: datasets.delete of a dataset that is not empty, without deleteContents`. HTTP 400. |
+
+### REST: tables and views
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| `tables.list` | Verified | [`15_tables_list.json`](../tests/fixtures/bigquery_api/15_tables_list.json)<br>[`test_tables_list_pages_with_next_page_token_and_reports_the_total`](../tests/unit/test_bigquery_server.py) | |
+| `tables.list` of partitioned tables | Verified | [`178_tables_list_partitioned.json`](../tests/fixtures/bigquery_api/178_tables_list_partitioned.json) | Partitioning DDL is under DDL and DML. |
+| `tables.get` | Verified | [`13_tables_get.json`](../tests/fixtures/bigquery_api/13_tables_get.json)<br>[`test_a_table_round_trips_its_rest_schema_without_nullable_modes`](../tests/unit/test_bigquery_server.py) | |
+| `tables.get` of a missing table | Verified | [`167_tables_get_not_found.json`](../tests/fixtures/bigquery_api/167_tables_get_not_found.json) | HTTP 404, `Not found: Table <project>:<dataset>.<table>`. |
+| `tables.get` of partitioned tables (DAY, HOUR, MONTH, RANGE) | Verified | [`171_tables_get_partitioned_day.json`](../tests/fixtures/bigquery_api/171_tables_get_partitioned_day.json)<br>[`173_tables_get_partitioned_hour.json`](../tests/fixtures/bigquery_api/173_tables_get_partitioned_hour.json)<br>[`175_tables_get_partitioned_month.json`](../tests/fixtures/bigquery_api/175_tables_get_partitioned_month.json)<br>[`177_tables_get_partitioned_range.json`](../tests/fixtures/bigquery_api/177_tables_get_partitioned_range.json) | |
+| `tables.insert` (schema, no other options) | Tested | [`test_a_table_round_trips_its_rest_schema_without_nullable_modes`](../tests/unit/test_bigquery_server.py) | |
+| `tables.insert` duplicate | Tested | [`test_inserting_a_table_twice_is_a_duplicate`](../tests/unit/test_bigquery_server.py) | HTTP 409. No fixture. |
+| `tables.insert` with `labels` | Not supported | [source: `app.py`](../src/crucible/server/bigquery/app.py) | `Not supported by Crucible: tables.insert field labels`. HTTP 400. |
+| `tables.insert` with `description` | Not supported | [source: `app.py`](../src/crucible/server/bigquery/app.py) | `Not supported by Crucible: tables.insert field description`. HTTP 400. |
+| `tables.insert` with `timePartitioning` | Not supported | [source: `app.py`](../src/crucible/server/bigquery/app.py) | `Not supported by Crucible: tables.insert field timePartitioning`. HTTP 400. Partitioned tables are made with DDL (see the partitioned fixtures above). |
+| `tables.insert` with a `REQUIRED` column | Not supported | [source: `app.py`](../src/crucible/server/bigquery/app.py) | `Not supported by Crucible: a REQUIRED column in a REST schema`. HTTP 400. |
+| Schema field options (`description`, `policyTags`, `defaultValueExpression`) | Not supported | [source: `app.py`](../src/crucible/server/bigquery/app.py) | `Not supported by Crucible: schema field options on column <name>`. HTTP 400. |
+| `tables.patch`, add a column | Verified | [`162_tables_patch_add_column.json`](../tests/fixtures/bigquery_api/162_tables_patch_add_column.json)<br>[`test_patch_appends_a_column_that_is_then_queryable`](../tests/unit/test_bigquery_server.py) | |
+| `tables.patch` that removes a column | Not supported | [source: `app.py`](../src/crucible/server/bigquery/app.py) | `Not supported by Crucible: tables.patch that removes columns`. |
+| `tables.patch` that changes a column's type | Not supported | [`test_patch_that_changes_a_column_type_is_unsupported`](../tests/unit/test_bigquery_server.py)<br>[source: `app.py`](../src/crucible/server/bigquery/app.py) | `Not supported by Crucible: tables.patch that changes column <name>`. |
+| `tables.delete` | Verified | [`179_tables_delete.json`](../tests/fixtures/bigquery_api/179_tables_delete.json)<br>[`test_deleting_a_table_removes_it`](../tests/unit/test_bigquery_server.py) | |
+| Views: listed as `VIEW`, deleted through `tables.delete` | Tested | [`test_a_view_lists_as_a_view_and_deletes_through_tables_delete`](../tests/unit/test_bigquery_server.py) | |
+| `tables.get` of the anonymous result table | Verified | [`14_tables_get_anonymous.json`](../tests/fixtures/bigquery_api/14_tables_get_anonymous.json) | |
+
+### REST: tabledata.list
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| `tabledata.list` default | Verified | [`19_tabledata_list.json`](../tests/fixtures/bigquery_api/19_tabledata_list.json)<br>[`test_bigquery_list_rows_pages_with_page_size`](../tests/clients/test_bigquery_client.py) | |
+| `tabledata.list` paging (`maxResults`, `pageToken`) | Verified | [`20_tabledata_list_page_1.json`](../tests/fixtures/bigquery_api/20_tabledata_list_page_1.json)<br>[`21_tabledata_list_page_2.json`](../tests/fixtures/bigquery_api/21_tabledata_list_page_2.json)<br>[`test_tabledata_list_pages_through_25_rows_in_order`](../tests/unit/test_bigquery_server.py) | |
+| `tabledata.list` `startIndex` | Verified | [`22_tabledata_list_start_index.json`](../tests/fixtures/bigquery_api/22_tabledata_list_start_index.json)<br>[`test_tabledata_list_start_index_20_returns_the_last_5_rows_and_no_token`](../tests/unit/test_bigquery_server.py) | |
+| `tabledata.list` `formatOptions.useInt64Timestamp` | Verified | [`23_tabledata_list_int64_timestamp.json`](../tests/fixtures/bigquery_api/23_tabledata_list_int64_timestamp.json)<br>[`test_tabledata_list_timestamps_are_float_seconds_unless_int64_is_asked_for`](../tests/unit/test_bigquery_server.py) | |
+| `tabledata.list` `maxResults=0`; past the end | Tested | [`test_tabledata_list_max_results_zero_gives_no_rows_and_a_token`](../tests/unit/test_bigquery_server.py)<br>[`test_tabledata_list_past_the_end_gives_no_rows_and_no_token`](../tests/unit/test_bigquery_server.py) | |
+| `tabledata.list` of an empty table | Tested | [`test_tabledata_list_of_an_empty_table_has_total_rows_zero`](../tests/unit/test_bigquery_server.py) | `totalRows` is `"0"`. |
+| `tabledata.list` non-integer `maxResults` | Tested | [`test_tabledata_list_with_a_non_integer_max_results_is_invalid`](../tests/unit/test_bigquery_server.py) | `Invalid maxResults: ...`, HTTP 400. |
+| `tabledata.list` with empty `selectedFields` | Tested | [`test_tabledata_list_with_an_empty_selected_fields_is_the_full_row`](../tests/unit/test_bigquery_server.py) | Full row. |
+| `tabledata.list` with non-empty `selectedFields` | Not supported | [`test_tabledata_list_with_selected_fields_is_unsupported`](../tests/unit/test_bigquery_server.py)<br>[source: `app.py`](../src/crucible/server/bigquery/app.py) | `Not supported by Crucible: tabledata.list with selectedFields`. |
+| `tabledata.list` with any other query parameter that changes the rows | Not supported | [`test_tabledata_list_with_a_parameter_that_changes_the_answer_is_unsupported`](../tests/unit/test_bigquery_server.py)<br>[source: `app.py`](../src/crucible/server/bigquery/app.py) | `Not supported by Crucible: tabledata.list query parameter <name>`. |
+| `tabledata.list` of a missing dataset or table | Tested | [`test_tabledata_list_of_a_missing_dataset_is_a_404`](../tests/unit/test_bigquery_server.py)<br>[`test_tabledata_list_of_a_missing_table_is_a_404`](../tests/unit/test_bigquery_server.py) | HTTP 404. |
+| `tabledata.list` of a view | Not supported | [`test_tabledata_list_of_a_view_is_unsupported`](../tests/unit/test_bigquery_server.py) | `Not supported by Crucible: tabledata.list of a view`. |
+| `tabledata.list` of an anonymous table | Verified | [`24_tabledata_list_anonymous.json`](../tests/fixtures/bigquery_api/24_tabledata_list_anonymous.json)<br>[`test_tabledata_list_of_an_anonymous_table_reads_the_job_result`](../tests/unit/test_bigquery_server.py) | |
+
+### REST: routines
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| `routines.list` | Verified | [`18_routines_list.json`](../tests/fixtures/bigquery_api/18_routines_list.json)<br>[`test_routines_list_is_empty_on_an_existing_dataset`](../tests/unit/test_bigquery_server.py) | Always empty. |
+| `routines.list` on a missing dataset | Tested | [`test_routines_list_on_a_missing_dataset_is_a_404`](../tests/unit/test_bigquery_server.py) | HTTP 404. |
+| `routines.get` | Tested | [`test_routines_get_is_a_404`](../tests/unit/test_bigquery_server.py) | HTTP 404, `Not found: Routine <project>:<dataset>.<routine>`. Whether a routine created by DDL appears here is not checked. |
+
+### REST: uploads (resumable and multipart)
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| Resumable upload initiate (`uploadType=resumable`) | Verified | [`28_load_baseline_upload.json`](../tests/fixtures/bigquery_api/28_load_baseline_upload.json)<br>[`test_a_resumable_upload_loads_the_rows_in_two_chunks`](../tests/unit/test_bigquery_server.py) | |
+| Resumable upload chunks (`Content-Range`) | Tested | [`test_a_resumable_upload_loads_the_rows_in_two_chunks`](../tests/unit/test_bigquery_server.py)<br>[`test_a_chunk_that_does_not_continue_the_upload_is_a_400`](../tests/unit/test_bigquery_server.py)<br>[`test_a_chunk_whose_length_differs_from_its_content_range_is_a_400`](../tests/unit/test_bigquery_server.py) | HTTP 400 for a non-continuing or mis-sized chunk. |
+| Unknown upload id | Tested | [`test_an_unknown_upload_id_is_a_404`](../tests/unit/test_bigquery_server.py) | HTTP 404. |
+| Reset invalidates uploads still waiting for a body | Tested | [`test_reset_invalidates_uploads_waiting_for_the_request_body`](../tests/unit/test_bigquery_job_lifecycle.py) | |
+| Multipart upload (`uploadType=multipart`, one request) | Tested | [`test_a_multipart_upload_loads_the_file_in_one_request`](../tests/unit/test_bigquery_server.py)<br>[`test_a_rejected_multipart_file_fails_the_job_and_creates_no_table`](../tests/unit/test_bigquery_server.py)<br>[`test_bigquery_load_csv_from_file`](../tests/clients/test_bigquery_client.py) | No recorded fixture. The official client uses multipart for files under 5 MiB (`google/cloud/bigquery/client.py:2731`), so the client test exercises it. Multipart without `multipart/related` is refused (`test_a_multipart_upload_without_multipart_related_is_refused`); malformed bodies are refused (`test_a_malformed_multipart_body_is_refused`). dbt's own loads were not checked for the upload type. |
+| Multipart job id is reserved like any other | Tested | [`test_a_multipart_job_id_is_reserved_like_any_other`](../tests/unit/test_bigquery_server.py) | |
+| `uploadType=media` | Not supported | [`test_an_upload_type_other_than_resumable_or_multipart_is_unsupported`](../tests/unit/test_bigquery_server.py)<br>[source: `app.py`](../src/crucible/server/bigquery/app.py) | `Not supported by Crucible: uploadType=media (resumable and multipart only)`. HTTP 400. |
+| Upload whose job is not a load job | Not supported | [source: `app.py`](../src/crucible/server/bigquery/app.py) | `Not supported by Crucible: an upload whose job is not a load job`. |
+
+### CSV load jobs: outcomes and accepted spellings
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| INT64: signed `-5`, `+5`, quoted `"1"` | Verified | [`121_load_int_negative_jobs_get.json`](../tests/fixtures/bigquery_api/121_load_int_negative_jobs_get.json)<br>[`126_load_int_plus_jobs_get.json`](../tests/fixtures/bigquery_api/126_load_int_plus_jobs_get.json)<br>[`131_load_int_quoted_jobs_get.json`](../tests/fixtures/bigquery_api/131_load_int_quoted_jobs_get.json) | Loads. |
+| INT64 out of range | Tested | [`test_an_integer_out_of_range_is_unsupported`](../tests/unit/test_bq_load_csv.py) | `Not supported by Crucible: CSV value '<text>' is out of INT64 range`. Refused, not rejected. |
+| The largest INT64 | Tested | [`test_the_largest_integer_loads`](../tests/unit/test_bq_load_csv.py) | |
+| FLOAT64: `-inf`, `NaN` | Verified | [`102_load_float_inf_nan_jobs_get.json`](../tests/fixtures/bigquery_api/102_load_float_inf_nan_jobs_get.json)<br>[`104_load_float_inf_nan_query_results.json`](../tests/fixtures/bigquery_api/104_load_float_inf_nan_query_results.json) | Loads. |
+| NUMERIC: `1.5`, `-0.000000001`, `1e3` | Verified | [`29_load_baseline_jobs_get.json`](../tests/fixtures/bigquery_api/29_load_baseline_jobs_get.json)<br>[`97_load_numeric_exponent_jobs_get.json`](../tests/fixtures/bigquery_api/97_load_numeric_exponent_jobs_get.json)<br>[`test_numeric_with_nine_fraction_digits_loads_exactly`](../tests/unit/test_bq_load_csv.py) | Loads. |
+| NUMERIC with too many digits | Verified | [`150_load_numeric_many_digits_jobs_get.json`](../tests/fixtures/bigquery_api/150_load_numeric_many_digits_jobs_get.json) | Rejected: the job fails with `CSV processing encountered too many errors, giving up`. |
+| BOOL: `true`, `false`, `T`, `1`, `yes`, `False`, `TRUE`, `True` | Verified | [`39_load_bool_t_jobs_get.json`](../tests/fixtures/bigquery_api/39_load_bool_t_jobs_get.json)<br>[`44_load_bool_1_jobs_get.json`](../tests/fixtures/bigquery_api/44_load_bool_1_jobs_get.json)<br>[`49_load_bool_yes_jobs_get.json`](../tests/fixtures/bigquery_api/49_load_bool_yes_jobs_get.json)<br>[`54_load_bool_mixed_case_jobs_get.json`](../tests/fixtures/bigquery_api/54_load_bool_mixed_case_jobs_get.json)<br>[`111_load_bool_upper_jobs_get.json`](../tests/fixtures/bigquery_api/111_load_bool_upper_jobs_get.json)<br>[`116_load_bool_title_true_jobs_get.json`](../tests/fixtures/bigquery_api/116_load_bool_title_true_jobs_get.json) | All load. `yes` loads as `true` ([`51_load_bool_yes_query_results.json`](../tests/fixtures/bigquery_api/51_load_bool_yes_query_results.json)). |
+| BOOL `maybe` | Verified | [`107_load_bad_value_jobs_get.json`](../tests/fixtures/bigquery_api/107_load_bad_value_jobs_get.json) | Rejected: job fails with `CSV processing encountered too many errors, giving up`. |
+| BOOL spellings not in the recording | Tested | [`test_an_unrecorded_spelling_is_unsupported`](../tests/unit/test_bq_load_csv.py) | Refused, not guessed. |
+| DATE: `YYYY-MM-DD`, one-digit `2024-1-2` | Verified | [`29_load_baseline_jobs_get.json`](../tests/fixtures/bigquery_api/29_load_baseline_jobs_get.json)<br>[`88_load_date_one_digit_jobs_get.json`](../tests/fixtures/bigquery_api/88_load_date_one_digit_jobs_get.json) | One-digit month and day load. |
+| DATE with slashes | Verified | [`93_load_date_slashes_jobs_get.json`](../tests/fixtures/bigquery_api/93_load_date_slashes_jobs_get.json) | Rejected. |
+| DATE that is not a date (invalid) | Verified | [`146_load_date_invalid_jobs_get.json`](../tests/fixtures/bigquery_api/146_load_date_invalid_jobs_get.json) | Rejected. |
+| TIMESTAMP: `YYYY-MM-DD HH:MM:SS[.ffffff]`, `T` separator with or without `Z`, ` UTC` suffix, `+01:00` offset, epoch seconds, slashed date-time, 3-digit fraction | Verified | [`29_load_baseline_jobs_get.json`](../tests/fixtures/bigquery_api/29_load_baseline_jobs_get.json)<br>[`59_load_ts_t_z_jobs_get.json`](../tests/fixtures/bigquery_api/59_load_ts_t_z_jobs_get.json)<br>[`64_load_ts_utc_suffix_jobs_get.json`](../tests/fixtures/bigquery_api/64_load_ts_utc_suffix_jobs_get.json)<br>[`69_load_ts_offset_jobs_get.json`](../tests/fixtures/bigquery_api/69_load_ts_offset_jobs_get.json)<br>[`74_load_ts_epoch_jobs_get.json`](../tests/fixtures/bigquery_api/74_load_ts_epoch_jobs_get.json)<br>[`83_load_ts_slashes_jobs_get.json`](../tests/fixtures/bigquery_api/83_load_ts_slashes_jobs_get.json)<br>[`136_load_ts_t_no_z_jobs_get.json`](../tests/fixtures/bigquery_api/136_load_ts_t_no_z_jobs_get.json)<br>[`141_load_ts_fraction_3_jobs_get.json`](../tests/fixtures/bigquery_api/141_load_ts_fraction_3_jobs_get.json) | All load. Offset values are converted to UTC (`test_offset_is_converted_to_utc`, tested). The slashed date-time loads as `1.704164645E9` (`85_load_ts_slashes_query_results.json`). |
+| TIMESTAMP with a date only | Verified | [`79_load_ts_date_only_jobs_get.json`](../tests/fixtures/bigquery_api/79_load_ts_date_only_jobs_get.json) | Rejected. |
+| Negative offset and epoch seconds outside the datetime range | Tested | [`test_a_negative_offset_is_added`](../tests/unit/test_bq_load_csv.py)<br>[`test_epoch_seconds_outside_the_datetime_range_are_unsupported`](../tests/unit/test_bq_load_csv.py) | The second is refused. |
+| DATETIME column in a CSV load | Not supported | [`test_a_datetime_column_is_unsupported`](../tests/unit/test_bq_load_csv.py)<br>[source: `load.py`](../src/crucible/server/bigquery/load.py) | Job fails with `Not supported by Crucible: CSV load into a DATETIME column`. The [`examples/dbt-bigquery`](../examples/dbt-bigquery) seeds type timestamps as TIMESTAMP for this reason. |
+| STRING: quoted fields, embedded commas, escaped `""`, CRLF line endings | Verified | [`29_load_baseline_jobs_get.json`](../tests/fixtures/bigquery_api/29_load_baseline_jobs_get.json)<br>[`154_load_string_escaped_quote_jobs_get.json`](../tests/fixtures/bigquery_api/154_load_string_escaped_quote_jobs_get.json)<br>[`159_load_crlf_jobs_get.json`](../tests/fixtures/bigquery_api/159_load_crlf_jobs_get.json) | |
+| File without a final newline | Tested | [`test_a_file_without_a_final_newline_loads`](../tests/unit/test_bq_load_csv.py) | |
+| Empty unquoted field is NULL for every type | Verified | [`34_load_empty_fields_jobs_get.json`](../tests/fixtures/bigquery_api/34_load_empty_fields_jobs_get.json)<br>[`test_an_unquoted_empty_field_is_null_for_every_type`](../tests/unit/test_bq_load_csv.py) | |
+| A rejected row fails the job and leaves the table unchanged | Verified | [`79_load_ts_date_only_jobs_get.json`](../tests/fixtures/bigquery_api/79_load_ts_date_only_jobs_get.json)<br>[`test_a_rejected_csv_fails_the_job_and_leaves_the_table_unchanged`](../tests/unit/test_bigquery_server.py) | The job error is `Error while reading data, error message: CSV processing encountered too many errors, giving up. Rows: 1; errors: 1; max bad: 0; error percent: 0`. |
+| An unsupported value in any row beats a rejected row in another | Tested | [`test_an_unsupported_value_in_any_row_beats_a_rejection_in_another`](../tests/unit/test_bq_load_csv.py) | |
+| Unsupported CSV constructs: BOM, lone CR, blank line, non-UTF-8, quote in an unquoted field, text after a closing quote, unclosed quote, `RECORD` column, repeated field, wrong column count, header read as data | Not supported | [`test_a_byte_order_mark_is_unsupported`](../tests/unit/test_bq_load_csv.py)<br>[`test_a_lone_carriage_return_is_unsupported`](../tests/unit/test_bq_load_csv.py)<br>[`test_a_blank_line_is_unsupported`](../tests/unit/test_bq_load_csv.py)<br>[`test_a_field_that_is_not_utf_8_is_unsupported`](../tests/unit/test_bq_load_csv.py)<br>[`test_a_quote_inside_an_unquoted_field_is_unsupported`](../tests/unit/test_bq_load_csv.py)<br>[`test_text_after_a_closing_quote_is_unsupported`](../tests/unit/test_bq_load_csv.py)<br>[`test_an_unclosed_quote_is_unsupported`](../tests/unit/test_bq_load_csv.py)<br>[`test_a_record_column_is_unsupported`](../tests/unit/test_bq_load_csv.py)<br>[`test_a_repeated_field_is_unsupported`](../tests/unit/test_bq_load_csv.py)<br>[`test_a_wrong_column_count_is_unsupported`](../tests/unit/test_bq_load_csv.py)<br>[`test_the_header_as_data_is_unsupported`](../tests/unit/test_bq_load_csv.py) | Each one is a refusal with a `CSV ...` message, not a best guess. |
+| REQUIRED column in a CSV load | Not supported | [`test_a_required_column_is_unsupported`](../tests/unit/test_bq_load_csv.py) | REQUIRED would change which empty fields are errors; no fixture confirms it. |
+| `skipLeadingRows` | Tested | [`test_skipping_leading_rows_is_by_count`](../tests/unit/test_bq_load_csv.py)<br>[`test_a_negative_skip_is_an_error`](../tests/unit/test_bq_load_csv.py) | Counted in lines. No fixture. |
+| `writeDisposition=WRITE_APPEND` | Tested | [`test_write_append_adds_rows_to_an_existing_table`](../tests/unit/test_bigquery_server.py)<br>[`test_write_append_with_a_different_schema_fails_the_job`](../tests/unit/test_bigquery_server.py) | A schema that differs from the table's fails the job. |
+| `writeDisposition=WRITE_TRUNCATE` | Tested | [`test_bigquery_load_csv_from_file`](../tests/clients/test_bigquery_client.py)<br>[`test_a_rejected_csv_fails_the_job_and_leaves_the_table_unchanged`](../tests/unit/test_bigquery_server.py) | Used by the official client test. |
+| `writeDisposition=WRITE_EMPTY` (and any other) | Not supported | [source: `jobs.py`](../src/crucible/server/bigquery/jobs.py) | Job fails with `Not supported by Crucible: writeDisposition WRITE_EMPTY`. |
+| `createDisposition` other than `CREATE_IF_NEEDED` | Not supported | [source: `jobs.py`](../src/crucible/server/bigquery/jobs.py) | Job fails with `Not supported by Crucible: createDisposition CREATE_NEVER`. |
+| `fieldDelimiter` other than `,` | Not supported | [source: `jobs.py`](../src/crucible/server/bigquery/jobs.py) | Job fails with `Not supported by Crucible: load job fieldDelimiter other than ','`. |
+| Other load options (e.g. `allowJaggedRows`) | Not supported | [source: `jobs.py`](../src/crucible/server/bigquery/jobs.py) | Job fails with `Not supported by Crucible: load job configuration field allowJaggedRows`. |
+| Autodetect: load with no schema | Not supported | [source: `jobs.py`](../src/crucible/server/bigquery/jobs.py) | Job fails with `Not supported by Crucible: a load job without an explicit schema (autodetect)`. |
+| `sourceFormat=NEWLINE_DELIMITED_JSON` | Not supported | [source: `jobs.py`](../src/crucible/server/bigquery/jobs.py) | Job fails with `Not supported by Crucible: load job sourceFormat NEWLINE_DELIMITED_JSON`. Initiate returns 200. |
+| `sourceFormat=PARQUET` | Not supported | [source: `jobs.py`](../src/crucible/server/bigquery/jobs.py) | Job fails with `Not supported by Crucible: load job sourceFormat PARQUET`. |
+
+### Wire format (query results and tabledata.list)
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| INT64 as a decimal string | Verified | [`05_get_query_results.json`](../tests/fixtures/bigquery_api/05_get_query_results.json) | `"1"`. |
+| NUMERIC as an exact decimal string | Verified | [`05_get_query_results.json`](../tests/fixtures/bigquery_api/05_get_query_results.json)<br>[`19_tabledata_list.json`](../tests/fixtures/bigquery_api/19_tabledata_list.json) | `"123.456000001"`. |
+| FLOAT64 as a decimal string | Verified | [`05_get_query_results.json`](../tests/fixtures/bigquery_api/05_get_query_results.json) | `"1.5"`, as recorded (getQueryResults cells are all strings). |
+| BOOL as `"true"` / `"false"` | Verified | [`05_get_query_results.json`](../tests/fixtures/bigquery_api/05_get_query_results.json) | |
+| BYTES as base64 | Verified | [`05_get_query_results.json`](../tests/fixtures/bigquery_api/05_get_query_results.json) | `"Af8="`. |
+| DATE, DATETIME, TIME as text | Verified | [`05_get_query_results.json`](../tests/fixtures/bigquery_api/05_get_query_results.json) | `"2024-02-29"`, `"2024-01-02T03:04:05.123456"`, `"04:05:06.500000"`. |
+| TIMESTAMP in getQueryResults, default | Verified | [`05_get_query_results.json`](../tests/fixtures/bigquery_api/05_get_query_results.json)<br>[`test_tabledata_list_timestamps_are_float_seconds_unless_int64_is_asked_for`](../tests/unit/test_bigquery_server.py) | `"1.704164645123456E9"` (exponent form, as recorded). |
+| TIMESTAMP in getQueryResults with `useInt64Timestamp` | Verified | [`06_get_query_results_int64_timestamp.json`](../tests/fixtures/bigquery_api/06_get_query_results_int64_timestamp.json) | `"1704164645123456"` (microseconds). |
+| TIMESTAMP in tabledata.list, default | Verified | [`19_tabledata_list.json`](../tests/fixtures/bigquery_api/19_tabledata_list.json) | `"1704164645.123456"` (float seconds). |
+| TIMESTAMP in tabledata.list with `useInt64Timestamp` | Verified | [`23_tabledata_list_int64_timestamp.json`](../tests/fixtures/bigquery_api/23_tabledata_list_int64_timestamp.json) | |
+| TIMESTAMP whole-second value in float form (tabledata.list) | Not supported | [`test_a_whole_second_timestamp_in_float_form_is_unsupported_and_int64_loads`](../tests/unit/test_bigquery_server.py) | `Not supported by Crucible: tabledata.list float TIMESTAMP of this shape (use int64)`, HTTP 400. The int64 form loads. |
+| NULL as `null`; NULL in a repeated field | Verified | [`05_get_query_results.json`](../tests/fixtures/bigquery_api/05_get_query_results.json) | |
+| ARRAY and STRUCT (RECORD) values | Verified | [`05_get_query_results.json`](../tests/fixtures/bigquery_api/05_get_query_results.json) | Nested `{"v": ...}` cells. |
+| INTERVAL value in a result | Not supported | [`test_bigquery_interval_is_not_supported`](../tests/clients/test_bigquery_client.py)<br>[`test_bigquery_interval_not_supported_via_query_and_wait`](../tests/clients/test_bigquery_client.py)<br>[source: `jobs.py`](../src/crucible/server/bigquery/jobs.py) | `Not supported by Crucible: INTERVAL value in a query result`. The INTERVAL column is left out of the fixture replay (`_INTERVAL_PARTS`). |
+
+### Errors and unknown endpoints
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| Missing dataset, table, job or upload: 404 `notFound` | Verified | [`167_tables_get_not_found.json`](../tests/fixtures/bigquery_api/167_tables_get_not_found.json)<br>[`test_an_unknown_anonymous_table_is_a_404`](../tests/unit/test_bigquery_server.py) | |
+| Duplicate dataset, table or job: 409 `duplicate` | Verified | [`168_jobs_insert_conflict.json`](../tests/fixtures/bigquery_api/168_jobs_insert_conflict.json)<br>[`169_datasets_insert_conflict.json`](../tests/fixtures/bigquery_api/169_datasets_insert_conflict.json)<br>[`test_inserting_a_table_twice_is_a_duplicate`](../tests/unit/test_bigquery_server.py) | |
+| Syntax error or runtime error in a query: 400 `invalidQuery` | Verified | [`166_jobs_query_syntax_error.json`](../tests/fixtures/bigquery_api/166_jobs_query_syntax_error.json)<br>[`test_bigquery_syntax_error_is_bad_request`](../tests/clients/test_bigquery_client.py)<br>[`test_bigquery_division_by_zero_is_bad_request`](../tests/clients/test_bigquery_client.py) | |
+| Missing table in a query: not-found job error naming the location | Tested | [`test_a_missing_table_is_a_not_found_job_error_naming_the_location`](../tests/unit/test_bigquery_server.py)<br>[`test_bigquery_missing_table_is_not_found`](../tests/clients/test_bigquery_client.py) | |
+| Every `Not supported by Crucible:` error: HTTP 400, reason `invalidQuery` | Tested | [`test_jobs_query_with_query_parameters_is_unsupported`](../tests/unit/test_bigquery_server.py) | |
+| Unknown endpoint: 501 `notImplemented`, `Not implemented in Crucible: <METHOD> <path>` | Tested | [`test_unknown_endpoint_uses_warehouse_error_shape`](../tests/unit/test_server.py)<br>[`test_wrong_method_on_admin_route_uses_warehouse_shape`](../tests/unit/test_server.py) | ../models`. |
+| IAM and policy endpoints (`setIamPolicy`, `getIamPolicy`) | Not supported | [`test_unknown_endpoint_uses_warehouse_error_shape`](../tests/unit/test_server.py)<br>[source: `app.py`](../src/crucible/server/bigquery/app.py)`) | Exact text: `Not implemented in Crucible: POST /bigquery/v2/projects/<p>/datasets/<d>:setIamPolicy` (HTTP 501, `notImplemented`); same shape for `tables/<t>:getIamPolicy`. No IAM at all (see Authentication). |
+
+### Authentication
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| Authentication | Partial | [`tests/clients/test_bigquery_client.py`](../tests/clients/test_bigquery_client.py)<br>[`tests/dbt/test_dbt_bigquery.py`](../tests/dbt/test_dbt_bigquery.py) | Any token, or none, is accepted and never checked. No IAM, dataset ACLs or permission errors. Never expose Crucible on a network. |
+
+### Health and admin
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| `GET /_crucible/health` | Tested | [`test_health`](../tests/unit/test_server.py) | `{"status":"ok", ...}`, with storage, catalog count, DuckDB and SQLGlot versions and dialect. |
+| `POST /_crucible/reset` | Tested | [`test_reset`](../tests/unit/test_server.py)<br>[`test_reset_clears_jobs_and_uploads`](../tests/unit/test_bigquery_server.py) | Returns `{"status":"reset"}`. The dbt suite calls it before each run. |
+| `--host` default and the CLI | Tested | [`test_cli_defaults_to_loopback`](../tests/unit/test_server.py)<br>[`test_cli_host_from_env`](../tests/unit/test_server.py) | Binds `127.0.0.1` unless `CRUCIBLE_HOST` says otherwise. |
+
+### Storage Read API and Storage Write API (client-side)
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| Storage Read API (`to_dataframe()` / `to_arrow()` through the Storage client) | Not supported | [source: `app.py`](../src/crucible/server/bigquery/app.py) | Crucible serves REST only, no gRPC. The Storage client does not use `api_endpoint`, so it would go to Google's endpoint, not Crucible. Use `create_bqstorage_client=False`. |
+| Storage Write API | Not supported | [source: `app.py`](../src/crucible/server/bigquery/app.py) | REST only, no gRPC. |
+| `to_dataframe()` with `create_bqstorage_client=False` | Partial | no test yet | Reads rows over REST (`tabledata.list`, which is tested). No test calls `to_dataframe` itself yet. |
+
+### Official clients and dbt
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| `google-cloud-bigquery==3.27.0` (CI floor) against a running server | Tested | [`tests/clients/test_bigquery_client.py`](../tests/clients/test_bigquery_client.py) | 15 passed. Not compared with real BigQuery. |
+| `google-cloud-bigquery` latest (resolved to 3.46.1) against a running server | Tested | [`tests/clients/test_bigquery_client.py`](../tests/clients/test_bigquery_client.py) | 15 passed. |
+| dbt-core 1.9.11 + dbt-bigquery 1.9.0 (CI pinned) | Tested | [`test_bigquery_seed_run_incremental_run_and_test`](../tests/dbt/test_dbt_bigquery.py) | 1 passed. |
+| dbt-core latest (1.12.6) + dbt-bigquery latest (1.12.1) | Tested | [`test_bigquery_seed_run_incremental_run_and_test`](../tests/dbt/test_dbt_bigquery.py) | 1 passed. |
+| `examples/dbt-bigquery/corner_cafe`: `dbt seed` (dbt-core 1.12.6 in the example venv) | Tested | [`examples/dbt-bigquery/corner_cafe/dbt_project.yml`](../examples/dbt-bigquery/corner_cafe/dbt_project.yml) | PASS=4 of 4 seeds. |
+| `examples/dbt-bigquery/corner_cafe`: `dbt run` | Tested | [`examples/dbt-bigquery/corner_cafe/models`](../examples/dbt-bigquery/corner_cafe/models) | PASS=7 of 7 (4 views, 3 tables). |
+| `examples/dbt-bigquery/corner_cafe`: `dbt test` | Tested | [`examples/dbt-bigquery/corner_cafe/tests/order_totals_are_not_negative.sql`](../examples/dbt-bigquery/corner_cafe/tests/order_totals_are_not_negative.sql) | PASS=22 of 22 (19 generic, 1 singular, 2 unit, as the README expects). |
+
+## Not yet covered by a test
+
+These ran correctly in a quick local check, but no test or recorded case backs them yet, so they are not
+claimed above. Reports and corpus cases for them are welcome.
+
+- PIVOT and UNPIVOT; TABLESAMPLE SYSTEM
+- CTEs (`WITH`), correlated subqueries and EXISTS, UNION/INTERSECT/EXCEPT DISTINCT, LIMIT and OFFSET,
+  INSERT ... SELECT
+- COUNT(DISTINCT), MIN, MAX, AVG, BOOL_AND, APPROX_COUNT_DISTINCT
+- RANK, LEAD, FIRST_VALUE, aggregate window functions such as `SUM(...) OVER (PARTITION BY ...)`
+- JSON_QUERY, JSON_EXTRACT, JSON_EXTRACT_SCALAR
+- DATE_TRUNC with `WEEK(<weekday>)`, DATE_FROM_UNIX_DATE, UNIX_SECONDS, SAFE.PARSE_DATE
+- REGEXP_CONTAINS, REGEXP_EXTRACT_ALL and REGEXP_REPLACE with a column as the pattern
+- SHA1
+- `jobs.cancel`
+- Common functions not checked at all yet, for example LIKE, BETWEEN, REPLACE, LTRIM, RTRIM, TIMESTAMP_TRUNC,
+  SQRT and LOG

@@ -82,6 +82,9 @@ virtualenv's binary by path as [examples/dbt-bigquery/](examples/dbt-bigquery/RE
 
 ## What works
 
+The full list, with a link to the test behind each feature, is in
+[docs/bigquery-features.md](docs/bigquery-features.md).
+
 - **REST API:** jobs (insert, get, cancel, query, getQueryResults), datasets and tables (list, get, insert,
   patch, delete), tabledata.list, routines (list, get), and CSV load jobs through resumable or multipart upload.
 - **SQL:** each area below has corpus cases checked against real BigQuery (239 of 246 cases recorded):
@@ -96,20 +99,30 @@ Crucible is pre-alpha. Unsupported features fail with `Not supported by Crucible
 guess. Not supported yet:
 
 - Scripting (`DECLARE`, `BEGIN ... END`), temporary and persistent SQL functions (`CREATE FUNCTION`).
+- `UPDATE`, `DELETE` and `TRUNCATE TABLE` (use `MERGE`), and query parameters.
 - `INFORMATION_SCHEMA`, wildcard tables (`dataset.events_*`), time travel (`FOR SYSTEM_TIME AS OF`).
 - Geography functions (`ST_*`).
 - The BigQuery Storage Read and Write APIs (gRPC), so `to_dataframe()` needs
   `create_bqstorage_client=False`, and dbt Fusion cannot run tests.
 - CSV loads into DATETIME columns, and load formats other than CSV.
 - Billing: `totalBytesProcessed` and `totalBytesBilled` are always `0`.
-- Authentication and IAM: there is none (see [Security](#security)).
+- Authentication and IAM: there is none (see [SECURITY.md](SECURITY.md)).
 
 If something you need is missing, open an issue with the query and the result real BigQuery returns.
+
+## Roadmap
+
+1. **dbt on BigQuery:** scripting (`DECLARE`, `BEGIN ... END`) for the `insert_overwrite` strategy, then
+   snapshots, `UPDATE`, `DELETE` and query parameters.
+2. **Wider BigQuery SQL:** corpus cases recorded from real BigQuery for common functions that have no test yet
+   (CTEs, `COUNT(DISTINCT)`, `RANK`, `LIKE`, ...), and a generated compatibility report.
+3. **Snowflake:** the wire protocol first, then the SQL dialect, verified the same way.
 
 ## Documentation
 
 - [CONTRIBUTING.md](CONTRIBUTING.md): setup, checks, corpus rules, and licensing.
 - [docs/architecture.md](docs/architecture.md): design.
+- [docs/bigquery-features.md](docs/bigquery-features.md): supported and unsupported BigQuery features, each linked to its test.
 - [docs/compatibility.md](docs/compatibility.md): generated; not yet available.
 - [docs/client-compat.md](docs/client-compat.md): how the official clients and dbt adapters connect to a local emulator.
 
