@@ -500,6 +500,12 @@ The client and dbt suites (`tests/clients`, `tests/dbt`) need a running server; 
 | `examples/dbt-bigquery/corner_cafe`: `dbt run` | Tested | [`examples/dbt-bigquery/corner_cafe/models`](../examples/dbt-bigquery/corner_cafe/models) | PASS=7 of 7 (4 views, 3 tables). |
 | `examples/dbt-bigquery/corner_cafe`: `dbt test` | Tested | [`examples/dbt-bigquery/corner_cafe/tests/order_totals_are_not_negative.sql`](../examples/dbt-bigquery/corner_cafe/tests/order_totals_are_not_negative.sql) | PASS=22 of 22 (19 generic, 1 singular, 2 unit, as the README expects). |
 
+### CLI: mirror-schema
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| `crucible mirror-schema`: table and view schemas (no data) from a BigQuery project, read-only on the Google side | Tested | [`test_mirrors_table_and_view_schemas_into_crucible`](../tests/unit/test_mirror_schema.py)<br>[`test_google_side_only_reads`](../tests/unit/test_mirror_schema.py)<br>[`test_skips_warn_and_name_the_object`](../tests/unit/test_mirror_schema.py)<br>[`test_refuses_without_from_project_or_dataset`](../tests/unit/test_mirror_schema.py)<br>[`test_cli_prints_summary_and_exits_zero`](../tests/unit/test_mirror_schema.py) | Copies partitioning, clustering, labels, descriptions and nested types. Skipped with a warning: GEOGRAPHY, ingestion-time partitioning, `require_partition_filter`, nested fields with a description or REQUIRED mode, legacy SQL views, and views whose SQL Crucible refuses. An existing table is left as it is. |
+
 ## More functions and syntax
 
 Recorded from real BigQuery in the Milestone 1 batch; each row is one corpus case.

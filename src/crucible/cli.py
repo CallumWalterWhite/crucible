@@ -1,4 +1,4 @@
-"""`crucible serve`, `crucible corpus run|record`."""
+"""`crucible serve`, `crucible corpus run|record`, `crucible mirror-schema`."""
 
 from __future__ import annotations
 
@@ -31,6 +31,42 @@ def _corpus(args: argparse.Namespace) -> int:
     from crucible.corpus.cli import main as corpus_main
 
     return corpus_main(args)
+
+
+def _mirror_schema(args: argparse.Namespace) -> int:
+    try:
+        from google.api_core.client_options import ClientOptions
+        from google.api_core.exceptions import GoogleAPICallError
+        from google.auth.credentials import AnonymousCredentials
+        from google.auth.exceptions import GoogleAuthError
+        from google.cloud import bigquery
+
+        from crucible.mirror import mirror_schema
+    except ImportError as exc:
+        extra = "pip install 'crucible-emulator[record-bigquery]'"
+        print(f"crucible mirror-schema needs: {extra} ({exc})", file=sys.stderr)
+        return 2
+    to_project = args.to_project or args.from_project
+
+    def warn(message: str) -> None:
+        print(f"warning: {message}", file=sys.stderr)
+
+    try:
+        source = bigquery.Client(project=args.from_project)  # Application Default Credentials
+        target = bigquery.Client(
+            project=to_project,
+            credentials=AnonymousCredentials(),  # pyright: ignore[reportArgumentType]
+            client_options=ClientOptions(api_endpoint=args.to),
+        )
+        summary = mirror_schema(source, target, args.from_project, to_project, args.dataset, warn)
+    except (GoogleAPICallError, GoogleAuthError, OSError) as exc:
+        print(f"crucible mirror-schema stopped: {exc}", file=sys.stderr)
+        return 1
+    print(
+        f"mirrored {summary.datasets} datasets, {summary.tables} tables, {summary.views} views; "
+        f"skipped {summary.skipped}"
+    )
+    return 0 if summary.tables or summary.views else 1
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -90,6 +126,27 @@ def build_parser() -> argparse.ArgumentParser:
         help="required: record-api runs jobs against the real warehouse",
     )
     corpus.set_defaults(func=_corpus)
+
+    mirror = sub.add_parser(
+        "mirror-schema",
+        help="copy table and view schemas (no data) from BigQuery into Crucible",
+    )
+    mirror.add_argument("--from-project", required=True, help="BigQuery project to read (ADC)")
+    mirror.add_argument(
+        "--dataset",
+        action="append",
+        required=True,
+        help="dataset to mirror; repeat for several (there is no all-datasets mode)",
+    )
+    mirror.add_argument(
+        "--to",
+        default="http://127.0.0.1:9050",
+        help="Crucible BigQuery endpoint (default: %(default)s)",
+    )
+    mirror.add_argument(
+        "--to-project", help="project to create in Crucible (default: --from-project)"
+    )
+    mirror.set_defaults(func=_mirror_schema)
     return parser
 
 
