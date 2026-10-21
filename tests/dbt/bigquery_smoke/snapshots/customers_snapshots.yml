@@ -1,0 +1,18 @@
+snapshots:
+  - name: customers_snapshot_timestamp
+    relation: source('raw', 'snapshot_source')
+    config:
+      target_schema: smoke
+      unique_key: customer_id
+      strategy: timestamp
+      updated_at: updated_at
+
+  - name: customers_snapshot_check
+    relation: source('raw', 'snapshot_source')
+    config:
+      target_schema: smoke
+      unique_key: customer_id
+      strategy: check
+      check_cols:
+        - name
+        - tier
