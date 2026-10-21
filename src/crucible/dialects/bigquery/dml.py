@@ -17,7 +17,7 @@ from dataclasses import dataclass
 
 from sqlglot import exp
 
-from crucible.dialects.bigquery import errors, metadata, types
+from crucible.dialects.bigquery import errors, metadata, scripting, types
 from crucible.dialects.bigquery.generator import generate
 from crucible.dialects.bigquery.translate import outer_selects, prepare, write_value
 from crucible.engine import (
@@ -62,7 +62,10 @@ def plan_merge(tree: exp.Merge, ctx: ExecContext) -> Plan:
     def scoped(expression: exp.Expr, alias: str) -> exp.Expr:
         """Unqualified columns in a NOT MATCHED clause name the only row there is."""
         out = expression.copy()
+        variables = scripting.declared(ctx)
         for column in out.find_all(exp.Column):
+            if column.name.lower() in variables and column.name.lower() not in by_name:
+                continue  # a script variable (dbt insert_overwrite: IN UNNEST(var))
             if not column.table:
                 column.set("table", exp.to_identifier(alias))
         return out

@@ -5,3 +5,6 @@ sources:
     schema: smoke
     tables:
       - name: snapshot_source
+      - name: events
+        config:
+          event_time: event_date
