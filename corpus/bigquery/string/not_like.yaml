@@ -10,5 +10,3 @@ expected:
     type: BOOL
   rows:
   - - true
-verified: false
-recorded_at: null

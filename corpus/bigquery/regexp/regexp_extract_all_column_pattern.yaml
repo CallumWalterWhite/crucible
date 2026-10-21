@@ -17,5 +17,3 @@ expected:
   - - - x
       - y
       - z
-verified: false
-recorded_at: null

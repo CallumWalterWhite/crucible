@@ -10,5 +10,3 @@ expected:
     type: DATE
   rows:
   - - null
-verified: false
-recorded_at: null

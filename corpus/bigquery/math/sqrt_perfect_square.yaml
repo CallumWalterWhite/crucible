@@ -10,5 +10,3 @@ expected:
     type: FLOAT64
   rows:
   - - 4.0
-verified: false
-recorded_at: null

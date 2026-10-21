@@ -109,9 +109,16 @@ def test_week_starts_on_sunday(bq, day, week):
     assert values(bq(f"SELECT EXTRACT(WEEK FROM {value}) AS v")) == [[week]]
 
 
-def test_week_with_a_weekday_is_unsupported(bq):
-    with pytest.raises(CrucibleUnsupportedError, match="WEEK\\(<weekday>\\)"):
-        bq("SELECT EXTRACT(WEEK(MONDAY) FROM DATE '2024-01-07') AS v")
+@pytest.mark.parametrize(
+    ("day", "week"),
+    [("SUNDAY", 9), ("MONDAY", 10), ("WEDNESDAY", 10), ("THURSDAY", 9), ("SATURDAY", 9)],
+)
+def test_week_with_a_weekday_counts_weeks_from_that_day(bq, day, week):
+    # 2024-03-06 is a Wednesday; 2024-01-01 a Monday. Days before the first <day> are week 0.
+    assert values(bq(f"SELECT EXTRACT(WEEK({day}) FROM DATE '2024-03-06') AS v")) == [[week]]
+    assert values(bq(f"SELECT EXTRACT(WEEK({day}) FROM DATE '2024-01-01') AS v")) == [
+        [1 if day == "MONDAY" else 0]
+    ]
 
 
 # --- FORMAT_DATE / FORMAT_DATETIME / FORMAT_TIMESTAMP: `%-` elements are refused -----------------

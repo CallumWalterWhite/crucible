@@ -10,5 +10,3 @@ expected:
     type: INT64
   rows:
   - - 1
-verified: false
-recorded_at: null

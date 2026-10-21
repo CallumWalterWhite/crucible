@@ -10,5 +10,3 @@ expected:
     type: DATE
   rows:
   - - '1970-01-02'
-verified: false
-recorded_at: null

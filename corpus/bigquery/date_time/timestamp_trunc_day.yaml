@@ -10,5 +10,3 @@ expected:
     type: TIMESTAMP
   rows:
   - - '2024-03-06T00:00:00Z'
-verified: false
-recorded_at: null

@@ -14,5 +14,3 @@ expected:
   rows:
   - - a#b#
   - - a1#22
-verified: false
-recorded_at: null

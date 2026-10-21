@@ -10,5 +10,3 @@ expected:
     type: STRING
   rows:
   - - axcaxc
-verified: false
-recorded_at: null

@@ -10,5 +10,3 @@ expected:
     type: STRING
   rows:
   - - '{"b":1}'
-verified: false
-recorded_at: null

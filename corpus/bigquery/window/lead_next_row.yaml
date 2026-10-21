@@ -15,5 +15,3 @@ expected:
     - 2
   - - 2
     - null
-verified: false
-recorded_at: null

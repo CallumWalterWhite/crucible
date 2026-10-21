@@ -153,3 +153,17 @@ def test_farm_fingerprint_is_unsupported_at_plan_time(bq):
 def test_lower_uses_full_case_mapping_for_dotted_capital_i(bq):
     # Recorded: LOWER('İ') is 'i' followed by U+0307 COMBINING DOT ABOVE.
     assert values(bq("SELECT LOWER('İ') AS v")) == [["i\u0307"]]
+
+
+# --- LIKE: a backslash escapes `%`, `_` and itself ---------------------------------------------
+def test_like_backslash_escapes_wildcards(bq):
+    sql = (
+        r"SELECT 'a%' LIKE 'a\\%', 'ab' LIKE 'a\\%', 'a_' LIKE 'a\\_', 'ab' LIKE 'a\\_', "
+        r"'a\\b' LIKE 'a\\\\b'"
+    )
+    assert values(bq(sql)) == [[True, False, True, False, True]]
+
+
+def test_like_pattern_ending_in_a_lone_backslash_is_unsupported(bq):
+    with pytest.raises(CrucibleUnsupportedError, match="unescaped backslash"):
+        bq(r"SELECT 'a' LIKE 'a\\'")
