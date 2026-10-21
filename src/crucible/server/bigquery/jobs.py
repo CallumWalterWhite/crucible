@@ -18,6 +18,7 @@ from sqlglot import exp
 
 from crucible.dialects.bigquery import metadata, types
 from crucible.dialects.bigquery.dialect import DIALECT
+from crucible.dialects.bigquery.parameters import STATE as PARAMETERS_STATE
 from crucible.engine import (
     Column,
     CrucibleError,
@@ -29,7 +30,7 @@ from crucible.engine import (
     Result,
 )
 from crucible.engine.catalog import qualified
-from crucible.server.bigquery import encoding, errors, load
+from crucible.server.bigquery import encoding, errors, load, params
 
 _LOG = logging.getLogger(__name__)
 DEFAULT_LOCATION = (
@@ -61,6 +62,8 @@ _IGNORED_QUERY_KEYS = frozenset(
         "priority",
         "labels",
         "useQueryCache",  # Crucible has no query cache: every answer is a fresh one
+        "queryParameters",  # bound by params.py
+        "parameterMode",
     }
 )
 _IGNORED_LOAD_KEYS = frozenset({"destinationTable", "schema", "sourceFormat", "skipLeadingRows"})
@@ -172,8 +175,7 @@ def _unsupported_keys(config: dict[str, Any], allowed: frozenset[str], what: str
 
 
 def check_query_config(config: dict[str, Any]) -> None:
-    """Raise for configuration Crucible would silently ignore. Query parameters, destination
-    tables and dry runs are not emulated yet."""
+    """Raise for configuration Crucible would silently ignore (destination tables, for one)."""
     _unsupported_keys(config, _IGNORED_QUERY_KEYS, "query job")
     if config.get("useLegacySql") is not False:
         # jobs.insert and jobs.query default to legacy SQL when the field is absent (REST
@@ -202,7 +204,9 @@ class Runner:
             session = DIALECT.new_session(
                 default.get("projectId") or job.project, default.get("datasetId")
             )
-            results = self.pipeline.execute(session, config["query"])
+            parameters = params.parse(config)
+            session.state[PARAMETERS_STATE] = parameters.types
+            results = self.pipeline.execute(session, config["query"], parameters.values)
             self._record(job, session, results)
         except CrucibleError as exc:
             job.fail(exc)
@@ -224,7 +228,9 @@ class Runner:
             session = DIALECT.new_session(
                 default.get("projectId") or job.project, default.get("datasetId")
             )
-            result = self.pipeline.dry_run(session, config["query"])
+            parameters = params.parse(config)
+            session.state[PARAMETERS_STATE] = parameters.types
+            result = self.pipeline.dry_run(session, config["query"], parameters.values)
             job.statement_type = result.statement_type
             if result.statement_type == "SELECT":
                 for column in result.columns:

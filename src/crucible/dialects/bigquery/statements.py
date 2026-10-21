@@ -12,7 +12,7 @@ from sqlglot.errors import ParseError
 from sqlglot.optimizer.annotate_types import annotate_types
 from sqlglot.tokenizer_core import TokenType
 
-from crucible.dialects.bigquery import ddl, dml, errors, metadata, types
+from crucible.dialects.bigquery import ddl, dml, errors, metadata, parameters, types
 from crucible.dialects.bigquery.keywords import RESERVED
 from crucible.dialects.bigquery.translate import (
     fix_annotation,
@@ -52,8 +52,12 @@ def split(sql: str) -> list[object]:
     statements: list[object] = []
     _refuse_unknown_functions(sql)
     starts = _statement_starts(sql)
+    position = 0  # positional parameters (`?`) count across the whole request
     for index, tree in enumerate(trees):
         if tree is not None:
+            for placeholder in tree.find_all(exp.Placeholder, bfs=False):  # text order
+                position += 1
+                placeholder.meta[parameters.POSITION] = position
             _check_reserved_aliases(tree, sql)
             if index < len(starts):
                 tree.meta[errors.STATEMENT_START] = starts[index]
@@ -194,12 +198,12 @@ def _plan(tree: exp.Expr, ctx: ExecContext) -> Plan:
 
 
 def run_sql(sql: str, statement_type: str, ctx: ExecContext, *, returns_rows: bool = True) -> Plan:
-    """Run generated SQL, giving DuckDB's own runtime errors BigQuery's wording."""
-    params = ctx.params
+    """Run generated SQL, giving DuckDB's own runtime errors BigQuery's wording. The request's
+    parameters it references are bound by ExecContext.run_sql."""
 
     def run(c: ExecContext) -> Result:
         try:
-            result = c.run_sql(sql, params, returns_rows=returns_rows)
+            result = c.run_sql(sql, returns_rows=returns_rows)
         except CrucibleError as exc:
             raise errors.reword(exc) from exc
         result.statement_type = statement_type

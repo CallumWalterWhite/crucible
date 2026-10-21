@@ -52,6 +52,8 @@ PLACEHOLDER_KEYS: dict[str, str] = {
 _EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+")
 _UPLOAD_ID = re.compile(r"upload_id=[^&\s\"']+")
 _TOKEN_LIKE = re.compile(r"(ya29\.[\w-]+|Bearer\s+\S+|AIza[0-9A-Za-z_-]{20,})")
+# An email address. A bare `@` is allowed: query parameters are named `@name` in SQL.
+EMAIL_LIKE = re.compile(r"[\w.+%-]+@[\w-]+(\.[\w-]+)+")
 # Kept with their original case, so a "Location" header is not mistaken for a "location" field.
 _KEEP_HEADERS = ("content-type", "location", "range")
 
@@ -139,8 +141,8 @@ class Redactor:
 
     def check(self, serialized: str) -> None:
         """Refuse to write a fixture that still identifies anything (hard requirement)."""
-        if "@" in serialized:
-            raise RecordApiError("redaction left an '@' in a fixture")
+        if EMAIL_LIKE.search(serialized):
+            raise RecordApiError("redaction left an email address in a fixture")
         for original in self.names:
             if original in serialized:
                 raise RecordApiError("redaction left a project, dataset or job name in a fixture")
@@ -483,6 +485,7 @@ class Recorder:
         self.record_metadata(p, tables)
         self.record_table_options(p)
         self.record_dry_runs(p)
+        self.record_query_parameters(p)
 
     def record_metadata(self, p: str, tables: str) -> None:
         """Table description, labels, field descriptions and REQUIRED columns: as tables.insert
@@ -733,6 +736,33 @@ class Recorder:
             body={**self.query_config("SELECT k, s FROM streamed")["query"], "dryRun": True},
         )
 
+    def record_query_parameters(self, p: str) -> None:
+        """queryParameters in the spellings the client sends (params.py): each scalar type,
+        positional, ARRAY and STRUCT, a missing parameter, and the same through jobs.insert."""
+        for name, mode, sql, parameters in QUERY_PARAMETER_CALLS:
+            self.call(
+                f"jobs_query_parameters_{name}",
+                "POST",
+                f"{API}/projects/{p}/queries",
+                body={
+                    **self.query_config(sql)["query"],
+                    "parameterMode": mode,
+                    "queryParameters": parameters,
+                },
+                expect=None,
+            )
+        job = self.insert_job(
+            "jobs_insert_parameters",
+            "parameters",
+            self.query_config(
+                "SELECT @k * 2 AS v",
+                parameterMode="NAMED",
+                queryParameters=[_param("k", "INT64", "21")],
+            ),
+        )
+        self.wait(job)
+        self.call("get_query_results_parameters", "GET", f"{API}/projects/{p}/queries/{job}")
+
     def load(self, name: str, csv_text: str) -> None:
         """A dbt-seed-style load: resumable upload of a CSV with an explicit schema."""
         job = self.job_id(f"load_{name}")
@@ -891,6 +921,63 @@ INSERT_ALL_CALLS: list[tuple[str, list[dict[str, Any]], dict[str, Any]]] = [
     ("bad_row", [{"json": {"k": 4}}, {"json": {"k": "abc"}}, {"json": {"k": 5, "nope": 1}}], {}),
     ("skip_invalid", [{"json": {"k": 6}}, {"json": {"k": "abc"}}], {"skipInvalidRows": True}),
     ("ignore_unknown", [{"json": {"k": 7, "nope": 1}}], {"ignoreUnknownValues": True}),
+]
+
+
+def _param(name: str | None, kind: str, value: Any) -> dict[str, Any]:
+    out: dict[str, Any] = {"parameterType": {"type": kind}, "parameterValue": {"value": value}}
+    return out | ({"name": name} if name is not None else {})
+
+
+# Spellings google-cloud-bigquery sends (_helpers.py, _SCALAR_VALUE_TO_JSON_PARAM).
+QUERY_PARAMETER_CALLS: list[tuple[str, str, str, list[dict[str, Any]]]] = [
+    (
+        "scalars",
+        "NAMED",
+        "SELECT @i + 1 AS i, @f AS f, @n AS n, @b AS b, @s AS s, @y AS y, @d AS d, @dt AS dt, "
+        "@tm AS tm, @ts AS ts, TO_JSON_STRING(@j) AS j, @nul AS nul",
+        [
+            _param("i", "INT64", "5"),
+            _param("f", "FLOAT64", 1.5),
+            _param("n", "NUMERIC", "1.25"),
+            _param("b", "BOOL", "true"),
+            _param("s", "STRING", "it's"),
+            _param("y", "BYTES", "Af8="),
+            _param("d", "DATE", "2024-02-29"),
+            _param("dt", "DATETIME", "2024-01-02T03:04:05.123456"),
+            _param("tm", "TIME", "04:05:06.500000"),
+            _param("ts", "TIMESTAMP", "2024-01-02 03:04:05.123456+00:00"),
+            _param("j", "JSON", '{"a": 1}'),
+            _param("nul", "STRING", None),
+        ],
+    ),
+    (
+        "positional",
+        "POSITIONAL",
+        "SELECT ? * 10 AS v, ? AS s",
+        [_param(None, "INT64", "2"), _param(None, "STRING", "b")],
+    ),
+    (
+        "array_struct",
+        "NAMED",
+        "SELECT ARRAY_LENGTH(@a) AS l, @st.x AS x",
+        [
+            {
+                "name": "a",
+                "parameterType": {"type": "ARRAY", "arrayType": {"type": "INT64"}},
+                "parameterValue": {"arrayValues": [{"value": "1"}, {"value": "2"}]},
+            },
+            {
+                "name": "st",
+                "parameterType": {
+                    "type": "STRUCT",
+                    "structTypes": [{"name": "x", "type": {"type": "INT64"}}],
+                },
+                "parameterValue": {"structValues": {"x": {"value": "7"}}},
+            },
+        ],
+    ),
+    ("missing", "NAMED", "SELECT @nope AS v", [_param("x", "INT64", "1")]),
 ]
 
 

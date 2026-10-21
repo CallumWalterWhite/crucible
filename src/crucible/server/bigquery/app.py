@@ -72,6 +72,8 @@ _QUERY_REQUEST_KEYS = frozenset(
         "useQueryCache",
         "kind",
         "dryRun",
+        "queryParameters",
+        "parameterMode",
     }
 )
 # REST reference, Dataset resource: fields Crucible stores and echoes.
@@ -415,7 +417,15 @@ class BigQueryServer:
                     raise CrucibleUnsupportedError(f"jobs.query request field {key}")
             config = {
                 k: body[k]
-                for k in ("query", "useLegacySql", "defaultDataset", "maximumBytesBilled", "labels")
+                for k in (
+                    "query",
+                    "useLegacySql",
+                    "defaultDataset",
+                    "maximumBytesBilled",
+                    "labels",
+                    "queryParameters",
+                    "parameterMode",
+                )
                 if k in body
             }
             job = Job(
