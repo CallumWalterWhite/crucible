@@ -1,0 +1,18 @@
+description: MERGE with an unaliased source table refers to it by its table name. See
+  https://cloud.google.com/bigquery/docs/reference/standard-sql/dml-syntax#merge_statement.
+tags: [dml, statements]
+setup:
+- CREATE TABLE t (k INT64, a INT64)
+- CREATE TABLE s (k INT64, v INT64)
+- INSERT INTO t VALUES (1, 10), (2, 20)
+- INSERT INTO s VALUES (2, 200)
+- MERGE t USING s ON t.k = s.k WHEN MATCHED THEN UPDATE SET a = s.v
+query: SELECT k, a FROM t
+ordered: false
+expected:
+  columns:
+  - {name: k, type: INT64}
+  - {name: a, type: INT64}
+  rows:
+  - [1, 10]
+  - [2, 200]

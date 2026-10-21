@@ -225,12 +225,14 @@ class Runner:
             return
         if len(results) > 1:
             return
-        if last.statement_type in ("INSERT", "MERGE"):
+        if last.statement_type in ("INSERT", "MERGE", "UPDATE", "DELETE"):
             job.dml_affected_rows = last.rowcount
         target = last.info.get("target")
         if isinstance(target, tuple) and last.statement_type in (
             "INSERT",
             "MERGE",
+            "UPDATE",
+            "DELETE",
             "CREATE_TABLE_AS_SELECT",
         ):
             project, dataset, table = (str(part) for part in cast("tuple[Any, ...]", target))

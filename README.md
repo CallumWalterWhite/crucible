@@ -99,7 +99,7 @@ Crucible is pre-alpha. Unsupported features fail with `Not supported by Crucible
 guess. Not supported yet:
 
 - Scripting (`DECLARE`, `BEGIN ... END`), temporary and persistent SQL functions (`CREATE FUNCTION`).
-- `UPDATE`, `DELETE` and `TRUNCATE TABLE` (use `MERGE`), and query parameters.
+- Query parameters.
 - `INFORMATION_SCHEMA`, wildcard tables (`dataset.events_*`), time travel (`FOR SYSTEM_TIME AS OF`).
 - Geography functions (`ST_*`).
 - The BigQuery Storage Read and Write APIs (gRPC), so `to_dataframe()` needs
@@ -113,7 +113,7 @@ If something you need is missing, open an issue with the query and the result re
 ## Roadmap
 
 1. **dbt on BigQuery:** scripting (`DECLARE`, `BEGIN ... END`) for the `insert_overwrite` strategy, then
-   snapshots, `UPDATE`, `DELETE` and query parameters.
+   snapshots and query parameters.
 2. **Wider BigQuery SQL:** corpus cases recorded from real BigQuery for common functions that have no test yet
    (CTEs, `COUNT(DISTINCT)`, `RANK`, `LIKE`, ...), and a generated compatibility report.
 3. **Snowflake:** the wire protocol first, then the SQL dialect, verified the same way.

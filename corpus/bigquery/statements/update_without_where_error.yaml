@@ -1,0 +1,9 @@
+description: UPDATE without a WHERE clause is an error; BigQuery requires one. See https://cloud.google.com/bigquery/docs/reference/standard-sql/dml-syntax#update_statement.
+tags: [dml, statements]
+setup:
+- CREATE TABLE t (k INT64, a INT64)
+query: UPDATE t SET a = 1
+expected:
+  error:
+    kind: invalid_query
+    message_contains: WHERE

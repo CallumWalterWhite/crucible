@@ -1,0 +1,17 @@
+description: UPDATE ... FROM sets values from the one matching source row. See https://cloud.google.com/bigquery/docs/reference/standard-sql/dml-syntax#update_from_clause.
+tags: [dml, statements]
+setup:
+- CREATE TABLE t (k INT64, a INT64)
+- CREATE TABLE s (k INT64, v INT64)
+- INSERT INTO t VALUES (1, 10), (2, 20)
+- INSERT INTO s VALUES (2, 200), (3, 300)
+- UPDATE t SET a = s.v FROM s WHERE t.k = s.k
+query: SELECT k, a FROM t
+ordered: false
+expected:
+  columns:
+  - {name: k, type: INT64}
+  - {name: a, type: INT64}
+  rows:
+  - [1, 10]
+  - [2, 200]

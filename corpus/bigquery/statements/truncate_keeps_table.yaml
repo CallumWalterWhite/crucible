@@ -1,0 +1,16 @@
+description: TRUNCATE TABLE removes every row and keeps the table and its schema. See
+  https://cloud.google.com/bigquery/docs/reference/standard-sql/dml-syntax#truncate_table_statement.
+tags: [dml, statements]
+setup:
+- CREATE TABLE t (k INT64, s STRING)
+- INSERT INTO t VALUES (1, 'a'), (2, 'b')
+- TRUNCATE TABLE t
+- INSERT INTO t VALUES (3, 'c')
+query: SELECT k, s FROM t
+ordered: false
+expected:
+  columns:
+  - {name: k, type: INT64}
+  - {name: s, type: STRING}
+  rows:
+  - [3, c]
