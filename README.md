@@ -61,6 +61,21 @@ A full dbt project (seeds, views, tables, data tests) runs against Crucible in [
 Client and dbt connection details, including planned Snowflake support, are in
 [docs/client-compat.md](docs/client-compat.md).
 
+## Tools
+
+`crucible mirror-schema` copies table and view schemas, never data, from a real BigQuery project into a running
+emulator, so dbt sources exist and `dbt build --empty` and unit tests work at once. It reads with your Application
+Default Credentials and calls only `datasets.get`, `tables.list` and `tables.get`:
+
+```sh
+uv run crucible mirror-schema --from-project my-project --dataset raw --dataset marts
+```
+
+Name each dataset with `--dataset`; there is no all-datasets mode. `--to` sets the emulator URL (default
+`http://127.0.0.1:9050`) and `--to-project` the project to create in (default `--from-project`). Objects Crucible
+cannot hold exactly are skipped with a warning. Rerunning leaves existing tables alone and replaces views. It needs
+the `record-bigquery` extra (`uv sync --all-extras` installs it).
+
 ## dbt versions
 
 Use **dbt-core 1.x with dbt-bigquery**. dbt Fusion (the `dbt` 2.x binary) works for only part of a project:

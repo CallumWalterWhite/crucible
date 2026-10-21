@@ -15,6 +15,8 @@ and this project does not yet follow semantic versioning.
 - README roadmap.
 - `INFORMATION_SCHEMA.COLUMNS`, `COLUMN_FIELD_PATHS`, `TABLE_OPTIONS`, `MATERIALIZED_VIEWS` and `__TABLES__`, with
   the columns `dbt docs generate` reads; the CI dbt suite now runs `dbt docs generate`.
+- `crucible mirror-schema`: copies table and view schemas (no data) from a BigQuery project into Crucible,
+  reading only datasets.get, tables.list and tables.get.
 - Corpus cases (to be recorded) for 62 common features that had no test.
 - `tabledata.insertAll` (`insert_rows`, `insert_rows_json`) with per-row `insertErrors`, `skipInvalidRows` and
   `ignoreUnknownValues`. UPDATE and DELETE over streamed rows give BigQuery's streaming-buffer error.
