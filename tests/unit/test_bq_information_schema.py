@@ -91,3 +91,12 @@ def test_an_option_crucible_cannot_render_is_unsupported(bq):
     bq("CREATE TABLE o (a INT64) OPTIONS (friendly_name = 'x')")
     with pytest.raises(CrucibleUnsupportedError, match="friendly_name"):
         bq(f"SELECT option_name FROM {DATASET}.INFORMATION_SCHEMA.TABLE_OPTIONS")
+
+
+def test_a_required_column_is_not_nullable(bq):
+    bq("CREATE TABLE r (a INT64 NOT NULL, b STRING)")
+    sql = (
+        f"SELECT column_name, is_nullable FROM {DATASET}.INFORMATION_SCHEMA.COLUMNS "
+        "WHERE table_name = 'r' ORDER BY ordinal_position"
+    )
+    assert values(bq(sql)) == [["a", "NO"], ["b", "YES"]]

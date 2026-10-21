@@ -1190,7 +1190,9 @@ def _set_metadata(props: dict[str, Any], body: dict[str, Any]) -> dict[str, Any]
     stored map, and a null label removes it. The options are the ones OPTIONS(...) sets."""
     options: dict[str, Any] = dict(props.get("options", {}))
     if "description" in body:
-        options["description"] = body["description"] or None
+        options["description"] = body["description"]
+        if not body["description"]:
+            del options["description"]  # an empty or null description clears it
     if "labels" in body:
         options["labels"] = {k: v for k, v in obj(body["labels"]).items() if v is not None}
     return props | {"options": options}
