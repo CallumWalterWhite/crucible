@@ -1,0 +1,14 @@
+description: DATE_FROM_UNIX_DATE reads the INT64 as days since 1970-01-01. See https://cloud.google.com/bigquery/docs/reference/standard-sql/date_functions#date_from_unix_date.
+tags:
+- probe
+- date_time
+query: SELECT DATE_FROM_UNIX_DATE(1) AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: DATE
+  rows:
+  - - '1970-01-02'
+verified: false
+recorded_at: null

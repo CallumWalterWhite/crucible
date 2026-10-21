@@ -1,0 +1,21 @@
+description: RANK gives tied rows the same rank and leaves a gap after them. See https://cloud.google.com/bigquery/docs/reference/standard-sql/window-function-calls.
+tags:
+- probe
+- window
+query: SELECT x, RANK() OVER (ORDER BY x) AS r FROM UNNEST([1, 1, 2]) AS x ORDER BY x
+ordered: true
+expected:
+  columns:
+  - name: x
+    type: INT64
+  - name: r
+    type: INT64
+  rows:
+  - - 1
+    - 1
+  - - 1
+    - 1
+  - - 2
+    - 3
+verified: false
+recorded_at: null

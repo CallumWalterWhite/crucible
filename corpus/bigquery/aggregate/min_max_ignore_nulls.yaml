@@ -1,0 +1,17 @@
+description: MIN and MAX ignore NULL values.
+tags:
+- probe
+- aggregate
+query: SELECT MIN(x) AS lo, MAX(x) AS hi FROM UNNEST([NULL, 3, 1, 2]) AS x
+ordered: false
+expected:
+  columns:
+  - name: lo
+    type: INT64
+  - name: hi
+    type: INT64
+  rows:
+  - - 1
+    - 3
+verified: false
+recorded_at: null

@@ -1,0 +1,14 @@
+description: LTRIM with one argument removes leading whitespace only. See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions#ltrim.
+tags:
+- probe
+- string
+query: SELECT LTRIM('  hi  ') AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: STRING
+  rows:
+  - - 'hi  '
+verified: false
+recorded_at: null

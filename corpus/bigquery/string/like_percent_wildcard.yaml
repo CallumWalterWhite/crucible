@@ -1,0 +1,14 @@
+description: LIKE with % matches any run of characters, including none. See https://cloud.google.com/bigquery/docs/reference/standard-sql/operators#like_operator.
+tags:
+- probe
+- string
+query: SELECT 'abc' LIKE 'a%' AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: BOOL
+  rows:
+  - - true
+verified: false
+recorded_at: null

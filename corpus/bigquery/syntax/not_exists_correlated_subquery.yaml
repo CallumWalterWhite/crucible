@@ -1,0 +1,15 @@
+description: NOT EXISTS keeps the rows for which a correlated subquery returns no rows. See https://cloud.google.com/bigquery/docs/reference/standard-sql/subqueries#exists_subquery_concepts.
+tags:
+- probe
+- syntax
+query: SELECT x FROM UNNEST([1, 2, 3]) AS x WHERE NOT EXISTS (SELECT 1 FROM UNNEST([2]) AS y WHERE y = x)
+ordered: false
+expected:
+  columns:
+  - name: x
+    type: INT64
+  rows:
+  - - 1
+  - - 3
+verified: false
+recorded_at: null

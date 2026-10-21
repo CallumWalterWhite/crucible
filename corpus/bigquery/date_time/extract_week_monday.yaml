@@ -1,0 +1,14 @@
+description: EXTRACT WEEK(MONDAY) counts weeks that start on Monday, so 2024-03-06 falls in week 10 because 2024-01-01 is a Monday. See https://cloud.google.com/bigquery/docs/reference/standard-sql/date_functions#extract.
+tags:
+- probe
+- date_time
+query: SELECT EXTRACT(WEEK(MONDAY) FROM DATE '2024-03-06') AS w
+ordered: false
+expected:
+  columns:
+  - name: w
+    type: INT64
+  rows:
+  - - 10
+verified: false
+recorded_at: null

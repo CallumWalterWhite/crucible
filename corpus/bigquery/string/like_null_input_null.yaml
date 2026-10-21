@@ -1,0 +1,14 @@
+description: LIKE returns NULL when its input is NULL. See https://cloud.google.com/bigquery/docs/reference/standard-sql/operators#like_operator.
+tags:
+- probe
+- string
+query: SELECT CAST(NULL AS STRING) LIKE 'a%' AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: BOOL
+  rows:
+  - - null
+verified: false
+recorded_at: null

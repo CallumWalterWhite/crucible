@@ -1,0 +1,14 @@
+description: REPLACE with an empty search string makes no replacements. See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions#replace.
+tags:
+- probe
+- string
+query: SELECT REPLACE('abc', '', 'x') AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: STRING
+  rows:
+  - - abc
+verified: false
+recorded_at: null

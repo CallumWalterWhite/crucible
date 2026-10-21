@@ -1,0 +1,24 @@
+description: SUM OVER PARTITION BY gives every row the sum of its partition.
+tags:
+- probe
+- window
+setup:
+- CREATE TABLE w (g STRING, x INT64)
+- INSERT INTO w VALUES ('a', 1), ('a', 2), ('b', 5)
+query: SELECT x, SUM(x) OVER (PARTITION BY g) AS s FROM w ORDER BY x
+ordered: true
+expected:
+  columns:
+  - name: x
+    type: INT64
+  - name: s
+    type: INT64
+  rows:
+  - - 1
+    - 3
+  - - 2
+    - 3
+  - - 5
+    - 5
+verified: false
+recorded_at: null

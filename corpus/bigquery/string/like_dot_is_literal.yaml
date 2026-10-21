@@ -1,0 +1,14 @@
+description: LIKE treats . as a literal character, not as a regular-expression wildcard. See https://cloud.google.com/bigquery/docs/reference/standard-sql/operators#like_operator.
+tags:
+- probe
+- string
+query: SELECT 'abc' LIKE 'a.c' AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: BOOL
+  rows:
+  - - false
+verified: false
+recorded_at: null

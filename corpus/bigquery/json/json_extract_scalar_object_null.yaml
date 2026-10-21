@@ -1,0 +1,14 @@
+description: JSON_EXTRACT_SCALAR returns NULL when the value at the path is an object or array, not a scalar. See https://cloud.google.com/bigquery/docs/reference/standard-sql/json_functions.
+tags:
+- probe
+- json
+query: "SELECT JSON_EXTRACT_SCALAR('{\"a\": {\"b\": 1}}', '$.a') AS v"
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: STRING
+  rows:
+  - - null
+verified: false
+recorded_at: null

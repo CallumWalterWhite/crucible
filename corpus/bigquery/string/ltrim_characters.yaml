@@ -1,0 +1,14 @@
+description: LTRIM with a second argument removes leading characters from that set. See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions#ltrim.
+tags:
+- probe
+- string
+query: SELECT LTRIM('xxhixx', 'x') AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: STRING
+  rows:
+  - - hixx
+verified: false
+recorded_at: null

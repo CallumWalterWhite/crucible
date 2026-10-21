@@ -1,0 +1,14 @@
+description: BOOL_AND returns FALSE when any non-NULL input is FALSE.
+tags:
+- probe
+- aggregate
+query: SELECT BOOL_AND(x) AS v FROM UNNEST([TRUE, FALSE]) AS x
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: BOOL
+  rows:
+  - - false
+verified: false
+recorded_at: null

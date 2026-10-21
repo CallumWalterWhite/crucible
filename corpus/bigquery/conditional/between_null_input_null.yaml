@@ -1,0 +1,14 @@
+description: BETWEEN returns NULL when the tested value is NULL. See https://cloud.google.com/bigquery/docs/reference/standard-sql/operators#between_operators.
+tags:
+- probe
+- conditional
+query: SELECT CAST(NULL AS INT64) BETWEEN 1 AND 2 AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: BOOL
+  rows:
+  - - null
+verified: false
+recorded_at: null

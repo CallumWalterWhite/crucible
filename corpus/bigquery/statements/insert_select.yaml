@@ -1,0 +1,18 @@
+description: INSERT ... SELECT writes the rows the query returns into the table. See https://cloud.google.com/bigquery/docs/reference/standard-sql/dml-syntax#insert_select_statement.
+tags:
+- probe
+- statements
+setup:
+- CREATE TABLE t (x INT64)
+- INSERT INTO t SELECT x FROM UNNEST([1, 2]) AS x
+query: SELECT x FROM t
+ordered: false
+expected:
+  columns:
+  - name: x
+    type: INT64
+  rows:
+  - - 1
+  - - 2
+verified: false
+recorded_at: null
