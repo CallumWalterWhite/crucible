@@ -192,6 +192,10 @@ NOT_RECORDED_YET: list[str] = [
     # dryRun (record_api.record_dry_runs), to be recorded.
     "jobs_insert_dry_run_*",
     "jobs_query_dry_run",
+    # queryParameters (record_api.record_query_parameters), to be recorded.
+    "jobs_query_parameters_*",
+    "jobs_insert_parameters",
+    "get_query_results_parameters",
 ]
 
 

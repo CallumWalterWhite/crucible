@@ -24,6 +24,8 @@ SAMPLES = pathlib.Path(__file__).resolve().parent / "redaction_samples"
 TOKEN_LIKE = re.compile(
     r"ya29\.|Bearer |AIza[0-9A-Za-z_-]{20,}|\"access_token\"|\"refresh_token\"|\"private_key\""
 )
+# An email address; a bare `@` is allowed (query parameters are `@name` in SQL).
+EMAIL_LIKE = re.compile(r"[\w.+%-]+@[\w-]+(\.[\w-]+)+")
 # Keys whose values must be placeholders such as <project> or <time>.
 PLACEHOLDER_KEYS = {
     "projectId",
@@ -71,8 +73,8 @@ def _private_terms() -> list[str]:
 def problems(text: str) -> list[str]:
     """Every redaction problem in one fixture's text. An empty list means the fixture is clean."""
     found: list[str] = []
-    if "@" in text:
-        found.append("contains '@' (an email address)")
+    if EMAIL_LIKE.search(text):
+        found.append("contains an email address")
     for match in sorted(set(m.group(0) for m in TOKEN_LIKE.finditer(text))):
         found.append(f"contains token-like text: {match!r}")
     for term in _private_terms():
@@ -118,6 +120,7 @@ def test_clean_sample_passes():
     "bad",
     [
         '{"user": "someone@example.com"}',
+        '{"member": "user:a.b+c@mail.example.org"}',
         '{"authorization": "Bearer abc.def"}',
         '{"token": "ya29.a0AfH6SMB"}',
         '{"key": "AIzaSyD-1234567890abcdefghijk"}',
@@ -128,6 +131,10 @@ def test_clean_sample_passes():
 )
 def test_token_like_and_email_text_is_reported(bad):
     assert problems(bad), bad
+
+
+def test_a_query_parameter_reference_is_not_an_email():
+    assert problems(json.dumps({"query": "SELECT @x AS v, @st.y AS y"})) == []
 
 
 def test_non_placeholder_project_id_is_reported():

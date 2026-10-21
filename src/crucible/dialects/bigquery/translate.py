@@ -16,7 +16,14 @@ from sqlglot.optimizer.annotate_types import annotate_types
 from sqlglot.optimizer.qualify import qualify
 from sqlglot.schema import MappingSchema
 
-from crucible.dialects.bigquery import errors, information_schema, metadata, transforms, types
+from crucible.dialects.bigquery import (
+    errors,
+    information_schema,
+    metadata,
+    parameters,
+    transforms,
+    types,
+)
 from crucible.dialects.bigquery.generator import generate
 from crucible.dialects.bigquery.transforms.common import check, raise_runtime
 from crucible.engine import ExecContext, TableInfo
@@ -140,6 +147,7 @@ class Prepared:
 def prepare(query: exp.Expr, ctx: ExecContext) -> Prepared:
     """Everything except the projection casts and generation (ADR 0010)."""
     information_schema.expand(query, ctx)
+    parameters.bind(query, ctx)
     anonymous_columns = transforms.unnest.alias_offset_unnests(query)
     first = outer_selects(query)[0]
     _tag_names(first)

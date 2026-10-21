@@ -291,3 +291,30 @@ def test_bigquery_dry_run_returns_the_schema_and_zero_bytes(client):
     assert job.state == "DONE"
     assert job.total_bytes_processed == 0
     assert [(f.name, f.field_type) for f in job.schema] == [("a", "INTEGER"), ("b", "STRING")]
+
+
+def test_bigquery_query_parameters(client):
+    at = datetime.datetime(2024, 1, 2, 3, 4, 5, 123456, tzinfo=datetime.UTC)
+    config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("i", "INT64", 5),
+            bigquery.ScalarQueryParameter("s", "STRING", "it's"),
+            bigquery.ScalarQueryParameter("n", "NUMERIC", decimal.Decimal("1.5")),
+            bigquery.ScalarQueryParameter("ts", "TIMESTAMP", at),
+            bigquery.ScalarQueryParameter("d", "DATE", datetime.date(2024, 2, 29)),
+            bigquery.ArrayQueryParameter("a", "INT64", [1, 2, 3]),
+            bigquery.StructQueryParameter("st", bigquery.ScalarQueryParameter("x", "INT64", 7)),
+        ]
+    )
+    sql = (
+        "SELECT @i + 1 AS i, @s AS s, @n AS n, @ts AS ts, @d AS d, ARRAY_LENGTH(@a) AS l, "
+        "@st.x AS x"
+    )
+    [row] = list(client.query(sql, job_config=config).result())
+    assert tuple(row.values()) == (
+        6, "it's", decimal.Decimal("1.5"), at, datetime.date(2024, 2, 29), 3, 7,
+    )  # fmt: skip
+    positional = bigquery.QueryJobConfig(
+        query_parameters=[bigquery.ScalarQueryParameter(None, "INT64", 2)]
+    )
+    assert next(iter(client.query("SELECT ? * 10 AS v", job_config=positional).result())).v == 20

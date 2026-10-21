@@ -98,6 +98,11 @@ def _scalar_or_record(value: Any, field: dict[str, Any], location: str) -> Any:
             )
             for f in inner
         }
+    return scalar(kind, value, location)
+
+
+def scalar(kind: str, value: Any, location: str) -> Any:
+    """One scalar value of a legacy-named type (INTEGER, FLOAT, ...) in a confirmed spelling."""
     parse = _SCALARS.get(kind)
     if parse is None:
         raise CrucibleUnsupportedError(f"insertAll into a {kind} column")

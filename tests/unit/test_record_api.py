@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 
-from crucible.corpus.record_api import RecordApiError, Recorder, Redactor
+from crucible.corpus.record_api import EMAIL_LIKE, RecordApiError, Recorder, Redactor
 
 PROJECT = "secret-project-123"
 EMAIL = "someone@example.invalid"
@@ -179,7 +179,7 @@ def test_no_identifying_value_reaches_a_fixture(recorded):
             "abc==",
         ):
             assert secret not in text, (name, secret)
-        assert "@" not in text
+        assert not EMAIL_LIKE.search(text)
 
 
 def test_placeholders_are_consistent_and_error_locations_survive(recorded):
