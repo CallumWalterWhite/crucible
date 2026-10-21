@@ -207,6 +207,50 @@ def test_bigquery_load_csv_from_file(client, dataset):
     ]
 
 
+def test_bigquery_load_table_from_json_rows(client, dataset):
+    ref = f"{PROJECT}.{dataset}.loaded_json"
+    rows = [
+        {
+            "id": 1,
+            "day": "2024-01-02",
+            "amount": 1.5,
+            "active": True,
+            "note": None,
+            "tags": ["x", "y"],
+            "point": {"x": 3},
+        },
+        {
+            "id": 2,
+            "day": "2024-02-29",
+            "amount": 10,
+            "active": False,
+            "note": "hi",
+            "tags": ["z"],
+            "point": None,
+        },
+    ]
+    config = bigquery.LoadJobConfig(
+        schema=[
+            bigquery.SchemaField("id", "INTEGER"),
+            bigquery.SchemaField("day", "DATE"),
+            bigquery.SchemaField("amount", "FLOAT"),
+            bigquery.SchemaField("active", "BOOLEAN"),
+            bigquery.SchemaField("note", "STRING"),
+            bigquery.SchemaField("tags", "STRING", mode="REPEATED"),
+            bigquery.SchemaField("point", "RECORD", fields=[bigquery.SchemaField("x", "INTEGER")]),
+        ],
+        write_disposition="WRITE_TRUNCATE",
+    )
+    client.load_table_from_json(rows, ref, job_config=config).result()
+    loaded = client.query(
+        f"SELECT id, day, amount, active, note, tags, point FROM `{ref}` ORDER BY id"
+    ).result()
+    assert [tuple(r.values()) for r in loaded] == [
+        (1, datetime.date(2024, 1, 2), 1.5, True, None, ["x", "y"], {"x": 3}),
+        (2, datetime.date(2024, 2, 29), 10.0, False, "hi", ["z"], None),
+    ]
+
+
 def test_bigquery_division_by_zero_is_bad_request(client):
     with pytest.raises(exceptions.BadRequest, match="division by zero"):
         client.query("SELECT 1/0 AS v").result()

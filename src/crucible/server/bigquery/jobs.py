@@ -66,7 +66,11 @@ _IGNORED_QUERY_KEYS = frozenset(
         "parameterMode",
     }
 )
-_IGNORED_LOAD_KEYS = frozenset({"destinationTable", "schema", "sourceFormat", "skipLeadingRows"})
+_LOAD_KEYS = frozenset(
+    {"destinationTable", "schema", "sourceFormat", "writeDisposition", "createDisposition"}
+)
+_CSV_LOAD_KEYS = frozenset({"fieldDelimiter", "skipLeadingRows"})
+_NDJSON_LOAD_KEYS = frozenset({"ignoreUnknownValues"})
 
 
 def obj(value: Any) -> dict[str, Any]:
@@ -322,13 +326,13 @@ class Runner:
         return job
 
     def _load(self, job: Job, config: dict[str, Any], data: bytes) -> None:
+        source = config.get("sourceFormat", "CSV")
+        if source not in ("CSV", "NEWLINE_DELIMITED_JSON"):
+            raise CrucibleUnsupportedError(f"load job sourceFormat {source}")
+        ndjson = source == "NEWLINE_DELIMITED_JSON"
         _unsupported_keys(
-            config,
-            _IGNORED_LOAD_KEYS | {"writeDisposition", "createDisposition", "fieldDelimiter"},
-            "load job",
+            config, _LOAD_KEYS | (_NDJSON_LOAD_KEYS if ndjson else _CSV_LOAD_KEYS), "load job"
         )
-        if config.get("sourceFormat", "CSV") != "CSV":
-            raise CrucibleUnsupportedError(f"load job sourceFormat {config.get('sourceFormat')}")
         if config.get("fieldDelimiter", ",") != ",":
             raise CrucibleUnsupportedError("load job fieldDelimiter other than ','")
         if config.get("createDisposition", "CREATE_IF_NEEDED") != "CREATE_IF_NEEDED":
@@ -344,7 +348,12 @@ class Runner:
         dataset, table = destination.get("datasetId"), destination.get("tableId")
         if not dataset or not table:
             raise CrucibleError(ErrorKind.INVALID_QUERY, "Load job needs a destinationTable")
-        rows = load.parse_csv(data, fields, int(config.get("skipLeadingRows", 0)))
+        if ndjson:
+            # `is True`: a string "true" is not the boolean the REST reference defines (fail closed)
+            ignore = config.get("ignoreUnknownValues") is True
+            rows = load.parse_ndjson(data, fields, ignore_unknown=ignore)
+        else:
+            rows = load.parse_csv(data, fields, int(config.get("skipLeadingRows", 0)))
 
         bq_types = [encoding.warehouse_type_from_field(f) for f in fields]
         storage = ", ".join(

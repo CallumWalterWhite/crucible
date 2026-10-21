@@ -203,6 +203,12 @@ NOT_RECORDED_YET: list[str] = [
     "*_temp_function",
     "*_function",
     "jobs_query_function_signature_error",
+    # NEWLINE_DELIMITED_JSON loads (record_api.record_ndjson_loads), to be recorded.
+    "ndjson_types_*",
+    "ndjson_nested_*",
+    "ndjson_bad_value_*",
+    "ndjson_unknown_field_*",
+    "ndjson_ignore_unknown_*",
 ]
 
 

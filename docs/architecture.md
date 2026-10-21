@@ -154,7 +154,7 @@ the not-implemented error.
 | `datasets.insert` / `datasets.delete` | `POST /projects/{p}/datasets`, `DELETE .../datasets/{d}` | `create_schema` / `drop_schema` |
 | `tables.insert` | `POST .../datasets/{d}/tables` | `create_table` with a schema (client tests) |
 | `jobs.cancel` | `POST /projects/{p}/jobs/{id}/cancel` | dbt on interrupt (jobs are already DONE) |
-| resumable or multipart upload load job | `POST /upload/bigquery/v2/projects/{p}/jobs?uploadType=resumable` + `PUT`, or `uploadType=multipart` (one request) | seeds (CSV, explicit schema, `WRITE_TRUNCATE`); multipart from Go clients (dbt Fusion) |
+| resumable or multipart upload load job | `POST /upload/bigquery/v2/projects/{p}/jobs?uploadType=resumable` + `PUT`, or `uploadType=multipart` (one request) | seeds (CSV or NDJSON, explicit schema, `WRITE_TRUNCATE`); multipart from Go clients (dbt Fusion) |
 
 Responses follow the recorded fixtures in `tests/fixtures/bigquery_api/`.
 `tests/unit/test_bigquery_fixtures.py` replays the recording against Crucible and lists every
