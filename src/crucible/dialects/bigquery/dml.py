@@ -1,4 +1,4 @@
-"""MERGE, including BigQuery's duplicate-match error (ADR 0011).
+"""MERGE, UPDATE, DELETE and TRUNCATE TABLE, with BigQuery's duplicate-match error (ADR 0011).
 
 The ON condition, WHEN conditions and every assigned value are translated together, as the
 projections of one synthetic query over `<target> AS t CROSS JOIN <source> AS s`, so they are
@@ -53,7 +53,9 @@ def plan_merge(tree: exp.Merge, ctx: ExecContext) -> Plan:
     info = metadata.find_table(ctx, metadata.name_of(target, ctx))
     target_alias = _alias(target, info.name)
     source = tree.args["using"]
-    source_alias = _alias(source, "crucible_source")
+    # An unaliased source table is named by its table name, as in BigQuery: USING s ON t.k = s.k.
+    default = source.name if isinstance(source, exp.Table) else "crucible_source"
+    source_alias = _alias(source, default)
     by_name = {c.name.lower(): c for c in info.columns}
     target_types = {c.name: types.parse(types.type_name(c.type)) for c in info.columns}
 
@@ -201,3 +203,89 @@ def _runner(merge_sql: str, check_sql: str | None, info: TableInfo):
         return result
 
     return run
+
+
+# UPDATE and DELETE run as a MERGE over one dummy row (or UPDATE's FROM source), so they share
+# its translation, coercion and duplicate-match check. BigQuery requires the WHERE clause:
+# https://cloud.google.com/bigquery/docs/reference/standard-sql/dml-syntax#update_statement
+_ONE_ROW = exp.Subquery(this=exp.select(exp.alias_(exp.Literal.number(1), "crucible_row")))
+
+
+def _dml_target(tree: exp.Update | exp.Delete, ctx: ExecContext, statement: str) -> exp.Table:
+    target = tree.this
+    if not isinstance(target, exp.Table):
+        target = (tree.args.get("tables") or [None])[0]  # `DELETE ds.t WHERE ...`
+    if not isinstance(target, exp.Table):
+        raise CrucibleUnsupportedError(f"{statement} target {tree.sql('bigquery')}")
+    if tree.args.get("where") is None:
+        raise errors.invalid(f"{statement} must have a WHERE clause")
+    info = metadata.find_table(ctx, metadata.name_of(target, ctx))
+    if info.kind != "table":
+        raise CrucibleUnsupportedError(f"{statement} of a view")
+    return target
+
+
+def _as(merge: exp.Merge, ctx: ExecContext, statement: str) -> Plan:
+    planned = plan_merge(merge, ctx)
+    assert isinstance(planned, CommandPlan)
+    run = planned.run
+
+    def renamed(c: ExecContext) -> Result:
+        result = run(c)
+        result.statement_type = statement
+        return result
+
+    return CommandPlan(renamed, statement)
+
+
+def plan_update(tree: exp.Update, ctx: ExecContext) -> Plan:
+    target = _dml_target(tree, ctx, "UPDATE")
+    from_ = tree.args.get("from_")
+    if tree.args.get("joins") or (from_ is not None and from_.args.get("joins")):
+        raise CrucibleUnsupportedError("UPDATE ... FROM with a join")
+    source = from_.this.copy() if from_ is not None else _ONE_ROW.copy()
+    merge = exp.Merge(
+        this=target.copy(),
+        using=source,
+        on=tree.args["where"].this.copy(),
+        whens=exp.Whens(
+            expressions=[
+                exp.When(
+                    matched=True,
+                    then=exp.Update(expressions=[e.copy() for e in tree.expressions]),
+                )
+            ]
+        ),
+    )
+    return _as(merge, ctx, "UPDATE")
+
+
+def plan_delete(tree: exp.Delete, ctx: ExecContext) -> Plan:
+    target = _dml_target(tree, ctx, "DELETE")
+    if tree.args.get("using") is True or isinstance(tree.args.get("using"), exp.Expr):
+        raise CrucibleUnsupportedError("DELETE ... USING")
+    merge = exp.Merge(
+        this=target.copy(),
+        using=_ONE_ROW.copy(),
+        on=tree.args["where"].this.copy(),
+        whens=exp.Whens(expressions=[exp.When(matched=True, then=exp.var("DELETE"))]),
+    )
+    return _as(merge, ctx, "DELETE")
+
+
+def plan_truncate(tree: exp.TruncateTable, ctx: ExecContext) -> Plan:
+    """TRUNCATE TABLE deletes every row; the table, its schema and its properties stay."""
+    [target] = tree.expressions
+    assert isinstance(target, exp.Table)
+    info = metadata.find_table(ctx, metadata.name_of(target, ctx))
+    if info.kind != "table":
+        raise CrucibleUnsupportedError("TRUNCATE TABLE of a view")
+    sql = f"DELETE FROM {qualified(info.catalog, info.schema, info.name)}"
+
+    def run(c: ExecContext) -> Result:
+        result = c.run_sql(sql, returns_rows=False)
+        result.statement_type = "TRUNCATE_TABLE"
+        result.rowcount = None
+        return result
+
+    return CommandPlan(run, "TRUNCATE_TABLE")

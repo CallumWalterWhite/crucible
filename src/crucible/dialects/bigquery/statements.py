@@ -95,11 +95,13 @@ def plan(statement: object, ctx: ExecContext) -> Plan:
 
 
 def _target(tree: exp.Expr, ctx: ExecContext) -> metadata.Name | None:
-    """The table a CREATE TABLE / CREATE VIEW / INSERT / MERGE writes."""
+    """The table a CREATE TABLE / CREATE VIEW / INSERT / MERGE / UPDATE / DELETE writes."""
     creates = isinstance(tree, exp.Create) and (tree.kind or "").upper() in ("TABLE", "VIEW")
-    if not creates and not isinstance(tree, exp.Insert | exp.Merge):
+    if not creates and not isinstance(tree, exp.Insert | exp.Merge | exp.Update | exp.Delete):
         return None
     target = tree.this
+    if isinstance(tree, exp.Delete) and not isinstance(target, exp.Table):
+        target = (tree.args.get("tables") or [None])[0]  # `DELETE ds.t WHERE ...`
     table = target.this if isinstance(target, exp.Schema) else target
     return metadata.name_of(table, ctx) if isinstance(table, exp.Table) else None
 
@@ -132,6 +134,12 @@ def _plan(tree: exp.Expr, ctx: ExecContext) -> Plan:
         return ddl.plan_drop(tree, ctx)
     if isinstance(tree, exp.Merge):
         return dml.plan_merge(tree, ctx)
+    if isinstance(tree, exp.Update):
+        return dml.plan_update(tree, ctx)
+    if isinstance(tree, exp.Delete):
+        return dml.plan_delete(tree, ctx)
+    if isinstance(tree, exp.TruncateTable):
+        return dml.plan_truncate(tree, ctx)
     if isinstance(tree, exp.Insert):
         return _insert(tree, ctx)
     if isinstance(tree, exp.Command):

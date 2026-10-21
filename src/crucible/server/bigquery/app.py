@@ -244,8 +244,12 @@ class BigQueryServer:
         }
         if job.dml_affected_rows is not None:
             stats["numDmlAffectedRows"] = str(job.dml_affected_rows)
-            if job.statement_type == "INSERT":
-                stats["dmlStats"] = {"insertedRowCount": str(job.dml_affected_rows)}
+            # JobStatistics2.dmlStats: https://cloud.google.com/bigquery/docs/reference/rest/v2/Job#DmlStats
+            counter = {"INSERT": "insertedRowCount", "UPDATE": "updatedRowCount"}.get(
+                job.statement_type, "deletedRowCount" if job.statement_type == "DELETE" else None
+            )
+            if counter is not None:
+                stats["dmlStats"] = {counter: str(job.dml_affected_rows)}
         if job.statement_type == "CREATE_TABLE_AS_SELECT" and job.target is not None:
             project, dataset, table = job.target
             if job.target_schema is not None:

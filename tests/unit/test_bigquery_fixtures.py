@@ -163,7 +163,16 @@ DIFFERENCES: list[tuple[str, str, str]] = [
 
 # Calls the recorder makes that the committed fixtures predate (Phase 4, Step A). The replay
 # makes them, so Crucible must answer; they are compared once the user records them.
-NOT_RECORDED_YET: list[str] = []
+NOT_RECORDED_YET: list[str] = [
+    # UPDATE, DELETE and TRUNCATE TABLE (record_api.record_dml), to be recorded.
+    "jobs_insert_dml_setup",
+    "*_[a-z]*_update",
+    "jobs_*_delete",
+    "get_query_results_delete",
+    "*_truncate",
+    "tables_get_after_truncate",
+    "jobs_query_*_without_where",
+]
 
 
 STORAGE_ORDER_PAGES = {"tabledata_list", "tabledata_list_int64_timestamp"}

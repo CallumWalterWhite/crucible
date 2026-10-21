@@ -476,7 +476,38 @@ class Recorder:
             self.wait_ok(job, f"CREATE TABLE {name}")
             self.call(f"tables_get_{name}", "GET", f"{tables}/{name}")
         self.call("tables_list_partitioned", "GET", tables)
+        self.record_dml(p, tables)
         self.call("tables_delete", "DELETE", f"{tables}/all_types", expect=(200, 204))
+
+    def record_dml(self, p: str, tables: str) -> None:
+        """UPDATE, DELETE and TRUNCATE TABLE: statistics, results, and the missing-WHERE errors."""
+        setup = self.insert_job(
+            "jobs_insert_dml_setup",
+            "dml_setup",
+            self.query_config("CREATE TABLE dml_t AS SELECT k FROM UNNEST([1, 2, 3]) AS k"),
+        )
+        self.wait_ok(setup, "CREATE TABLE dml_t")
+        for kind, sql in (
+            ("update", "UPDATE dml_t SET k = k + 10 WHERE k >= 2"),
+            ("delete", "DELETE FROM dml_t WHERE k = 1"),
+            ("truncate", "TRUNCATE TABLE dml_t"),
+        ):
+            job = self.insert_job(f"jobs_insert_{kind}", kind, self.query_config(sql))
+            self.wait_ok(job, kind.upper())
+            self.call(f"jobs_get_{kind}", "GET", f"{API}/projects/{p}/jobs/{job}")
+            self.call(f"get_query_results_{kind}", "GET", f"{API}/projects/{p}/queries/{job}")
+        self.call("tables_get_after_truncate", "GET", f"{tables}/dml_t")
+        for kind, sql in (
+            ("update", "UPDATE dml_t SET k = 1"),
+            ("delete", "DELETE FROM dml_t"),
+        ):
+            self.call(
+                f"jobs_query_{kind}_without_where",
+                "POST",
+                f"{API}/projects/{p}/queries",
+                body=self.query_config(sql)["query"],
+                expect=None,
+            )
 
     def load(self, name: str, csv_text: str) -> None:
         """A dbt-seed-style load: resumable upload of a CSV with an explicit schema."""

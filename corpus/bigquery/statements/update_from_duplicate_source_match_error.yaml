@@ -1,0 +1,13 @@
+description: UPDATE ... FROM raises when a target row matches more than one source row. See
+  https://cloud.google.com/bigquery/docs/reference/standard-sql/dml-syntax#update_from_clause.
+tags: [dml, statements]
+setup:
+- CREATE TABLE t (k INT64, a INT64)
+- CREATE TABLE s (k INT64, v INT64)
+- INSERT INTO t VALUES (1, 10)
+- INSERT INTO s VALUES (1, 100), (1, 101)
+query: UPDATE t SET a = s.v FROM s WHERE t.k = s.k
+expected:
+  error:
+    kind: runtime
+    message_contains: must match at most one source row

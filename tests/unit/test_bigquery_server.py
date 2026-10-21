@@ -287,6 +287,23 @@ def test_an_insert_job_reports_the_affected_rows(client):
     assert body["numDmlAffectedRows"] == "2"
 
 
+@pytest.mark.parametrize(
+    ("sql", "statement", "counter", "count"),
+    [
+        ("UPDATE ds.t SET a = 5 WHERE a > 1", "UPDATE", "updatedRowCount", "2"),
+        ("DELETE FROM ds.t WHERE a = 1", "DELETE", "deletedRowCount", "1"),
+    ],
+)
+def test_update_and_delete_jobs_report_the_affected_rows(client, sql, statement, counter, count):
+    make_dataset(client)
+    insert_query(client, "CREATE TABLE ds.t (a INT64)")
+    insert_query(client, "INSERT INTO ds.t VALUES (1), (2), (3)")
+    stats = insert_query(client, sql).json()["statistics"]["query"]
+    assert stats["statementType"] == statement
+    assert stats["numDmlAffectedRows"] == count
+    assert stats["dmlStats"] == {counter: count}
+
+
 # --- 8. anonymous result tables ---------------------------------------------------------------
 def test_the_anonymous_destination_of_a_select_is_a_table_with_nullable_fields(client):
     make_dataset(client)
