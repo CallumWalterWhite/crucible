@@ -21,6 +21,7 @@ from crucible.dialects.bigquery import (
     information_schema,
     metadata,
     parameters,
+    scripting,
     transforms,
     types,
 )
@@ -152,6 +153,7 @@ def prepare(query: exp.Expr, ctx: ExecContext) -> Prepared:
     first = outer_selects(query)[0]
     _tag_names(first)
     infos = metadata.qualify_names(query, ctx)
+    scripting.bind(query, ctx, {c.name.lower() for info in infos for c in info.columns})
     schema = schema_for(infos)
     struct_names = _struct_field_names(query)
     try:

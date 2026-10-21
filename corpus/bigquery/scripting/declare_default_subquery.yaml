@@ -1,0 +1,11 @@
+description: DECLARE ... DEFAULT (SELECT ...) reads a table, as dbt's _dbt_max_partition does. See https://cloud.google.com/bigquery/docs/reference/standard-sql/procedural-language#declare.
+tags: [scripting]
+setup:
+- CREATE TABLE t (d DATE)
+- INSERT INTO t VALUES (DATE '2024-01-01'), (DATE '2024-01-03'), (NULL)
+query: DECLARE m DATE DEFAULT (SELECT MAX(d) FROM t WHERE d IS NOT NULL); SELECT m AS v
+expected:
+  columns:
+  - {name: v, type: DATE}
+  rows:
+  - ['2024-01-03']

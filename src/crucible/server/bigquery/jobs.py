@@ -30,7 +30,7 @@ from crucible.engine import (
     Result,
 )
 from crucible.engine.catalog import qualified
-from crucible.server.bigquery import encoding, errors, load, params
+from crucible.server.bigquery import copy, encoding, errors, load, params
 
 _LOG = logging.getLogger(__name__)
 DEFAULT_LOCATION = (
@@ -106,6 +106,7 @@ class Job:
     target_schema: dict[str, Any] | None = None
     anonymous_table: str | None = None
     load_statistics: dict[str, str] | None = None
+    copied_rows: int | None = None  # copy jobs: rows written to the destination
     dry_run: bool = False  # planned, not run, and never stored (REST: configuration.dryRun)
 
     @property
@@ -212,6 +213,24 @@ class Runner:
             job.fail(exc)
         except Exception as exc:  # noqa: BLE001 - a Crucible bug: fail the job, never leave it RUNNING
             _LOG.exception("query job %s failed inside Crucible", job.job_id)
+            job.fail(CrucibleError(ErrorKind.INTERNAL, f"Crucible internal error: {exc!r}"))
+        job.ended_ms = now_ms()
+        self.store.finished(pending, job)
+        return job
+
+    def run_copy(self, job: Job) -> Job:
+        """Run a copy job to completion (copy.py); failures become the job's error."""
+        pending = job
+        job = replace(job)
+        try:
+            session = DIALECT.new_session(job.project)
+            with self.engine.cursor(session) as cursor:
+                ctx = ExecContext(self.engine, DIALECT, session, cursor, None)
+                job.copied_rows = copy.run_copy(ctx, job.configuration["copy"], job.project)
+        except CrucibleError as exc:
+            job.fail(exc)
+        except Exception as exc:  # noqa: BLE001 - a Crucible bug: fail the job, never leave it RUNNING
+            _LOG.exception("copy job %s failed inside Crucible", job.job_id)
             job.fail(CrucibleError(ErrorKind.INTERNAL, f"Crucible internal error: {exc!r}"))
         job.ended_ms = now_ms()
         self.store.finished(pending, job)

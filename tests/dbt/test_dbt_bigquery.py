@@ -191,3 +191,50 @@ def test_persist_docs_and_labels_are_returned_by_get_table(dbt_workdir):
     assert {field.name: field.description for field in signups.schema}["signup_date"] == (
         "The day the customer signed up."
     )
+
+
+def write_events(rows: list[tuple[str, int, int]]) -> None:
+    """Replace the partition models' source. Each row is (event_date, id, amount)."""
+    client = bigquery_client()
+    client.create_dataset(f"{PROJECT}.{DATASET}", exists_ok=True)
+    table = f"`{PROJECT}.{DATASET}.events`"
+    client.query(
+        f"CREATE OR REPLACE TABLE {table} (event_date DATE, id INT64, amount INT64)"
+    ).result()
+    values = ", ".join(f"(DATE '{d}', {i}, {a})" for d, i, a in rows)
+    client.query(f"INSERT INTO {table} VALUES {values}").result()
+
+
+def model_rows(model: str) -> list[tuple[str, int, int]]:
+    sql = f"SELECT event_date, id, amount FROM `{PROJECT}.{DATASET}.{model}` ORDER BY 1, 2"
+    return [(r.event_date.isoformat(), r.id, r.amount) for r in bigquery_client().query(sql)]
+
+
+PARTITION_RUN = ("--select", "partitions", "--vars", "{partitions: true}")
+# The microbatch window: one batch per day, so the run does not reach today.
+BATCHES = ("--event-time-start", "2024-01-01", "--event-time-end", "2024-01-04")
+
+
+def test_bigquery_partition_strategies(dbt_workdir):
+    """insert_overwrite (dynamic, static, copy_partitions) and microbatch, run twice."""
+    write_events([("2024-01-01", 1, 10), ("2024-01-02", 2, 20)])
+    assert_all_ok(dbt(dbt_workdir, "run", *PARTITION_RUN, *BATCHES), "run (first)")
+    first = [("2024-01-01", 1, 10), ("2024-01-02", 2, 20)]
+    for model in ("events_overwrite_dynamic", "events_overwrite_static", "events_overwrite_copy"):
+        assert model_rows(model) == first, model
+    assert model_rows("events_microbatch") == first
+
+    # Partition 2024-01-02 changes, 2024-01-03 is new, 2024-01-01 is no longer in the source.
+    write_events([("2024-01-02", 2, 21), ("2024-01-02", 3, 30), ("2024-01-03", 4, 40)])
+    assert_all_ok(dbt(dbt_workdir, "run", *PARTITION_RUN, *BATCHES), "run (incremental)")
+    replaced = [
+        ("2024-01-01", 1, 10),
+        ("2024-01-02", 2, 21),
+        ("2024-01-02", 3, 30),
+        ("2024-01-03", 4, 40),
+    ]
+    assert model_rows("events_overwrite_dynamic") == replaced
+    assert model_rows("events_overwrite_copy") == replaced
+    assert model_rows("events_microbatch") == replaced
+    # Static partitions: only 2024-01-02 is replaced (the model filters to it when incremental).
+    assert model_rows("events_overwrite_static") == replaced[:3]

@@ -9,6 +9,9 @@ and this project does not yet follow semantic versioning.
 
 ### Added
 
+- BigQuery scripting subset for dbt: `DECLARE` and `SET` with script variables, so dbt-bigquery's dynamic
+  `insert_overwrite` and `microbatch` work. Copy jobs (`client.copy_table`) with `$partition` decorators,
+  so `copy_partitions` works. The CI dbt project now runs all three strategies twice.
 - Query parameters (`queryParameters`, named and positional, including ARRAY and STRUCT) on `jobs.query`
   and `jobs.insert`, bound as DuckDB parameters.
 - `dryRun` on `jobs.insert` and `jobs.query`: the statement is planned, not run, and the response carries

@@ -289,18 +289,22 @@ class BigQueryServer:
         configuration: dict[str, Any] = dict(obj(body.get("configuration")))
         try:
             kinds = [k for k in ("query", "load", "copy", "extract") if k in configuration]
-            if kinds != ["query"]:
+            if kinds not in (["query"], ["copy"]):
                 raise CrucibleUnsupportedError(
-                    f"jobs.insert of a {kinds[0] if kinds else 'empty'} job (only query jobs; "
-                    "load jobs use the resumable upload)"
+                    f"jobs.insert of a {kinds[0] if kinds else 'empty'} job (only query and copy "
+                    "jobs; load jobs use the resumable upload)"
                 )
             job = Job(
                 project=project,
                 job_id=reference.get("jobId") or new_job_id(),
                 location=reference.get("location") or DEFAULT_LOCATION,
-                job_type="QUERY",
+                job_type=kinds[0].upper(),
                 configuration=configuration,
             )
+            if job.job_type == "COPY":
+                self.store.add(job)
+                done = await run_in_threadpool(self.runner.run_copy, job)
+                return JSONResponse(self.job_resource(done, self._base(request)))
             if configuration.get("dryRun"):
                 # A dry run is planned and answered, never stored: jobs.get does not find it.
                 job = await run_in_threadpool(self.runner.dry_run_query, job)

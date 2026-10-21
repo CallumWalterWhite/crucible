@@ -486,6 +486,7 @@ class Recorder:
         self.record_table_options(p)
         self.record_dry_runs(p)
         self.record_query_parameters(p)
+        self.record_scripts_and_copies(p)
 
     def record_metadata(self, p: str, tables: str) -> None:
         """Table description, labels, field descriptions and REQUIRED columns: as tables.insert
@@ -762,6 +763,69 @@ class Recorder:
         )
         self.wait(job)
         self.call("get_query_results_parameters", "GET", f"{API}/projects/{p}/queries/{job}")
+
+    def record_scripts_and_copies(self, p: str) -> None:
+        """A script job (DECLARE, SET, SELECT: its SCRIPT statistics and results), and copy jobs:
+        a whole table, and one partition with WRITE_TRUNCATE (dbt's copy_partitions)."""
+        script = self.insert_job(
+            "jobs_insert_script",
+            "script",
+            self.query_config(
+                "DECLARE ks ARRAY<INT64>; "
+                "SET (ks) = (SELECT AS STRUCT ARRAY_AGG(DISTINCT k IGNORE NULLS) FROM streamed); "
+                "SELECT ARRAY_LENGTH(ks) AS n"
+            ),
+        )
+        self.wait(script)
+        self.call("jobs_get_script", "GET", f"{API}/projects/{p}/jobs/{script}")
+        self.call("get_query_results_script", "GET", f"{API}/projects/{p}/queries/{script}")
+        for name, sql in (
+            (
+                "copy_target",
+                "CREATE TABLE copy_target PARTITION BY d AS "
+                "SELECT DATE '2024-01-01' AS d, 1 AS k UNION ALL SELECT DATE '2024-01-02', 2",
+            ),
+            (
+                "copy_source",
+                "CREATE TABLE copy_source PARTITION BY d AS SELECT DATE '2024-01-02' AS d, 20 AS k",
+            ),
+        ):
+            job = self.insert_job(f"jobs_insert_{name}", name, self.query_config(sql))
+            self.wait_ok(job, f"CREATE TABLE {name}")
+        for name, source, destination, extra in (
+            ("table", "copy_target", "copy_whole", {}),
+            (
+                "partition",
+                "copy_source$20240102",
+                "copy_target$20240102",
+                {"writeDisposition": "WRITE_TRUNCATE"},
+            ),
+        ):
+            job = self.job_id(f"copy_{name}")
+
+            def ref(table: str) -> dict[str, str]:
+                return {"projectId": p, "datasetId": self.dataset, "tableId": table}
+
+            body: dict[str, Any] = {
+                "jobReference": {"projectId": p, "jobId": job},
+                "configuration": {
+                    "copy": {
+                        "sourceTables": [ref(source)],
+                        "destinationTable": ref(destination),
+                        **extra,
+                    }
+                },
+            }
+            self.call(f"jobs_insert_copy_{name}", "POST", f"{API}/projects/{p}/jobs", body=body)
+            self.wait(job)
+            self.call(f"jobs_get_copy_{name}", "GET", f"{API}/projects/{p}/jobs/{job}")
+        target = self.insert_job(
+            "jobs_insert_copy_check",
+            "copy_check",
+            self.query_config("SELECT d, k FROM copy_target ORDER BY d"),
+        )
+        self.wait(target)
+        self.call("get_query_results_copy_check", "GET", f"{API}/projects/{p}/queries/{target}")
 
     def load(self, name: str, csv_text: str) -> None:
         """A dbt-seed-style load: resumable upload of a CSV with an explicit schema."""

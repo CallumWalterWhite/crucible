@@ -196,6 +196,9 @@ NOT_RECORDED_YET: list[str] = [
     "jobs_query_parameters_*",
     "jobs_insert_parameters",
     "get_query_results_parameters",
+    # Script and copy jobs (record_api.record_scripts_and_copies), to be recorded.
+    "*_script",
+    "*_copy_*",
 ]
 
 
