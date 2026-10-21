@@ -21,7 +21,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.routing import BaseRoute, Route
 
-from crucible.dialects.bigquery import ddl, metadata, types
+from crucible.dialects.bigquery import ddl, metadata, types, udfs
 from crucible.dialects.bigquery.dialect import DIALECT
 from crucible.engine import (
     CrucibleError,
@@ -963,22 +963,49 @@ class BigQueryServer:
     # --- routines (none are emulated) ---------------------------------------------------------
     async def routines_list(self, request: Request) -> Response:
         project, dataset = request.path_params["project"], request.path_params["dataset"]
+
+        def listing(c: ExecContext) -> list[dict[str, Any]]:
+            metadata.check_dataset(c, project, dataset)
+            return udfs.routines(c, project, dataset)
+
         try:
-            await run_in_threadpool(
-                self._context_run, project, lambda c: metadata.check_dataset(c, project, dataset)
-            )
+            found = await run_in_threadpool(self._context_run, project, listing)
         except CrucibleError as exc:
             return http_error(exc)
-        return JSONResponse({})  # an empty dataset lists as {} (routines_list)
+        if not found:
+            return JSONResponse({})  # an empty dataset lists as {} (routines_list)
+        # routines.list: ListRoutinesResponse; each Routine without its body, arguments or return
+        # type unless a readMask asks for them (REST reference, routines.list).
+        return JSONResponse(
+            {"routines": [_routine(project, dataset, d, full=False) for d in found]}
+        )
 
     async def routines_get(self, request: Request) -> Response:
         p = request.path_params
-        return http_error(
-            CrucibleError(
-                ErrorKind.NOT_FOUND,
-                f"Not found: Routine {p['project']}:{p['dataset']}.{p['routine']}",
+        project, dataset, routine = p["project"], p["dataset"], p["routine"]
+
+        def find(c: ExecContext) -> dict[str, Any] | None:
+            metadata.check_dataset(c, project, dataset)
+            return next(
+                (
+                    d
+                    for d in udfs.routines(c, project, dataset)
+                    if d["name"].lower() == routine.lower()
+                ),
+                None,
             )
-        )
+
+        try:
+            definition = await run_in_threadpool(self._context_run, project, find)
+        except CrucibleError as exc:
+            return http_error(exc)
+        if definition is None:
+            return http_error(
+                CrucibleError(
+                    ErrorKind.NOT_FOUND, f"Not found: Routine {project}:{dataset}.{routine}"
+                )
+            )
+        return JSONResponse(_routine(project, dataset, definition, full=True))
 
     # --- resumable upload (load jobs; docs/client-compat.md, "Resumable load upload") ---------
     def _new_load_job(self, project: str, metadata: dict[str, Any]) -> Job:
@@ -1111,6 +1138,27 @@ def multipart_related(content_type: str, body: bytes) -> tuple[dict[str, Any], b
     if not isinstance(metadata, dict):
         raise CrucibleError(ErrorKind.INVALID_QUERY, "The upload's job must be a JSON object")
     return cast("dict[str, Any]", metadata), contents[1]
+
+
+def _routine(project: str, dataset: str, d: dict[str, Any], *, full: bool) -> dict[str, Any]:
+    """A SQL function as a REST Routine resource (REST reference, routines)."""
+    resource: dict[str, Any] = {
+        "etag": _etag(),
+        "routineReference": {"projectId": project, "datasetId": dataset, "routineId": d["name"]},
+        "routineType": "SCALAR_FUNCTION",
+        "language": "SQL",
+        "creationTime": str(d["created_ms"]),
+        "lastModifiedTime": str(d["created_ms"]),
+    }
+    if full:
+        resource["arguments"] = [
+            {"name": a["name"], "dataType": encoding.standard_sql_type(a["type"])}
+            for a in d["arguments"]
+        ]
+        if d["return_type"]:
+            resource["returnType"] = encoding.standard_sql_type(d["return_type"])
+        resource["definitionBody"] = d["body"]
+    return resource
 
 
 def _insert_error(reason: str, location: str, message: str) -> dict[str, str]:

@@ -60,7 +60,7 @@ def test_partition_and_cluster_columns_must_exist(bq):
         "CREATE TABLE t OPTIONS (require_partition_filter = TRUE) AS SELECT 1 AS a",
         "CREATE TABLE t PARTITION BY _PARTITIONDATE AS SELECT 1 AS a",
         "CREATE TEMP TABLE t AS SELECT 1 AS a",
-        "CREATE FUNCTION f() AS (1)",
+        "CREATE FUNCTION f() RETURNS STRING LANGUAGE js AS 'return 1;'",
     ],
 )
 def test_options_that_would_change_results_are_unsupported(bq, sql):

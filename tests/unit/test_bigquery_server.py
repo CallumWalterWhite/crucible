@@ -1188,3 +1188,17 @@ def test_write_append_adds_and_write_empty_refuses_a_non_empty_table(partitioned
 def test_decorators_crucible_cannot_match_are_refused(partitioned, source, destination):
     job = copy_job(partitioned, source, destination, writeDisposition="WRITE_TRUNCATE")
     assert job["status"]["errorResult"]["message"].startswith("Not supported by Crucible")
+
+
+def test_routines_list_and_get_report_persistent_functions(client):
+    make_dataset(client)
+    insert_query(client, "CREATE FUNCTION ds.g(x FLOAT64) RETURNS FLOAT64 AS (x * 2)")
+    listed = client.get(f"{API}/datasets/ds/routines").json()["routines"]
+    assert [r["routineReference"]["routineId"] for r in listed] == ["g"]
+    assert "definitionBody" not in listed[0]
+    routine = client.get(f"{API}/datasets/ds/routines/g").json()
+    assert routine["routineType"] == "SCALAR_FUNCTION"
+    assert routine["language"] == "SQL"
+    assert routine["arguments"] == [{"name": "x", "dataType": {"typeKind": "FLOAT64"}}]
+    assert routine["returnType"] == {"typeKind": "FLOAT64"}
+    assert routine["definitionBody"] == "(x * 2)"

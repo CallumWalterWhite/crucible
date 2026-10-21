@@ -247,7 +247,7 @@ The client and dbt suites (`tests/clients`, `tests/dbt`) need a running server; 
 |---|---|---|---|
 | DECLARE (with or without DEFAULT) and SET (one variable, or several from SELECT AS STRUCT), variables in later statements | Tested | [`scripting/declare_default_and_read`](../corpus/bigquery/scripting/declare_default_and_read.yaml)<br>[`scripting/set_struct_array_agg_in_unnest`](../corpus/bigquery/scripting/set_struct_array_agg_in_unnest.yaml)<br>[`scripting/insert_overwrite_dynamic_script`](../corpus/bigquery/scripting/insert_overwrite_dynamic_script.yaml)<br>[`test_bigquery_partition_strategies`](../tests/dbt/test_dbt_bigquery.py) | The subset dbt's `insert_overwrite` and `microbatch` scripts use. A variable lives for the request; a table column with the same name wins. A script job reports `statementType: SCRIPT` without child jobs. |
 | BEGIN ... END, IF, loops, EXECUTE IMMEDIATE | Not supported | [`test_out_of_scope_constructs_raise_unsupported`](../tests/unit/test_bigquery_backbone.py) | `Not supported by Crucible: BEGIN statement`. |
-| CREATE TEMP FUNCTION, CREATE FUNCTION | Not supported | [`test_options_that_would_change_results_are_unsupported`](../tests/unit/test_bq_statements.py) | `Not supported by Crucible: CREATE FUNCTION`. |
+| SQL functions: CREATE TEMP FUNCTION, CREATE [OR REPLACE] FUNCTION [IF NOT EXISTS], DROP FUNCTION | Tested | [`udf/temp_function_sql_body`](../corpus/bigquery/udf/temp_function_sql_body.yaml)<br>[`udf/persistent_function_over_table`](../corpus/bigquery/udf/persistent_function_over_table.yaml)<br>[`test_a_mismatched_call_has_no_matching_signature`](../tests/unit/test_bq_udfs.py)<br>[`test_bigquery_sql_udfs_and_routines`](../tests/clients/test_bigquery_client.py) | Typed parameters and RETURNS; a call is expanded into the body, so the body follows BigQuery's rules. Arguments coerce like a built-in function's; otherwise `No matching signature`. Refused: JavaScript, remote, table-valued and ANY TYPE functions ([`test_javascript_table_valued_and_templated_functions_are_unsupported`](../tests/unit/test_bq_udfs.py)). |
 | CREATE TEMP TABLE | Not supported | [`test_options_that_would_change_results_are_unsupported`](../tests/unit/test_bq_statements.py) | `Not supported by Crucible: CREATE TEMP TABLE (BigQuery scripting)`. |
 
 ### DDL and DML
@@ -382,7 +382,7 @@ The client and dbt suites (`tests/clients`, `tests/dbt`) need a running server; 
 |---|---|---|---|
 | `routines.list` | Verified | [`18_routines_list.json`](../tests/fixtures/bigquery_api/18_routines_list.json)<br>[`test_routines_list_is_empty_on_an_existing_dataset`](../tests/unit/test_bigquery_server.py) | Always empty. |
 | `routines.list` on a missing dataset | Tested | [`test_routines_list_on_a_missing_dataset_is_a_404`](../tests/unit/test_bigquery_server.py) | HTTP 404. |
-| `routines.get` | Tested | [`test_routines_get_is_a_404`](../tests/unit/test_bigquery_server.py) | HTTP 404, `Not found: Routine <project>:<dataset>.<routine>`. Whether a routine created by DDL appears here is not checked. |
+| `routines.get` | Tested | [`test_routines_list_and_get_report_persistent_functions`](../tests/unit/test_bigquery_server.py)<br>[`test_routines_get_is_a_404`](../tests/unit/test_bigquery_server.py) | A persistent SQL function as a `SCALAR_FUNCTION` routine with its arguments, return type and body; an unknown routine is a 404. |
 
 ### REST: uploads (resumable and multipart)
 

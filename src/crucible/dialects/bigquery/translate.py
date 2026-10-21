@@ -24,6 +24,7 @@ from crucible.dialects.bigquery import (
     scripting,
     transforms,
     types,
+    udfs,
 )
 from crucible.dialects.bigquery.generator import generate
 from crucible.dialects.bigquery.transforms.common import check, raise_runtime
@@ -163,6 +164,7 @@ def prepare(query: exp.Expr, ctx: ExecContext) -> Prepared:
     _restore_struct_field_names(struct_names)
     query = annotate_types(query, schema=schema, dialect="bigquery")
     fix_annotation(query)
+    udfs.check(query)
 
     selects = outer_selects(query)
     if any(len(select.expressions) != len(selects[0].expressions) for select in selects[1:]):

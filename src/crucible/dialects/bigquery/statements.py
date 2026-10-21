@@ -20,6 +20,7 @@ from crucible.dialects.bigquery import (
     parameters,
     scripting,
     types,
+    udfs,
 )
 from crucible.dialects.bigquery.keywords import RESERVED
 from crucible.dialects.bigquery.translate import (
@@ -179,6 +180,11 @@ def _refuse_unmodelled(tree: exp.Expr) -> None:
 
 
 def _plan(tree: exp.Expr, ctx: ExecContext) -> Plan:
+    if isinstance(tree, exp.Create) and (tree.kind or "").upper() == "FUNCTION":
+        return udfs.plan_create(tree, ctx)  # its body is checked when the function is called
+    if isinstance(tree, exp.Drop) and (tree.kind or "").upper() == "FUNCTION":
+        return udfs.plan_drop(tree, ctx)
+    tree = udfs.expand(tree, ctx)
     _refuse_unmodelled(tree)
     if isinstance(tree, exp.Query):
         return run_sql(translate_query(tree, ctx).sql, "SELECT", ctx)
