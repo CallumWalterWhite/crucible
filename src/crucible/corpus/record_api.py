@@ -13,6 +13,9 @@ throwaway dataset with expiring tables and a label, deleted at the end.
 
 from __future__ import annotations
 
+import base64
+import datetime as dt
+import io
 import json
 import re
 import time
@@ -193,8 +196,9 @@ class Recorder:
             payload = response.text
         if expect is not None and status not in expect:
             raise RecordApiError(f"{name}: expected HTTP {expect}, got {status}")
-        # An upload's CSV is part of the fixture, so a replay can send the same bytes.
-        sent = body if data is None else data.decode("utf-8")
+        # An upload's file is part of the fixture, so a replay can send the same bytes; a binary
+        # one (Parquet) is kept as base64.
+        sent = body if data is None else _upload_body(data)
         self.save(name, method, url, params, sent, status, dict(response.headers), payload)
         return payload, dict(response.headers)
 
@@ -493,6 +497,7 @@ class Recorder:
         self.record_ndjson_loads()
         self.record_partitioned_tables(p, tables)
         self.record_destination_queries(p, tables)
+        self.record_parquet_loads()
 
     def record_destination_queries(self, p: str, tables: str) -> None:
         """Query jobs with configuration.query.destinationTable: create, WRITE_TRUNCATE with a
@@ -986,7 +991,7 @@ class Recorder:
             f"SELECT * FROM load_{name} ORDER BY id",
         )
 
-    def load_job(self, name: str, text: str, config: dict[str, Any], select: str) -> None:
+    def load_job(self, name: str, text: str | bytes, config: dict[str, Any], select: str) -> None:
         """A load by resumable upload: the job's configuration, then the file as the upload's body,
         then the loaded table, queried when the load succeeded. `name` names the calls and table."""
         job = self.job_id(name)
@@ -1013,7 +1018,7 @@ class Recorder:
         location = {k.lower(): v for k, v in headers.items()}.get("location")
         if not location:
             raise RecordApiError("resumable upload returned no Location header")
-        payload = text.encode()
+        payload = text.encode() if isinstance(text, str) else text
         self.call(
             f"{name}_upload",
             "PUT",
@@ -1034,6 +1039,23 @@ class Recorder:
                 f"{API}/projects/{self.project}/queries/{select_job}",
             )
 
+    def record_parquet_loads(self) -> None:
+        """PARQUET loads with an explicit schema, as load_table_from_file sends them: each type,
+        a NULL in a REQUIRED field, an int32 and a zone-less timestamp column, a column missing
+        from the file or from the schema, and a file that is not Parquet."""
+        for name, fields, columns, extra in parquet_loads():
+            self.load_job(
+                f"parquet_{name}",
+                columns if isinstance(columns, bytes) else _parquet(columns),
+                {
+                    "schema": {"fields": fields},
+                    "sourceFormat": "PARQUET",
+                    "writeDisposition": "WRITE_APPEND",
+                    **extra,
+                },
+                f"SELECT * FROM parquet_{name}",
+            )
+
     def record_ndjson_loads(self) -> None:
         """NEWLINE_DELIMITED_JSON loads, each a file of rows as load_table_from_json sends it
         (json.dumps per row, joined with newlines, no final newline; client.py). Last, so the
@@ -1051,6 +1073,79 @@ class Recorder:
                 },
                 f"SELECT * FROM ndjson_{name}",
             )
+
+
+def _upload_body(data: bytes) -> Any:
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError:
+        return {"base64": base64.b64encode(data).decode("ascii")}
+
+
+def _parquet(columns: dict[str, Any]) -> bytes:
+    # pyarrow comes with the server extra; only the Parquet loads need it.
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    sink = io.BytesIO()
+    pq.write_table(pa.table(columns), sink)  # pyright: ignore[reportUnknownMemberType]
+    return sink.getvalue()
+
+
+def parquet_loads() -> list[
+    tuple[str, list[dict[str, str]], dict[str, Any] | bytes, dict[str, Any]]
+]:
+    """(name, schema fields, Arrow columns or raw bytes, extra load configuration)."""
+    import pyarrow as pa
+
+    required = {"name": "k", "type": "INTEGER", "mode": "REQUIRED"}
+    utc = dt.UTC
+    return [
+        (
+            "types",
+            [
+                required,
+                {"name": "f", "type": "FLOAT"},
+                {"name": "b", "type": "BOOLEAN"},
+                {"name": "d", "type": "DATE"},
+                {"name": "ts", "type": "TIMESTAMP"},
+                {"name": "s", "type": "STRING"},
+            ],
+            {
+                "k": pa.array([1, 2], pa.int64()),
+                "f": pa.array([1.5, None], pa.float64()),
+                "b": pa.array([True, None]),
+                "d": pa.array([dt.date(2024, 2, 29), None]),
+                "ts": pa.array(
+                    [dt.datetime(2024, 1, 2, 3, 4, 5, 6, tzinfo=utc), None],
+                    pa.timestamp("us", "UTC"),
+                ),
+                "s": pa.array(["x", None]),
+            },
+            {},
+        ),
+        ("required_null", [required], {"k": pa.array([1, None], pa.int64())}, {}),
+        ("int32", [required], {"k": pa.array([1, 2], pa.int32())}, {}),
+        (
+            "naive_timestamp",
+            [{"name": "ts", "type": "TIMESTAMP"}],
+            {"ts": pa.array([dt.datetime(2024, 1, 2, 3, 4, 5)], pa.timestamp("us"))},
+            {},
+        ),
+        (
+            "missing_column",
+            [required, {"name": "s", "type": "STRING"}],
+            {"k": pa.array([1], pa.int64())},
+            {},
+        ),
+        (
+            "extra_column",
+            [required],
+            {"k": pa.array([1], pa.int64()), "s": pa.array(["x"])},
+            {},
+        ),
+        ("unreadable", [required], b"not a parquet file", {}),
+    ]
 
 
 # Every ADR 0014 type, NULLs, nested STRUCT/ARRAY and NUMERIC edge values; three rows for paging.

@@ -1,6 +1,6 @@
 # 15. Parquet loads
 
-Status: proposed
+Status: accepted (2026-10-28)
 
 ## Context
 
@@ -55,9 +55,10 @@ Option (b), with pyarrow: parse in Python, reject any column whose Arrow type do
 to the load schema's type, and insert from the registered table. It keeps ADR 0006 as written, and
 it keeps type decisions in Crucible's code rather than in DuckDB's reader.
 
-This is a design note. Nothing is built. A later change would add pyarrow as a server dependency
-and pin it exactly, as ADR 0008 does for sqlglot and DuckDB. It would also need a byte limit on
-the upload before parsing, since pyarrow reads the whole file.
+Built as recommended (`src/crucible/server/bigquery/parquet.py`). pyarrow is in the server extra
+as a range, not an exact pin: Crucible decides every type mapping itself, so the parser's version
+does not change answers, and an exact pin would clash in users' environments. `uv.lock` pins it
+for CI and the image. Uploads over 512 MiB are refused before parsing.
 
 ## Consequences
 

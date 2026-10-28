@@ -32,7 +32,7 @@ from crucible.engine import (
     Result,
 )
 from crucible.engine.catalog import qualified
-from crucible.server.bigquery import copy, encoding, errors, load, params
+from crucible.server.bigquery import copy, encoding, errors, load, params, parquet
 
 _LOG = logging.getLogger(__name__)
 DEFAULT_LOCATION = (
@@ -449,12 +449,11 @@ class Runner:
 
     def _load(self, job: Job, config: dict[str, Any], data: bytes) -> None:
         source = config.get("sourceFormat", "CSV")
-        if source not in ("CSV", "NEWLINE_DELIMITED_JSON"):
+        if source not in ("CSV", "NEWLINE_DELIMITED_JSON", "PARQUET"):
             raise CrucibleUnsupportedError(f"load job sourceFormat {source}")
         ndjson = source == "NEWLINE_DELIMITED_JSON"
-        _unsupported_keys(
-            config, _LOAD_KEYS | (_NDJSON_LOAD_KEYS if ndjson else _CSV_LOAD_KEYS), "load job"
-        )
+        extra = {"CSV": _CSV_LOAD_KEYS, "NEWLINE_DELIMITED_JSON": _NDJSON_LOAD_KEYS}.get(source)
+        _unsupported_keys(config, _LOAD_KEYS | (extra or frozenset()), "load job")
         if config.get("fieldDelimiter", ",") != ",":
             raise CrucibleUnsupportedError("load job fieldDelimiter other than ','")
         if config.get("createDisposition", "CREATE_IF_NEEDED") != "CREATE_IF_NEEDED":
@@ -470,22 +469,29 @@ class Runner:
         dataset, table = destination.get("datasetId"), destination.get("tableId")
         if not dataset or not table:
             raise CrucibleError(ErrorKind.INVALID_QUERY, "Load job needs a destinationTable")
-        if ndjson:
+        arrow = None
+        rows: list[tuple[Any, ...]] = []
+        if source == "PARQUET":
+            arrow = parquet.parse_parquet(data, fields)
+        elif ndjson:
             # `is True`: a string "true" is not the boolean the REST reference defines (fail closed)
             ignore = config.get("ignoreUnknownValues") is True
             rows = load.parse_ndjson(data, fields, ignore_unknown=ignore)
         else:
             rows = load.parse_csv(data, fields, int(config.get("skipLeadingRows", 0)))
+        count = arrow.num_rows if arrow is not None else len(rows)
 
         bq_types = [encoding.warehouse_type_from_field(f) for f in fields]
+        # A REQUIRED field is NOT NULL (only Parquet loads take one so far).
         storage = ", ".join(
             f"{qualified(f['name'])} {types.storage_type(t).sql('duckdb')}"
+            + (" NOT NULL" if str(f.get("mode", "")).upper() == "REQUIRED" else "")
             for f, t in zip(fields, bq_types, strict=True)
         )
         session = DIALECT.new_session(project, dataset)
         full = qualified(project, dataset, table)
         # A DuckDB transaction writes one attached database, so the rows go to a temp table first
-        # and then reach the target in one statement: a failed load leaves the target untouched.
+        # and then reach the target in one transaction: a failed load leaves the target untouched.
         staging = qualified(f"crucible_load_{uuid.uuid4().hex}")
         with self.engine.cursor(session) as cursor:
             ctx = ExecContext(self.engine, DIALECT, session, cursor, None)
@@ -503,16 +509,33 @@ class Runner:
                     )
             try:
                 ctx.run_sql(f"CREATE TEMP TABLE {staging} ({storage})", returns_rows=False)
-                if rows:
+                if arrow is not None:
+                    view = f"crucible_arrow_{uuid.uuid4().hex}"
+                    cursor.register(view, arrow)
+                    try:
+                        cursor.execute(f"INSERT INTO {staging} SELECT * FROM {qualified(view)}")
+                    finally:
+                        cursor.unregister(view)
+                elif rows:
                     marks = ", ".join("?" for _ in fields)
                     cursor.executemany(
                         f"INSERT INTO {staging} VALUES ({marks})", [list(r) for r in rows]
                     )
                 if info is None or disposition == "WRITE_TRUNCATE":
-                    ctx.run_sql(
-                        f"CREATE OR REPLACE TABLE {full} AS SELECT * FROM {staging}",
-                        returns_rows=False,
-                    )
+                    # CREATE ... AS SELECT would drop NOT NULL, so create, then fill, in one
+                    # transaction: a failure leaves the old table.
+                    ctx.run_sql("BEGIN TRANSACTION", returns_rows=False)
+                    try:
+                        ctx.run_sql(
+                            f"CREATE OR REPLACE TABLE {full} ({storage})", returns_rows=False
+                        )
+                        ctx.run_sql(
+                            f"INSERT INTO {full} SELECT * FROM {staging}", returns_rows=False
+                        )
+                    except BaseException:
+                        ctx.run_sql("ROLLBACK", returns_rows=False)
+                        raise
+                    ctx.run_sql("COMMIT", returns_rows=False)
                     ctx.catalog.set_properties(project, dataset, table, {})
                 else:
                     ctx.run_sql(f"INSERT INTO {full} SELECT * FROM {staging}", returns_rows=False)
@@ -521,7 +544,7 @@ class Runner:
         job.load_statistics = {
             "inputFiles": "1",
             "inputFileBytes": str(len(data)),
-            "outputRows": str(len(rows)),
+            "outputRows": str(count),
             "badRecords": "0",
         }
 

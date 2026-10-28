@@ -1490,3 +1490,96 @@ def test_destination_shapes_crucible_does_not_emulate_are_refused(client, sql, e
     job = insert_query(client, sql, configuration_extra=to_table("dest", **extra)).json()
     message = job.get("status", {}).get("errorResult", {}).get("message") or job["error"]["message"]
     assert message == f"Not supported by Crucible: {construct}"
+
+
+# --- Parquet load jobs (ADR 0015) -----------------------------------------------------------
+PARQUET_FIELDS = [
+    {"name": "k", "type": "INTEGER", "mode": "REQUIRED"},
+    {"name": "s", "type": "STRING"},
+]
+
+
+def parquet_bytes(keys: list[int | None], strings: list[str | None]) -> bytes:
+    import io
+
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    sink = io.BytesIO()
+    pq.write_table(pa.table({"k": pa.array(keys, pa.int64()), "s": pa.array(strings)}), sink)
+    return sink.getvalue()
+
+
+def load_parquet(client: TestClient, table: str, data: bytes, **config: Any) -> dict[str, Any]:
+    body = {
+        "jobReference": {"projectId": PROJECT, "jobId": f"pq_{uuid.uuid4().hex[:8]}"},
+        "configuration": {
+            "load": {
+                "destinationTable": {"projectId": PROJECT, "datasetId": "ds", "tableId": table},
+                "schema": {"fields": PARQUET_FIELDS},
+                "sourceFormat": "PARQUET",
+                "writeDisposition": "WRITE_APPEND",
+                **config,
+            }
+        },
+    }
+    url = upload_url(client.post(UPLOAD, params={"uploadType": "resumable"}, json=body))
+    response = client.put(
+        url, content=data, headers={"Content-Range": f"bytes 0-{len(data) - 1}/{len(data)}"}
+    )
+    assert response.status_code == 200
+    job: dict[str, Any] = response.json()
+    return job
+
+
+def test_a_parquet_load_keeps_required_fields_and_counts_output_rows(client):
+    make_dataset(client)
+    job = load_parquet(client, "pq", parquet_bytes([1, 2], ["a", None]))
+    assert job["status"] == {"state": "DONE"}
+    assert job["statistics"]["load"]["outputRows"] == "2"
+    fields = client.get(f"{API}/datasets/ds/tables/pq").json()["schema"]["fields"]
+    assert [f.get("mode", "NULLABLE") for f in fields] == ["REQUIRED", "NULLABLE"]
+    load_parquet(client, "pq", parquet_bytes([3], ["c"]))
+    assert values(run_query(client, "SELECT k FROM ds.pq ORDER BY k").json()["rows"]) == [
+        "1",
+        "2",
+        "3",
+    ]
+    load_parquet(client, "pq", parquet_bytes([9], ["z"]), writeDisposition="WRITE_TRUNCATE")
+    assert values(run_query(client, "SELECT k, s FROM ds.pq").json()["rows"]) == ["9", "z"]
+    fields = client.get(f"{API}/datasets/ds/tables/pq").json()["schema"]["fields"]
+    assert fields[0]["mode"] == "REQUIRED"
+
+
+@pytest.mark.parametrize(
+    "data",
+    [b"not parquet", parquet_bytes([1, None], ["a", "b"])],
+    ids=["unreadable", "null-in-required"],
+)
+def test_a_failed_parquet_load_appends_nothing(client, data):
+    make_dataset(client)
+    load_parquet(client, "pq", parquet_bytes([1], ["a"]))
+    for disposition in ("WRITE_APPEND", "WRITE_TRUNCATE"):
+        job = load_parquet(client, "pq", data, writeDisposition=disposition)
+        assert job["status"]["errorResult"]["message"].startswith("Not supported by Crucible")
+        assert values(run_query(client, "SELECT k FROM ds.pq").json()["rows"]) == ["1"]
+
+
+def test_a_multipart_parquet_upload_loads(client):
+    make_dataset(client)
+    metadata = load_metadata("mp_pq", schema={"fields": PARQUET_FIELDS}, sourceFormat="PARQUET")
+    metadata = json.dumps(
+        {
+            **json.loads(metadata),
+            "configuration": {
+                "load": {
+                    k: v
+                    for k, v in json.loads(metadata)["configuration"]["load"].items()
+                    if k not in ("fieldDelimiter", "skipLeadingRows")
+                }
+            },
+        }
+    ).encode()
+    response = multipart(client, metadata, parquet_bytes([5, 6], ["e", "f"]))
+    assert response.json()["status"] == {"state": "DONE"}
+    assert values(run_query(client, "SELECT COUNT(*) FROM ds.mp_pq").json()["rows"]) == ["2"]

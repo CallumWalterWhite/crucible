@@ -30,7 +30,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-server = ["starlette>=1.8,<2", "uvicorn>=0.54"]
+server = [
+    "starlette>=1.8,<2",
+    "uvicorn>=0.54",
+    # Parquet load jobs (ADR 0015). A range: uv.lock pins it for CI and the image.
+    "pyarrow>=21",
+]
 # Only for `crucible corpus record`, which runs cases against the real warehouse.
 record-bigquery = ["google-cloud-bigquery>=3.27"]
 record-snowflake = ["snowflake-connector-python>=3.12"]
@@ -50,6 +55,7 @@ dev = [
     "pre-commit>=4.7",
     "types-pyyaml>=6.0.12",
     "types-pytz>=2025.2",
+    "pyarrow-stubs>=20.0.0.20260819",
     "httpx2>=2.13",  # starlette.testclient transport
 ]
 

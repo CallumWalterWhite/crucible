@@ -16,6 +16,9 @@ and this project does not yet follow semantic versioning.
 - Query jobs with a `destinationTable` (`QueryJobConfig(destination=...)`), with `WRITE_EMPTY`,
   `WRITE_TRUNCATE`, `WRITE_APPEND`, `CREATE_NEVER` and query parameters. A failed job leaves the
   destination untouched.
+- Parquet load jobs (`sourceFormat=PARQUET`, `load_table_from_file`) with an explicit schema, by
+  resumable or multipart upload (ADR 0015, now accepted): INT64, FLOAT64, BOOL, DATE, TIMESTAMP and
+  STRING, NULLs and REQUIRED fields; a failed load appends nothing. pyarrow joins the `server` extra.
 
 ### Fixed
 
