@@ -1,0 +1,24 @@
+description: A correlated subquery over UNNEST of a named STRUCT built with NULLIF reads the
+  field by name. See https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#unnest_operator.
+tags:
+- unnest
+- struct
+setup:
+- CREATE TABLE src (id INT64, note STRING)
+- INSERT INTO src VALUES (1, 'x'), (2, ''), (3, NULL)
+query: SELECT p.id, (SELECT v.value FROM UNNEST([STRUCT(NULLIF(p.note, '') AS value)]) AS v) AS
+  value FROM src AS p
+ordered: false
+expected:
+  columns:
+  - name: id
+    type: INT64
+  - name: value
+    type: STRING
+  rows:
+  - - 1
+    - x
+  - - 2
+    - null
+  - - 3
+    - null

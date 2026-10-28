@@ -1,0 +1,26 @@
+description: An aliased UNNEST of a literal STRUCT array, comma-joined to a table, reads the
+  fields through the alias. See https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#unnest_operator.
+tags:
+- unnest
+- struct
+setup:
+- CREATE TABLE src (id INT64)
+- INSERT INTO src VALUES (1)
+query: SELECT p.id, v.k, v.n FROM src AS p, UNNEST([STRUCT('a' AS k, 1 AS n), STRUCT('b', 2)])
+  AS v
+ordered: false
+expected:
+  columns:
+  - name: id
+    type: INT64
+  - name: k
+    type: STRING
+  - name: n
+    type: INT64
+  rows:
+  - - 1
+    - a
+    - 1
+  - - 1
+    - b
+    - 2
