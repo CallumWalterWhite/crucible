@@ -1,0 +1,24 @@
+description: STARTS_WITH and ENDS_WITH over BYTES compare bytes; an empty suffix matches.
+  See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions#ends_with.
+tags:
+- string
+- bytes
+query: SELECT STARTS_WITH(b'\x12\x34', b'\x12') AS starts, ENDS_WITH(b'\x12\x34', b'\x34') AS ends,
+  ENDS_WITH(b'\x12\x34', b'\x23') AS not_suffix, ENDS_WITH(b'\xff', b'') AS empty_suffix
+ordered: false
+expected:
+  columns:
+  - name: starts
+    type: BOOL
+  - name: ends
+    type: BOOL
+  - name: not_suffix
+    type: BOOL
+  - name: empty_suffix
+    type: BOOL
+  rows:
+  - - true
+    - true
+    - false
+    - true
+verified: false

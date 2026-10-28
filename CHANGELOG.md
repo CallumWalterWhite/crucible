@@ -7,6 +7,17 @@ and this project does not yet follow semantic versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- REVERSE, ENDS_WITH, STARTS_WITH, BIT_COUNT and STRING_AGG with a delimiter work on BYTES
+  byte for byte. REVERSE and STARTS_WITH were refused; the others raised DuckDB errors.
+- `BIT_COUNT` of a negative INT64 literal counts 64 bits: `BIT_COUNT(-1)` gave 32.
+- STRPOS, INSTR, LPAD and RPAD of BYTES are refused: they matched hex digits across bytes or
+  padded with the whole pattern, so `STRPOS(b'\x12\x34', b'\x23')` gave 2 and
+  `LPAD(b'a', 4, b'xy')` gave 7 bytes.
+- LIKE, SUBSTR, SPLIT, the REGEXP functions, CHAR_LENGTH and ARRAY_TO_STRING of BYTES raise
+  `Not supported by Crucible` instead of a DuckDB binder error.
+
 ## [0.1.0a4] - 2026-10-28
 
 ### Added

@@ -1,0 +1,14 @@
+description: STRING_AGG of BYTES with a BYTES delimiter joins the bytes, in ORDER BY order. See
+  https://cloud.google.com/bigquery/docs/reference/standard-sql/aggregate_functions#string_agg.
+tags:
+- aggregate
+- bytes
+query: SELECT STRING_AGG(x, b'\xff' ORDER BY x) AS v FROM UNNEST([b'\x10', b'\x01', b'a']) AS x
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: BYTES
+  rows:
+  - - Af8Q/2E=
+verified: false
