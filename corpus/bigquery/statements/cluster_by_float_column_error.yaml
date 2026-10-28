@@ -1,0 +1,9 @@
+description: A FLOAT64 column cannot cluster a table. See https://cloud.google.com/bigquery/docs/clustered-tables#cluster_column_types.
+tags:
+- ddl
+- clustering
+query: CREATE TABLE c_bad (f FLOAT64, s STRING) CLUSTER BY f
+expected:
+  error:
+    kind: invalid_query
+    message_contains: not supported for clustering
