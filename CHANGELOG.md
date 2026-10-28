@@ -7,6 +7,8 @@ and this project does not yet follow semantic versioning.
 
 ## [Unreleased]
 
+## [0.1.0a3] - 2026-10-28
+
 ### Added
 
 - SQL user-defined functions: `CREATE TEMP FUNCTION`, `CREATE [OR REPLACE] FUNCTION`, `DROP FUNCTION`, typed
