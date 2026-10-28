@@ -30,11 +30,24 @@ def test_integer_comparisons_are_unchanged(bq):
     assert values(bq("SELECT 1 < 2, 2 IN (1, 2), 3 BETWEEN 1 AND 2")) == [[True, True, False]]
 
 
+def test_nullif_never_matches_nan(bq):
+    sql = (
+        f"SELECT NULLIF({NAN}, {NAN}), NULLIF({NAN}, 0.0), NULLIF(0.0, {NAN}), NULLIF(0.0, 0.0),"
+        f" NULLIF(-0.0, 0.0), NULLIF(NULL, {NAN}), NULLIF({NAN}, NULL), NULLIF(1, {NAN})"
+    )
+    assert values(bq(sql)) == [["NaN", "NaN", 0.0, None, None, None, "NaN", 1.0]]
+
+
+def test_nullif_over_float_columns(bq):
+    bq("CREATE TABLE t (k INT64, x FLOAT64, y FLOAT64)")
+    bq(f"INSERT INTO t VALUES (1, {NAN}, {NAN}), (2, 1.0, 1.0), (3, 2.0, {NAN})")
+    assert values(bq("SELECT NULLIF(x, y) FROM t ORDER BY k")) == [["NaN"], [None], [2.0]]
+
+
 @pytest.mark.parametrize(
     "sql",
     [
         f"SELECT {NAN} IS DISTINCT FROM {NAN}",
-        f"SELECT NULLIF({NAN}, {NAN})",
         f"SELECT CASE {NAN} WHEN 1.0 THEN 'a' END",
         f"SELECT x IN (SELECT 1.0) FROM UNNEST([{NAN}]) AS x",
         "SELECT SUM(x) OVER (ORDER BY x RANGE BETWEEN 1 PRECEDING AND CURRENT ROW) "
