@@ -1357,20 +1357,25 @@ def test_tables_insert_partitioning_round_trips_through_tables_get(client, parti
                     "range": {"start": "0", "end": "9", "interval": "1"},
                 }
             },
-            "The field specified for range partitioning can only be of type INTEGER. The type "
-            "found is: STRING.",
+            "The field specified for integer range partitioning can only be of type INT64. The "
+            "type found is: STRING.",
         ),
         (
             {"timePartitioning": {"type": "DAY", "field": "nope"}},
-            "The field specified for time partitioning can not be found in the schema",
+            "The field specified for partitioning cannot be found in the schema.",
         ),
         (
             {"clustering": {"fields": ["f"]}},
-            "Field f is of type FLOAT64 which is not supported for clustering",
+            "Field f has type FLOAT, which is not supported for clustering.",
         ),
         (
             {"clustering": {"fields": ["d", "ts", "n", "s", "d"]}},
-            "Too many clustering columns: 5, maximum is 4",
+            "Field can only appear once in clustering fields. Invalid field: d.",
+        ),
+        (
+            {"timePartitioning": {"type": "HOUR", "field": "d"}},
+            "The field specified for hourly partitioning can only be of type TIMESTAMP or "
+            "DATETIME. The type found is: DATE.",
         ),
     ],
 )
@@ -1378,7 +1383,9 @@ def test_tables_insert_rejects_invalid_partitioning_and_clustering(client, body,
     make_dataset(client)
     response = insert_table(client, "bad", **body)
     assert response.status_code == 400
-    assert response.json()["error"]["message"].startswith(message)
+    error = response.json()["error"]
+    assert error["message"] == message
+    assert error["errors"][0]["reason"] == "invalid"
     assert client.get(f"{API}/datasets/ds/tables/bad").status_code == 404
 
 
@@ -1552,16 +1559,33 @@ def test_a_parquet_load_keeps_required_fields_and_counts_output_rows(client):
 
 
 @pytest.mark.parametrize(
-    "data",
-    [b"not parquet", parquet_bytes([1, None], ["a", "b"])],
+    ("data", "error"),
+    [
+        (
+            b"not parquet",
+            {
+                "reason": "invalid",
+                "message": "Error while reading data, error message: Input file is not in "
+                "Parquet format.",
+            },
+        ),
+        (
+            parquet_bytes([1, None], ["a", "b"]),
+            {
+                "reason": "invalidQuery",
+                "location": "query",
+                "message": "Required field k cannot be null",
+            },
+        ),
+    ],
     ids=["unreadable", "null-in-required"],
 )
-def test_a_failed_parquet_load_appends_nothing(client, data):
+def test_a_failed_parquet_load_appends_nothing(client, data, error):
     make_dataset(client)
     load_parquet(client, "pq", parquet_bytes([1], ["a"]))
     for disposition in ("WRITE_APPEND", "WRITE_TRUNCATE"):
         job = load_parquet(client, "pq", data, writeDisposition=disposition)
-        assert job["status"]["errorResult"]["message"].startswith("Not supported by Crucible")
+        assert job["status"]["errorResult"] == error  # parquet_unreadable, parquet_required_null
         assert values(run_query(client, "SELECT k FROM ds.pq").json()["rows"]) == ["1"]
 
 

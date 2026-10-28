@@ -3,7 +3,6 @@ description: A BYTES variable with a STRING default is an error; a STRING is not
 tags:
 - scripting
 - bytes
-- known-divergence
 query: DECLARE x BYTES DEFAULT 'a'; SELECT x
 expected:
   error:

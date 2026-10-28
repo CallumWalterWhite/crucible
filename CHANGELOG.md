@@ -29,17 +29,31 @@ and this project does not yet follow semantic versioning.
 - CAST and SAFE_CAST between STRING and BYTES encode and decode UTF-8, as BigQuery does. They
   followed DuckDB's escaped text form: `CAST('\\x41' AS BYTES)` gave one byte, `CAST(b'\xc3\xa9' AS
   STRING)` gave the text `\xC3\xA9`, and `CAST('é' AS BYTES)` failed. Invalid UTF-8 to STRING is
-  refused until BigQuery's error is recorded (SAFE_CAST gives NULL).
+  BigQuery's `Invalid cast of bytes to UTF8 string` (SAFE_CAST gives NULL).
 - `BYTES || BYTES` is BYTES; it was STRING in escaped text form.
 - A STRING and a BYTES operand of one function or operator (CONCAT, `||`, comparisons, IN,
-  COALESCE, IF, CASE, ...) and a variable DEFAULT or SET of the other type are refused; DuckDB
-  silently cast one to the other, where BigQuery raises an error.
+  COALESCE, IF, CASE, ...) and a variable DEFAULT or SET of the other type are errors; DuckDB
+  silently cast one to the other. CONCAT, `STRING = BYTES` and a STRING literal for a BYTES
+  variable give BigQuery's recorded errors; the other mixes are refused until recorded.
 - LOWER, UPPER, REVERSE, REPLACE, STARTS_WITH, TRIM, LTRIM, RTRIM and STRING() of BYTES are refused:
   they ran on DuckDB's escaped text form and could give wrong bytes.
 - TO_JSON_STRING of a bare BYTES, TIMESTAMP or TIME value gives a JSON string; it raised a DuckDB
   error.
 - NULLIF over FLOAT64 follows IEEE-754 (NaN equals nothing), so `NULLIF(NaN, NaN)` is NaN. It was
   refused.
+
+- Reconciled with the Part 2 recording:
+  - `tables.insert` partitioning and clustering errors are HTTP 400 with reason `invalid` and
+    BigQuery's messages, including HOUR partitioning on a DATE field and a repeated clustering
+    field; DDL clustering on FLOAT64 and a bad PARTITION BY use BigQuery's messages too;
+  - `getQueryResults` of a query job with a destination returns the destination's rows (the
+    whole table after WRITE_APPEND); a missing CREATE_NEVER destination names no location;
+    `tables.get` of a query destination lists `mode: NULLABLE`;
+  - Parquet loads accept int32 columns, zone-less timestamps (as UTC), a NULLABLE field missing
+    from the file (NULL) and a file column not in the schema (ignored); NULL in a REQUIRED field
+    and an unreadable file fail with BigQuery's errors;
+  - NET.REG_DOMAIN ignores labels before the result (`a..b.com` gives `b.com`, a leading dot or
+    an underscore there is fine) and keeps one trailing dot (`example.com.`).
 
 ## [0.1.0a3] - 2026-10-28
 

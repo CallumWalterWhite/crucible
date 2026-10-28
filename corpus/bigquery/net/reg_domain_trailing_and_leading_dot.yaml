@@ -1,8 +1,7 @@
-description: A trailing or leading dot; BigQuery's answer is not documented, so Crucible
-  refuses it until recorded. See https://cloud.google.com/bigquery/docs/reference/standard-sql/net_functions#netreg_domain.
+description: A trailing dot is kept in the result; a leading dot is dropped with the
+  labels before the result. See https://cloud.google.com/bigquery/docs/reference/standard-sql/net_functions#netreg_domain.
 tags:
 - net
-- known-divergence
 query: SELECT NET.REG_DOMAIN('example.com.') AS d0, NET.REG_DOMAIN('.example.com')
   AS d1
 ordered: false

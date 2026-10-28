@@ -3,7 +3,6 @@ description: Comparing a STRING with BYTES is an error; BigQuery never converts 
 tags:
 - string
 - bytes
-- known-divergence
 query: SELECT 'A' = b'A' AS v
 expected:
   error:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from crucible.engine import CrucibleUnsupportedError
+from crucible.engine import CrucibleError, CrucibleUnsupportedError, ErrorKind
 from tests.unit.bigquery import column_types, values
 
 
@@ -24,9 +24,10 @@ def test_cast_of_null_stays_null(bq):
     assert values(bq(sql)) == [[None, None]]
 
 
-def test_invalid_utf8_is_unsupported_and_null_under_safe_cast(bq):
-    with pytest.raises(CrucibleUnsupportedError, match="not UTF-8"):
-        bq(r"SELECT CAST(b'\xff' AS STRING) AS v")
+def test_invalid_utf8_is_a_runtime_error_and_null_under_safe_cast(bq):
+    with pytest.raises(CrucibleError, match=r"^Invalid cast of bytes to UTF8 string$") as info:
+        bq(r"SELECT CAST(s AS STRING) AS v FROM UNNEST([b'a', b'\xff']) AS s")
+    assert info.value.kind is ErrorKind.RUNTIME
     assert values(bq(r"SELECT SAFE_CAST(b'\xff' AS STRING) AS v")) == [[None]]
 
 
@@ -44,9 +45,10 @@ def test_bytes_concat_operator_is_bytes(bq):
 @pytest.mark.parametrize(
     "sql",
     [
-        "SELECT CONCAT('a', b'b')",
+        "SELECT CONCAT('a', b'b', 1)",
         "SELECT 'a' || b'b'",
-        "SELECT 'A' = b'A'",
+        "SELECT b'A' = 'A'",
+        "SELECT 'A' < b'A'",
         "SELECT 'a' IN (b'a')",
         "SELECT COALESCE('x', b'y')",
         "SELECT IF(TRUE, 'x', b'y')",
@@ -70,13 +72,43 @@ def test_functions_on_the_text_form_of_bytes_are_refused(bq, call):
         bq(f"SELECT {call}")
 
 
+def test_concat_of_string_and_bytes_is_bigquerys_signature_error(bq):
+    with pytest.raises(CrucibleError) as info:
+        bq("SELECT CONCAT(b'a', 'b', b'c')")
+    assert info.value.kind is ErrorKind.INVALID_QUERY
+    assert str(info.value) == (
+        "No matching signature for function CONCAT\n  Argument types: BYTES, STRING, BYTES\n"
+        "  Signature: CONCAT(STRING, [STRING, ...])\n"
+        "    Argument 1: Unable to coerce type BYTES to expected type STRING\n"
+        "  Signature: CONCAT(BYTES, [BYTES, ...])\n"
+        "    Argument 2: Unable to coerce type STRING to expected type BYTES at [1:8]"
+    )
+
+
+def test_string_equals_bytes_is_bigquerys_signature_error(bq):
+    with pytest.raises(CrucibleError, match=r"^No matching signature for operator = "):
+        bq("SELECT 'A' = b'A'")
+
+
 def test_struct_fields_of_both_types_are_allowed(bq):
     assert values(bq("SELECT STRUCT('a' AS s, b'b' AS y) AS v")) == [[{"s": "a", "y": "Yg=="}]]
 
 
-def test_variable_of_the_other_type_is_refused(bq):
-    with pytest.raises(CrucibleUnsupportedError, match="STRING value to a BYTES variable"):
+def test_a_string_literal_for_a_bytes_variable_is_bigquerys_coercion_error(bq):
+    with pytest.raises(
+        CrucibleError,
+        match=r"^Query error: Cannot coerce expression 'a' to type BYTES at \[1:25\]$",
+    ):
         bq("DECLARE x BYTES DEFAULT 'a'; SELECT x")
+
+
+@pytest.mark.parametrize(
+    "script",
+    ["DECLARE x STRING DEFAULT b'a'; SELECT x", "DECLARE x BYTES DEFAULT CONCAT('a'); SELECT x"],
+)
+def test_other_values_of_the_other_type_for_a_variable_are_refused(bq, script):
+    with pytest.raises(CrucibleUnsupportedError, match="variable"):
+        bq(script)
 
 
 def test_to_json_string_of_bare_bytes_is_a_json_string(bq):

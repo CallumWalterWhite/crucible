@@ -3,7 +3,6 @@ description: CONCAT of a STRING and BYTES is an error; BigQuery never converts o
 tags:
 - string
 - bytes
-- known-divergence
 query: SELECT CONCAT('a', b'b') AS v
 expected:
   error:

@@ -39,17 +39,18 @@ _PARTITION_FORMS: dict[str, tuple[frozenset[str], frozenset[str]]] = {
     "DATETIME_TRUNC": (frozenset({"DATETIME"}), frozenset({"DAY", "HOUR", "MONTH", "YEAR"})),
     "RANGE_BUCKET": (frozenset({"INT64"}), frozenset({""})),
 }
+# Recorded: statements/partition_by_string_column_error.
 _PARTITION_RULE = (
-    "PARTITION BY expression must be DATE(<timestamp_column>), DATE(<datetime_column>), "
-    "DATETIME_TRUNC(<datetime_column>, DAY/HOUR/MONTH/YEAR), a DATE-type column, "
-    "TIMESTAMP_TRUNC(<timestamp_column>, DAY/HOUR/MONTH/YEAR), DATE_TRUNC(<date_column>, "
-    "MONTH/YEAR), or RANGE_BUCKET(<int64_column>, GENERATE_ARRAY(<int64_value>, <int64_value>[, "
-    "<int64_value>]))"
+    "PARTITION BY expression must be _PARTITIONDATE, DATE(_PARTITIONTIME), "
+    "DATE(<timestamp_column>), DATE(<datetime_column>), DATETIME_TRUNC(<datetime_column>, "
+    "DAY/HOUR/MONTH/YEAR), a DATE column, TIMESTAMP_TRUNC(<timestamp_column>, "
+    "DAY/HOUR/MONTH/YEAR), DATE_TRUNC(<date_column>, MONTH/YEAR), or "
+    "RANGE_BUCKET(<int64_column>, GENERATE_ARRAY(<int64_value>, <int64_value>[, <int64_value>]))"
 )
 _MAX_CLUSTER_COLUMNS = 4
 # Clustering columns are top-level, non-repeated columns of these types
 # (https://cloud.google.com/bigquery/docs/clustered-tables#cluster_column_types).
-_CLUSTER_TYPES = frozenset(
+CLUSTER_TYPES = frozenset(
     {"BIGNUMERIC", "BOOL", "DATE", "DATETIME", "GEOGRAPHY", "INT64", "NUMERIC", "RANGE", "STRING",
      "TIMESTAMP"}
 )  # fmt: skip
@@ -165,9 +166,14 @@ def table_properties(tree: exp.Create, columns: Columns) -> dict[str, Any]:
             if len(names) > _MAX_CLUSTER_COLUMNS:
                 raise errors.invalid(f"Too many clustering columns: {len(names)}, maximum is 4")
             _check_columns(names, columns, "CLUSTER BY")
-            for name in names:
+            for name, node in zip(names, prop.expressions, strict=True):
                 kind = _type_of(name, columns)
-                if kind is not None and kind not in _CLUSTER_TYPES:
+                if kind == "FLOAT64":  # recorded: statements/cluster_by_float_column_error
+                    at = node.this if isinstance(node, exp.Column) else node  # meta is on the name
+                    raise errors.invalid_at(
+                        at, "CLUSTER BY expression may not be a floating point type"
+                    )
+                if kind is not None and kind not in CLUSTER_TYPES:
                     raise errors.invalid(
                         f"Field {name} is of type {kind} which is not supported for clustering"
                     )

@@ -5,15 +5,19 @@ and #cast_as_string). DuckDB's own casts use an escaped text form of a BLOB inst
 - CAST(STRING AS BYTES) is the string's UTF-8 bytes. DuckDB's cast reads `\\xNN` in the text as
   one byte and refuses other non-ASCII characters, so it becomes encode().
 - CAST(BYTES AS STRING) decodes UTF-8. DuckDB's cast writes `\\xNN` for a non-ASCII byte, so it
-  becomes decode(). Invalid UTF-8 is an error in BigQuery, whose message is not recorded, so it
-  raises unsupported; SAFE_CAST gives NULL.
+  becomes decode(). Invalid UTF-8 is BigQuery's runtime error (recorded:
+  cast/cast_bytes_invalid_utf8_to_string_error); SAFE_CAST gives NULL.
 - Nothing converts implicitly. A STRING and a BYTES operand of one function or operator
   (CONCAT, ||, =, IN, COALESCE, IF, CASE, ...) is an error in BigQuery, where DuckDB casts one to
-  the other; the message is not recorded, so it is refused.
+  the other. CONCAT of STRING and BYTES arguments and `STRING = BYTES` give BigQuery's recorded
+  errors (string/concat_string_and_bytes_error, string/compare_string_and_bytes_error); the
+  others are not recorded, so they are refused.
 - BYTES arguments of the functions SQLGlot runs on DuckDB's text form of a BLOB (LOWER, UPPER,
   REVERSE, REPLACE, STARTS_WITH, TRIM, LTRIM, RTRIM) are refused: that text has `\\xNN` escapes,
   so the answer can be wrong. STRING(BYTES) has no BigQuery signature and is refused too.
-- A variable's DEFAULT or SET value of the other type (scripting.py marks those casts) is refused.
+- A variable's DEFAULT or SET value of the other type (scripting.py marks those casts) is an
+  error. A STRING literal for a BYTES variable gives BigQuery's recorded error
+  (scripting/declare_bytes_default_string_error); anything else is refused.
 """
 
 from __future__ import annotations
@@ -22,13 +26,8 @@ from typing import TYPE_CHECKING
 
 from sqlglot import exp
 
-from crucible.dialects.bigquery.transforms.common import (
-    VOLATILE,
-    T,
-    check,
-    raise_unsupported,
-    typed,
-)
+from crucible.dialects.bigquery.errors import invalid_at
+from crucible.dialects.bigquery.transforms.common import VOLATILE, T, check, raise_runtime, typed
 from crucible.engine import CrucibleUnsupportedError
 
 if TYPE_CHECKING:
@@ -80,6 +79,11 @@ def _cast(node: exp.Cast) -> exp.Expr:
     if not (to_bytes or to_string) or node.meta.get("crucible_storage"):
         return node
     if node.meta.get(COERCION):
+        if to_bytes and isinstance(value, exp.Literal) and value.is_string:
+            raise invalid_at(
+                value,
+                f"Query error: Cannot coerce expression {value.sql('bigquery')} to type BYTES",
+            )
         raise CrucibleUnsupportedError(
             f"assigning a {'STRING' if to_bytes else 'BYTES'} value to a "
             f"{'BYTES' if to_bytes else 'STRING'} variable"
@@ -99,7 +103,37 @@ def _cast(node: exp.Cast) -> exp.Expr:
         this=exp.Not(this=exp.Is(this=value.copy(), expression=exp.Null())),
         expression=exp.Is(this=tried, expression=exp.Null()),
     )
-    return check(invalid, raise_unsupported("CAST of BYTES that are not UTF-8 to STRING"), decoded)
+    return check(invalid, raise_runtime("Invalid cast of bytes to UTF8 string"), decoded)
+
+
+def _mixed_error(node: exp.Expr) -> Exception:
+    """BigQuery's recorded error for the mixed operands, where it is recorded; else a refusal."""
+    if isinstance(node, exp.Concat):
+        args = list(node.expressions)
+        if all(_is(a, _STRING) or _is(a, _BYTES) for a in args):
+            kinds = ["STRING" if _is(a, _STRING) else "BYTES" for a in args]
+            lines = [
+                f"No matching signature for function CONCAT\n  Argument types: {', '.join(kinds)}"
+            ]
+            for wanted, other in (("STRING", "BYTES"), ("BYTES", "STRING")):
+                at = kinds.index(other) + 1
+                lines.append(
+                    f"  Signature: CONCAT({wanted}, [{wanted}, ...])\n    Argument {at}: Unable to "
+                    f"coerce type {other} to expected type {wanted}"
+                )
+            return invalid_at(node, "\n".join(lines))
+    if isinstance(node, exp.EQ) and _is(node.this, _STRING) and _is(node.expression, _BYTES):
+        return invalid_at(
+            node.this,
+            "No matching signature for operator = for argument types: STRING, BYTES. STRING and "
+            "BYTES are different types that are not directly comparable. To write a BYTES literal, "
+            "use a b-prefixed literal such as b'bytes value'\n  Signature: T1 = T1\n    Unable to "
+            "find common supertype for templated argument <T1>\n      Input types for <T1>: "
+            "{STRING, BYTES}",
+        )
+    return CrucibleUnsupportedError(
+        f"STRING and BYTES operands of {_name(node)} (BigQuery's error is not recorded)"
+    )
 
 
 def transform(tree: exp.Expr, ctx: TransformContext) -> exp.Expr:
@@ -121,7 +155,5 @@ def transform(tree: exp.Expr, ctx: TransformContext) -> exp.Expr:
             and not isinstance(node, _MIXED_OK)
             and _mixed(node)
         ):
-            raise CrucibleUnsupportedError(
-                f"STRING and BYTES operands of {_name(node)} (BigQuery's error is not recorded)"
-            )
+            raise _mixed_error(node)
     return tree
