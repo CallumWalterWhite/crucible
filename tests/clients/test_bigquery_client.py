@@ -397,3 +397,30 @@ def test_bigquery_sql_udfs_and_routines(client, dataset):
     assert routine.type_ == "SCALAR_FUNCTION"
     assert [a.name for a in routine.arguments] == ["x"]
     assert routine.body == "x / 2"  # routines_get_function
+
+
+def test_bigquery_create_table_with_partitioning_and_clustering(client, dataset):
+    """client.create_table with TimePartitioning, RangePartitioning and clustering_fields, read
+    back by get_table."""
+    schema = [
+        bigquery.SchemaField("d", "DATE"),
+        bigquery.SchemaField("n", "INTEGER"),
+        bigquery.SchemaField("s", "STRING"),
+    ]
+    timed = bigquery.Table(f"{PROJECT}.{dataset}.timed", schema=schema)
+    timed.time_partitioning = bigquery.TimePartitioning(type_="MONTH", field="d")
+    timed.clustering_fields = ["s", "n"]
+    client.create_table(timed)
+    got = client.get_table(f"{PROJECT}.{dataset}.timed")
+    assert got.time_partitioning.type_ == "MONTH"
+    assert got.time_partitioning.field == "d"
+    assert got.clustering_fields == ["s", "n"]
+
+    ranged = bigquery.Table(f"{PROJECT}.{dataset}.ranged", schema=schema)
+    ranged.range_partitioning = bigquery.RangePartitioning(
+        field="n", range_=bigquery.PartitionRange(start=0, end=100, interval=10)
+    )
+    client.create_table(ranged)
+    got = client.get_table(f"{PROJECT}.{dataset}.ranged")
+    assert got.range_partitioning.field == "n"
+    assert got.range_partitioning.range_.interval == 10

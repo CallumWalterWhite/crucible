@@ -491,6 +491,65 @@ class Recorder:
         self.record_scripts_and_copies(p)
         self.record_udfs(p)
         self.record_ndjson_loads()
+        self.record_partitioned_tables(p, tables)
+
+    def record_partitioned_tables(self, p: str, tables: str) -> None:
+        """tables.insert with timePartitioning, rangePartitioning and clustering, as
+        google-cloud-bigquery's create_table sends them, read back by tables.get; and the
+        partitioning and clustering BigQuery rejects."""
+        fields = [
+            {"name": "d", "type": "DATE"},
+            {"name": "ts", "type": "TIMESTAMP"},
+            {"name": "n", "type": "INTEGER"},
+            {"name": "s", "type": "STRING"},
+            {"name": "f", "type": "FLOAT"},
+        ]
+
+        def body(table: str, **extra: Any) -> dict[str, Any]:
+            reference = {"projectId": p, "datasetId": self.dataset, "tableId": table}
+            return {"tableReference": reference, "schema": {"fields": fields}, **extra}
+
+        cluster = {"clustering": {"fields": ["s", "n"]}}
+        for table, extra in (
+            ("part_day", {"timePartitioning": {"type": "DAY", "field": "d"}, **cluster}),
+            ("part_month", {"timePartitioning": {"type": "MONTH", "field": "d"}}),
+            ("part_hour", {"timePartitioning": {"type": "HOUR", "field": "ts"}}),
+            (
+                "part_range",
+                {
+                    "rangePartitioning": {
+                        "field": "n",
+                        "range": {"start": "0", "end": "100", "interval": "10"},
+                    },
+                    **cluster,
+                },
+            ),
+        ):
+            self.call(f"tables_insert_{table}", "POST", tables, body=body(table, **extra))
+            self.call(f"tables_get_{table}", "GET", f"{tables}/{table}")
+        for name, extra in (
+            ("time_string", {"timePartitioning": {"type": "DAY", "field": "s"}}),
+            ("time_missing", {"timePartitioning": {"type": "DAY", "field": "nope"}}),
+            ("date_hour", {"timePartitioning": {"type": "HOUR", "field": "d"}}),
+            (
+                "range_string",
+                {
+                    "rangePartitioning": {
+                        "field": "s",
+                        "range": {"start": "0", "end": "9", "interval": "1"},
+                    }
+                },
+            ),
+            ("cluster_float", {"clustering": {"fields": ["f"]}}),
+            ("cluster_five", {"clustering": {"fields": ["d", "ts", "n", "s", "d"]}}),
+        ):
+            self.call(
+                f"tables_insert_bad_{name}",
+                "POST",
+                tables,
+                body=body(f"bad_{name}", **extra),
+                expect=None,
+            )
 
     def record_metadata(self, p: str, tables: str) -> None:
         """Table description, labels, field descriptions and REQUIRED columns: as tables.insert

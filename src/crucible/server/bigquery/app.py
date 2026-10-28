@@ -919,7 +919,17 @@ class BigQueryServer:
         def create(ctx: ExecContext) -> dict[str, Any]:
             _check_fields(
                 body,
-                ("tableReference", "schema", "kind", "description", "labels"),
+                (
+                    "tableReference",
+                    "schema",
+                    "kind",
+                    "description",
+                    "labels",
+                    "timePartitioning",
+                    "rangePartitioning",
+                    "clustering",
+                    "requirePartitionFilter",
+                ),
                 "tables.insert",
             )
             table = obj(body.get("tableReference")).get("tableId")
@@ -932,11 +942,15 @@ class BigQueryServer:
                 )
             fields: list[dict[str, Any]] = fields_of(obj(body.get("schema")))
             columns = ", ".join(_column_sql(f) for f in fields)
+            clauses = _partitioning_sql(body, fields)
             for statement in DIALECT.split(
-                f"CREATE TABLE `{project}`.`{dataset}`.`{table}` ({columns})"
+                f"CREATE TABLE `{project}`.`{dataset}`.`{table}` ({columns}){clauses}"
             ):
                 ctx.execute(statement)
-            props = _set_metadata({}, body) | {"field_descriptions": _field_descriptions(fields)}
+            stored = ctx.catalog.properties(project, dataset, table)  # partitioning, clustering
+            props = _set_metadata(stored, body) | {
+                "field_descriptions": _field_descriptions(fields)
+            }
             ctx.catalog.set_properties(project, dataset, table, props)
             return self._describe(ctx, self._find(ctx, project, dataset, table), base)
 
@@ -1297,6 +1311,79 @@ def _check_field(field: dict[str, Any], *, nested: bool = False) -> None:
         raise CrucibleUnsupportedError(f"a REQUIRED field inside a RECORD ({field.get('name')})")
     for sub in field.get("fields", []):
         _check_field(sub, nested=True)
+
+
+_TIME_TYPES = {"DATE": "DATE_TRUNC", "TIMESTAMP": "TIMESTAMP_TRUNC", "DATETIME": "DATETIME_TRUNC"}
+
+
+def _partitioning_sql(body: dict[str, Any], fields: list[dict[str, Any]]) -> str:
+    """tables.insert timePartitioning, rangePartitioning and clustering (REST reference, Table) as
+    the PARTITION BY and CLUSTER BY clauses that store them, so tables.get returns them as for DDL.
+    The DDL checks the column types. Partition expiry and a required partition filter would change
+    results, so they are refused."""
+    time = obj(body.get("timePartitioning"))
+    ranged = obj(body.get("rangePartitioning"))
+    if body.get("requirePartitionFilter") or time.get("requirePartitionFilter"):
+        raise CrucibleUnsupportedError("requirePartitionFilter")
+    by_name = {str(f["name"]).lower(): f for f in fields}
+    sql = ""
+    if time and ranged:
+        raise CrucibleError(
+            ErrorKind.INVALID_QUERY, "Cannot specify both time partitioning and range partitioning"
+        )
+    if time:
+        _check_fields(time, ("type", "field", "requirePartitionFilter"), "timePartitioning")
+        field = time.get("field")
+        if not field:
+            raise CrucibleUnsupportedError("ingestion-time partitioning")
+        legacy = _partition_field(by_name, str(field), "time")
+        standard = types.type_name(encoding.warehouse_type_from_field(by_name[str(field).lower()]))
+        unit = str(time.get("type") or "DAY").upper()
+        if standard not in _TIME_TYPES:
+            raise CrucibleError(
+                ErrorKind.INVALID_QUERY,
+                "The field specified for time partitioning can only be of type TIMESTAMP, DATE or "
+                f"DATETIME. The type found is: {legacy}.",
+            )
+        column = f"`{str(field).replace('`', '')}`"
+        if standard == "DATE" and unit == "DAY":
+            sql += f" PARTITION BY {column}"
+        else:
+            sql += f" PARTITION BY {_TIME_TYPES[standard]}({column}, {unit})"
+    if ranged:
+        _check_fields(ranged, ("field", "range"), "rangePartitioning")
+        field = str(ranged.get("field") or "")
+        legacy = _partition_field(by_name, field, "range")
+        if legacy not in ("INTEGER", "INT64"):
+            raise CrucibleError(
+                ErrorKind.INVALID_QUERY,
+                "The field specified for range partitioning can only be of type INTEGER. The type "
+                f"found is: {legacy}.",
+            )
+        bounds = obj(ranged.get("range"))
+        try:
+            start, end, step = (int(bounds[k]) for k in ("start", "end", "interval"))
+        except (KeyError, TypeError, ValueError) as exc:
+            raise CrucibleUnsupportedError(f"rangePartitioning range {bounds}") from exc
+        column = f"`{field.replace('`', '')}`"
+        sql += f" PARTITION BY RANGE_BUCKET({column}, GENERATE_ARRAY({start}, {end}, {step}))"
+    listed: list[Any] = obj(body.get("clustering")).get("fields") or []
+    clustering = [str(f) for f in listed]
+    if clustering:
+        sql += " CLUSTER BY " + ", ".join(f"`{f.replace('`', '')}`" for f in clustering)
+    return sql
+
+
+def _partition_field(by_name: dict[str, dict[str, Any]], field: str, kind: str) -> str:
+    """The legacy type of a top-level partitioning field, which must exist and not repeat."""
+    found = by_name.get(field.lower())
+    if found is None:
+        raise CrucibleError(
+            ErrorKind.INVALID_QUERY,
+            f"The field specified for {kind} partitioning can not be found in the schema",
+        )
+    legacy = str(found.get("type", "")).upper()
+    return "ARRAY" if _mode(found) == "REPEATED" else legacy
 
 
 def _column_sql(field: dict[str, Any]) -> str:

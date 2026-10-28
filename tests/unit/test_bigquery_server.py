@@ -1296,3 +1296,107 @@ def test_routines_list_and_get_report_persistent_functions(client):
     assert routine["arguments"] == [{"name": "x", "dataType": {"typeKind": "FLOAT64"}}]
     assert routine["returnType"] == {"typeKind": "FLOAT64"}
     assert routine["definitionBody"] == "x * 2"  # routines_get_function
+
+
+# --- tables.insert with partitioning and clustering ------------------------------------------
+PARTITIONED_SCHEMA = {
+    "fields": [
+        {"name": "d", "type": "DATE"},
+        {"name": "ts", "type": "TIMESTAMP"},
+        {"name": "n", "type": "INTEGER"},
+        {"name": "s", "type": "STRING"},
+        {"name": "f", "type": "FLOAT"},
+    ]
+}
+
+
+def insert_table(client: TestClient, table: str, **body: Any) -> Any:
+    reference = {"projectId": PROJECT, "datasetId": "ds", "tableId": table}
+    return client.post(
+        f"{API}/datasets/ds/tables",
+        json={"tableReference": reference, "schema": PARTITIONED_SCHEMA, **body},
+    )
+
+
+@pytest.mark.parametrize(
+    "partitioning",
+    [
+        {"timePartitioning": {"type": "DAY", "field": "d"}},
+        {"timePartitioning": {"type": "MONTH", "field": "d"}},
+        {"timePartitioning": {"type": "HOUR", "field": "ts"}},
+        {
+            "rangePartitioning": {
+                "field": "n",
+                "range": {"start": "0", "end": "100", "interval": "10"},
+            }
+        },
+    ],
+)
+def test_tables_insert_partitioning_round_trips_through_tables_get(client, partitioning):
+    make_dataset(client)
+    clustering = {"clustering": {"fields": ["s", "n"]}}
+    created = insert_table(client, "p", **partitioning, **clustering)
+    assert created.status_code == 200, created.json()
+    got = client.get(f"{API}/datasets/ds/tables/p").json()
+    for key, value in {**partitioning, **clustering}.items():
+        assert got[key] == value
+
+
+@pytest.mark.parametrize(
+    ("body", "message"),
+    [
+        (
+            {"timePartitioning": {"type": "DAY", "field": "s"}},
+            "The field specified for time partitioning can only be of type TIMESTAMP, DATE or "
+            "DATETIME. The type found is: STRING.",
+        ),
+        (
+            {
+                "rangePartitioning": {
+                    "field": "s",
+                    "range": {"start": "0", "end": "9", "interval": "1"},
+                }
+            },
+            "The field specified for range partitioning can only be of type INTEGER. The type "
+            "found is: STRING.",
+        ),
+        (
+            {"timePartitioning": {"type": "DAY", "field": "nope"}},
+            "The field specified for time partitioning can not be found in the schema",
+        ),
+        (
+            {"clustering": {"fields": ["f"]}},
+            "Field f is of type FLOAT64 which is not supported for clustering",
+        ),
+        (
+            {"clustering": {"fields": ["d", "ts", "n", "s", "d"]}},
+            "Too many clustering columns: 5, maximum is 4",
+        ),
+    ],
+)
+def test_tables_insert_rejects_invalid_partitioning_and_clustering(client, body, message):
+    make_dataset(client)
+    response = insert_table(client, "bad", **body)
+    assert response.status_code == 400
+    assert response.json()["error"]["message"].startswith(message)
+    assert client.get(f"{API}/datasets/ds/tables/bad").status_code == 404
+
+
+@pytest.mark.parametrize(
+    ("body", "construct"),
+    [
+        ({"timePartitioning": {"type": "DAY"}}, "ingestion-time partitioning"),
+        (
+            {"timePartitioning": {"type": "DAY", "field": "d", "expirationMs": "1000"}},
+            "timePartitioning field expirationMs",
+        ),
+        (
+            {"requirePartitionFilter": True, "timePartitioning": {"field": "d"}},
+            "requirePartitionFilter",
+        ),
+    ],
+)
+def test_tables_insert_refuses_partitioning_that_would_change_results(client, body, construct):
+    make_dataset(client)
+    response = insert_table(client, "refused", **body)
+    assert response.json()["error"]["message"] == f"Not supported by Crucible: {construct}"

@@ -195,7 +195,12 @@ DIFFERENCES: list[tuple[str, str, str]] = [
 
 # Calls the recorder makes that the committed fixtures predate (Phase 4, Step A). The replay
 # makes them, so Crucible must answer; they are compared once the user records them.
-NOT_RECORDED_YET: list[str] = []
+NOT_RECORDED_YET: list[str] = [
+    # tables.insert with partitioning and clustering (record_api.record_partitioned_tables).
+    "tables_insert_part_*",
+    "tables_get_part_*",
+    "tables_insert_bad_*",
+]
 
 
 STORAGE_ORDER_PAGES = {"tabledata_list", "tabledata_list_int64_timestamp"}

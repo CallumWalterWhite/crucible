@@ -29,8 +29,32 @@ from crucible.engine import (
 )
 from crucible.engine.catalog import qualified
 
-_PARTITION_FUNCTIONS = {"DATE_TRUNC", "TIMESTAMP_TRUNC", "DATETIME_TRUNC", "RANGE_BUCKET"}
+# The column type each PARTITION BY form takes, and the units it allows ("" for none)
+# (https://cloud.google.com/bigquery/docs/creating-partitioned-tables). A bare column is DATE.
+_PARTITION_FORMS: dict[str, tuple[frozenset[str], frozenset[str]]] = {
+    "": (frozenset({"DATE"}), frozenset({""})),
+    "DATE": (frozenset({"TIMESTAMP", "DATETIME"}), frozenset({""})),
+    "DATE_TRUNC": (frozenset({"DATE"}), frozenset({"MONTH", "YEAR"})),
+    "TIMESTAMP_TRUNC": (frozenset({"TIMESTAMP"}), frozenset({"DAY", "HOUR", "MONTH", "YEAR"})),
+    "DATETIME_TRUNC": (frozenset({"DATETIME"}), frozenset({"DAY", "HOUR", "MONTH", "YEAR"})),
+    "RANGE_BUCKET": (frozenset({"INT64"}), frozenset({""})),
+}
+_PARTITION_RULE = (
+    "PARTITION BY expression must be DATE(<timestamp_column>), DATE(<datetime_column>), "
+    "DATETIME_TRUNC(<datetime_column>, DAY/HOUR/MONTH/YEAR), a DATE-type column, "
+    "TIMESTAMP_TRUNC(<timestamp_column>, DAY/HOUR/MONTH/YEAR), DATE_TRUNC(<date_column>, "
+    "MONTH/YEAR), or RANGE_BUCKET(<int64_column>, GENERATE_ARRAY(<int64_value>, <int64_value>[, "
+    "<int64_value>]))"
+)
 _MAX_CLUSTER_COLUMNS = 4
+# Clustering columns are top-level, non-repeated columns of these types
+# (https://cloud.google.com/bigquery/docs/clustered-tables#cluster_column_types).
+_CLUSTER_TYPES = frozenset(
+    {"BIGNUMERIC", "BOOL", "DATE", "DATETIME", "GEOGRAPHY", "INT64", "NUMERIC", "RANGE", "STRING",
+     "TIMESTAMP"}
+)  # fmt: skip
+
+Columns = dict[str, exp.DataType | None]  # lowercased name -> BigQuery type (None: not known)
 
 
 def _command(statement_type: str, run: Callable[[ExecContext], None]) -> Plan:
@@ -44,11 +68,43 @@ def _command(statement_type: str, run: Callable[[ExecContext], None]) -> Plan:
     return CommandPlan(wrapped, statement_type)
 
 
-def _check_columns(names: list[str], columns: list[str], clause: str) -> None:
-    present = {c.lower() for c in columns}
+def _check_columns(names: list[str], columns: Columns, clause: str) -> None:
     for name in names:
-        if name.lower() not in present:
+        if name.lower() not in columns:
             raise errors.invalid(f"{clause} column {name} is not present in the table")
+
+
+def _type_of(name: str, columns: Columns) -> str | None:
+    kind = columns.get(name.lower())
+    if kind is None or kind.this == exp.DType.UNKNOWN:
+        return None
+    return types.type_name(kind).split("<", 1)[0].split("(", 1)[0]
+
+
+def _check_partition(expression: exp.Expr, columns: Columns) -> list[str]:
+    """The columns a PARTITION BY expression reads, after checking its form, type and unit."""
+    if isinstance(expression, exp.Column):
+        if expression.name.upper().startswith("_PARTITION"):
+            raise CrucibleUnsupportedError("ingestion-time partitioning")
+        form, column, unit = "", expression, ""
+    elif isinstance(expression, exp.Func):
+        form = expression.name if isinstance(expression, exp.Anonymous) else expression.sql_name()
+        form = form.upper()
+        column = expression.this
+        unit_arg = expression.args.get("unit")
+        unit = unit_arg.name.upper() if isinstance(unit_arg, exp.Expr) else ""
+    else:
+        raise CrucibleUnsupportedError(f"PARTITION BY {expression.sql('bigquery')}")
+    if form not in _PARTITION_FORMS:
+        raise CrucibleUnsupportedError(f"PARTITION BY {expression.sql('bigquery')}")
+    if not isinstance(column, exp.Column):
+        raise errors.invalid(_PARTITION_RULE)
+    _check_columns([column.name], columns, "PARTITION BY")
+    allowed_types, allowed_units = _PARTITION_FORMS[form]
+    kind = _type_of(column.name, columns)
+    if unit not in allowed_units or (kind is not None and kind not in allowed_types):
+        raise errors.invalid(_PARTITION_RULE)
+    return [column.name]
 
 
 def _options(properties: list[exp.Expr]) -> dict[str, Any]:
@@ -88,7 +144,7 @@ def _labels(array: exp.Array) -> dict[str, str]:
     return labels
 
 
-def table_properties(tree: exp.Create, columns: list[str]) -> dict[str, Any]:
+def table_properties(tree: exp.Create, columns: Columns) -> dict[str, Any]:
     """PARTITION BY / CLUSTER BY / OPTIONS, validated against the table's columns."""
     recorded: dict[str, Any] = {}
     props = tree.args.get("properties")
@@ -102,27 +158,19 @@ def table_properties(tree: exp.Create, columns: list[str]) -> dict[str, Any]:
             expression = prop.this
             if isinstance(expression, exp.Identifier):
                 expression = exp.column(expression.copy())
-            if isinstance(expression, exp.Column):
-                if expression.name.upper().startswith("_PARTITION"):
-                    raise CrucibleUnsupportedError("ingestion-time partitioning")
-                referenced = [expression.name]
-            elif isinstance(expression, exp.Func) and (
-                expression.sql_name().upper() in _PARTITION_FUNCTIONS
-                or (
-                    isinstance(expression, exp.Anonymous)
-                    and expression.name.upper() in _PARTITION_FUNCTIONS
-                )
-            ):
-                referenced = [c.name for c in expression.find_all(exp.Column)][:1]
-            else:
-                raise CrucibleUnsupportedError(f"PARTITION BY {expression.sql('bigquery')}")
-            _check_columns(referenced, columns, "PARTITION BY")
+            _check_partition(expression, columns)
             recorded["partition_by"] = expression.sql("bigquery")
         elif isinstance(prop, exp.ClusterProperty):
             names = [e.name for e in prop.expressions]
             if len(names) > _MAX_CLUSTER_COLUMNS:
                 raise errors.invalid(f"Too many clustering columns: {len(names)}, maximum is 4")
             _check_columns(names, columns, "CLUSTER BY")
+            for name in names:
+                kind = _type_of(name, columns)
+                if kind is not None and kind not in _CLUSTER_TYPES:
+                    raise errors.invalid(
+                        f"Field {name} is of type {kind} which is not supported for clustering"
+                    )
             recorded["cluster_by"] = names
         else:
             option_props.append(prop)
@@ -236,11 +284,13 @@ def _create_table(tree: exp.Create, ctx: ExecContext) -> Plan:
     if isinstance(query, exp.Expr) and isinstance(_query_of(query), exp.Query):
         translation = translate_query(_query_of(query), ctx)
         sql = f"{head} {full} AS {translation.sql}"
-        columns = translation.names
+        columns: Columns = {
+            n.lower(): t for n, t in zip(translation.names, translation.types, strict=True)
+        }
         statement_type = "CREATE_TABLE_AS_SELECT"
     elif isinstance(target, exp.Schema):
         sql = f"{head} {full} ({', '.join(column_def(c) for c in target.expressions)})"
-        columns = [c.name for c in target.expressions]
+        columns = {c.name.lower(): c.args.get("kind") for c in target.expressions}
         statement_type = "CREATE_TABLE"
     else:
         raise errors.invalid("CREATE TABLE needs a column list or AS SELECT")
@@ -266,7 +316,7 @@ def _create_view(tree: exp.Create, ctx: ExecContext) -> Plan:
     if tree.args.get("exists"):
         head += " IF NOT EXISTS"
     sql = f"{head} {qualified(name.project, name.dataset, name.table)} AS {translation.sql}"
-    properties = table_properties(tree, translation.names)
+    properties = table_properties(tree, dict.fromkeys(n.lower() for n in translation.names))
 
     def run(c: ExecContext) -> None:
         c.run_sql(sql, returns_rows=False)
@@ -358,7 +408,7 @@ def plan_alter_column(text: str, ctx: ExecContext) -> Plan:
         raise errors.invalid(f"Syntax error: {exc}") from exc
     info = metadata.find_table(ctx, metadata.name_of(table, ctx))
     column = match["column"].strip("`")
-    _check_columns([column], [c.name for c in info.columns], "ALTER COLUMN")
+    _check_columns([column], dict.fromkeys(c.name.lower() for c in info.columns), "ALTER COLUMN")
     stored = next(c.name for c in info.columns if c.name.lower() == column.lower())
     options = _options(list(alter.find_all(exp.Property)))
     if set(options) - {"description"}:

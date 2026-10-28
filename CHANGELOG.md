@@ -7,6 +7,18 @@ and this project does not yet follow semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+- `tables.insert` with `timePartitioning`, `rangePartitioning` and `clustering` (`create_table` with a
+  partitioned or clustered `Table`), returned by `tables.get`. Partition expiry, ingestion-time
+  partitioning and `requirePartitionFilter: true` are refused.
+- `PARTITION BY DATE(<timestamp or datetime column>)`.
+
+### Fixed
+
+- PARTITION BY and CLUSTER BY check column types as BigQuery does: a STRING partitioning column or a
+  FLOAT64 clustering column was accepted.
+
 ## [0.1.0a3] - 2026-10-28
 
 ### Added

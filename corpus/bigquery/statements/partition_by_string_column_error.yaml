@@ -1,0 +1,9 @@
+description: A STRING column cannot partition a table. See https://cloud.google.com/bigquery/docs/creating-partitioned-tables.
+tags:
+- ddl
+- partitioning
+query: CREATE TABLE p_bad (s STRING) PARTITION BY s
+expected:
+  error:
+    kind: invalid_query
+    message_contains: PARTITION BY expression must be
