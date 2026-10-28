@@ -1,5 +1,5 @@
-description: A host with an underscore; BigQuery's answer is not documented, so Crucible refuses it until
-  recorded. See https://cloud.google.com/bigquery/docs/reference/standard-sql/net_functions#netreg_domain.
+description: A host with an underscore; BigQuery's answer is not documented, so Crucible
+  refuses it until recorded. See https://cloud.google.com/bigquery/docs/reference/standard-sql/net_functions#netreg_domain.
 tags:
 - net
 - known-divergence
@@ -11,3 +11,5 @@ expected:
     type: STRING
   rows:
   - - example.com
+verified: true
+recorded_at: '2026-10-28T15:57:31Z'

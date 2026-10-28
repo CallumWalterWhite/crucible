@@ -1,13 +1,13 @@
-description: An aliased UNNEST of a literal STRUCT array, comma-joined to a table, reads the
-  fields through the alias. See https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#unnest_operator.
+description: An aliased UNNEST of a literal STRUCT array, comma-joined to a table,
+  reads the fields through the alias. See https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#unnest_operator.
 tags:
 - unnest
 - struct
 setup:
 - CREATE TABLE src (id INT64)
 - INSERT INTO src VALUES (1)
-query: SELECT p.id, v.k, v.n FROM src AS p, UNNEST([STRUCT('a' AS k, 1 AS n), STRUCT('b', 2)])
-  AS v
+query: SELECT p.id, v.k, v.n FROM src AS p, UNNEST([STRUCT('a' AS k, 1 AS n), STRUCT('b',
+  2)]) AS v
 ordered: false
 expected:
   columns:
@@ -24,3 +24,5 @@ expected:
   - - 1
     - b
     - 2
+verified: true
+recorded_at: '2026-10-28T15:58:30Z'

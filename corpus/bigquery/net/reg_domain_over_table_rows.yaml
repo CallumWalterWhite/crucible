@@ -1,10 +1,11 @@
-description: NET.REG_DOMAIN over a table's rows, with a NULL row and a host that is only a suffix.
-  See https://cloud.google.com/bigquery/docs/reference/standard-sql/net_functions#netreg_domain.
+description: NET.REG_DOMAIN over a table's rows, with a NULL row and a host that is
+  only a suffix. See https://cloud.google.com/bigquery/docs/reference/standard-sql/net_functions#netreg_domain.
 tags:
 - net
 setup:
 - CREATE TABLE hosts (id INT64, h STRING)
-- INSERT INTO hosts VALUES (1, 'news.example.co.uk'), (2, NULL), (3, 'co.uk'), (4, 'https://shop.example.net/x')
+- INSERT INTO hosts VALUES (1, 'news.example.co.uk'), (2, NULL), (3, 'co.uk'), (4,
+  'https://shop.example.net/x')
 query: SELECT id, NET.REG_DOMAIN(h) AS d FROM hosts
 ordered: false
 expected:
@@ -16,9 +17,11 @@ expected:
   rows:
   - - 1
     - example.co.uk
-  - - 2
-    - null
   - - 3
     - null
   - - 4
     - example.net
+  - - 2
+    - null
+verified: true
+recorded_at: '2026-10-28T15:57:22Z'

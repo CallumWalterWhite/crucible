@@ -1,10 +1,10 @@
-description: CAST(STRING AS BYTES) gives the string's UTF-8 bytes. A backslash is an ordinary character,
-  so '\\x41' is 4 bytes, not the byte 0x41. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions#cast_as_bytes.
+description: CAST(STRING AS BYTES) gives the string's UTF-8 bytes. A backslash is
+  an ordinary character, so '\\x41' is 4 bytes, not the byte 0x41. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions#cast_as_bytes.
 tags:
 - cast
 - bytes
-query: SELECT CAST('\\x41' AS BYTES) AS escape_text, CAST('é日本' AS BYTES) AS unicode, CAST('' AS BYTES)
-  AS empty, CAST(CAST(NULL AS STRING) AS BYTES) AS n
+query: SELECT CAST('\\x41' AS BYTES) AS escape_text, CAST('é日本' AS BYTES) AS unicode,
+  CAST('' AS BYTES) AS empty, CAST(CAST(NULL AS STRING) AS BYTES) AS n
 ordered: false
 expected:
   columns:
@@ -21,3 +21,5 @@ expected:
     - w6nml6XmnKw=
     - ''
     - null
+verified: true
+recorded_at: '2026-10-28T15:56:40Z'

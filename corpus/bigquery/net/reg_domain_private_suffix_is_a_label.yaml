@@ -1,9 +1,9 @@
-description: 'Only the ICANN section of the Public Suffix List counts: a private-section suffix is an
-  ordinary label. See https://cloud.google.com/bigquery/docs/reference/standard-sql/net_functions#netreg_domain.'
+description: 'Only the ICANN section of the Public Suffix List counts: a private-section
+  suffix is an ordinary label. See https://cloud.google.com/bigquery/docs/reference/standard-sql/net_functions#netreg_domain.'
 tags:
 - net
-query: SELECT NET.REG_DOMAIN('foo.us.com') AS d0, NET.REG_DOMAIN('site.blogspot.com') AS d1, NET.REG_DOMAIN('x.y.github.io')
-  AS d2
+query: SELECT NET.REG_DOMAIN('foo.us.com') AS d0, NET.REG_DOMAIN('site.blogspot.com')
+  AS d1, NET.REG_DOMAIN('x.y.github.io') AS d2
 ordered: false
 expected:
   columns:
@@ -17,3 +17,5 @@ expected:
   - - us.com
     - blogspot.com
     - github.io
+verified: true
+recorded_at: '2026-10-28T15:57:24Z'

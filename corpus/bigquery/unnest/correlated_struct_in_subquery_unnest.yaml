@@ -1,13 +1,13 @@
-description: A correlated subquery over UNNEST of a named STRUCT built with NULLIF reads the
-  field by name. See https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#unnest_operator.
+description: A correlated subquery over UNNEST of a named STRUCT built with NULLIF
+  reads the field by name. See https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#unnest_operator.
 tags:
 - unnest
 - struct
 setup:
 - CREATE TABLE src (id INT64, note STRING)
 - INSERT INTO src VALUES (1, 'x'), (2, ''), (3, NULL)
-query: SELECT p.id, (SELECT v.value FROM UNNEST([STRUCT(NULLIF(p.note, '') AS value)]) AS v) AS
-  value FROM src AS p
+query: SELECT p.id, (SELECT v.value FROM UNNEST([STRUCT(NULLIF(p.note, '') AS value)])
+  AS v) AS value FROM src AS p
 ordered: false
 expected:
   columns:
@@ -16,9 +16,11 @@ expected:
   - name: value
     type: STRING
   rows:
+  - - 3
+    - null
   - - 1
     - x
   - - 2
     - null
-  - - 3
-    - null
+verified: true
+recorded_at: '2026-10-28T15:58:12Z'

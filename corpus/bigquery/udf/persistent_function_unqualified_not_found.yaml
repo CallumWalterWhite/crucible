@@ -12,5 +12,5 @@ expected:
     kind: invalid_query
     message: 'Function not found: double_it at [1:12]'
     message_contains: 'Function not found: double_it'
-verified: false
-recorded_at: '2026-10-21T14:25:32Z'
+verified: true
+recorded_at: '2026-10-28T15:58:01Z'

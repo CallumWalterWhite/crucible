@@ -1,0 +1,103 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/datasets/<dataset>/tables",
+    "params": {},
+    "body": {
+      "tableReference": {
+        "projectId": "<project>",
+        "datasetId": "<dataset>",
+        "tableId": "part_month"
+      },
+      "schema": {
+        "fields": [
+          {
+            "name": "d",
+            "type": "DATE"
+          },
+          {
+            "name": "ts",
+            "type": "TIMESTAMP"
+          },
+          {
+            "name": "n",
+            "type": "INTEGER"
+          },
+          {
+            "name": "s",
+            "type": "STRING"
+          },
+          {
+            "name": "f",
+            "type": "FLOAT"
+          }
+        ]
+      },
+      "timePartitioning": {
+        "type": "MONTH",
+        "field": "d"
+      }
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#table",
+    "etag": "<etag>",
+    "id": "<project>:<dataset>.part_month",
+    "selfLink": "<self-link>",
+    "tableReference": {
+      "projectId": "<project>",
+      "datasetId": "<dataset>",
+      "tableId": "part_month"
+    },
+    "schema": {
+      "fields": [
+        {
+          "name": "d",
+          "type": "DATE"
+        },
+        {
+          "name": "ts",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "n",
+          "type": "INTEGER"
+        },
+        {
+          "name": "s",
+          "type": "STRING"
+        },
+        {
+          "name": "f",
+          "type": "FLOAT"
+        }
+      ]
+    },
+    "timePartitioning": {
+      "type": "MONTH",
+      "field": "d"
+    },
+    "numBytes": "0",
+    "numLongTermBytes": "0",
+    "numRows": "0",
+    "creationTime": "<time>",
+    "expirationTime": "<time>",
+    "lastModifiedTime": "<time>",
+    "type": "TABLE",
+    "location": "<location>",
+    "numTotalLogicalBytes": "0",
+    "numActiveLogicalBytes": "0",
+    "numLongTermLogicalBytes": "0",
+    "partitionDefinition": {
+      "partitionedColumn": [
+        {
+          "field": "d"
+        }
+      ]
+    }
+  }
+}

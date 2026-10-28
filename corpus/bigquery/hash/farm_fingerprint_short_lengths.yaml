@@ -1,10 +1,10 @@
-description: FARM_FINGERPRINT of the empty string and of 1 to 16 bytes (the 0-3, 4-7 and 8-16 byte code
-  paths). See https://cloud.google.com/bigquery/docs/reference/standard-sql/hash_functions#farm_fingerprint.
+description: FARM_FINGERPRINT of the empty string and of 1 to 16 bytes (the 0-3, 4-7
+  and 8-16 byte code paths). See https://cloud.google.com/bigquery/docs/reference/standard-sql/hash_functions#farm_fingerprint.
 tags:
 - hash
-query: SELECT FARM_FINGERPRINT('') AS l0, FARM_FINGERPRINT('a') AS l1, FARM_FINGERPRINT('abc') AS l3,
-  FARM_FINGERPRINT('abcd') AS l4, FARM_FINGERPRINT('abcdefg') AS l7, FARM_FINGERPRINT('abcdefgh') AS l8,
-  FARM_FINGERPRINT('abcdefghijklmnop') AS l16
+query: SELECT FARM_FINGERPRINT('') AS l0, FARM_FINGERPRINT('a') AS l1, FARM_FINGERPRINT('abc')
+  AS l3, FARM_FINGERPRINT('abcd') AS l4, FARM_FINGERPRINT('abcdefg') AS l7, FARM_FINGERPRINT('abcdefgh')
+  AS l8, FARM_FINGERPRINT('abcdefghijklmnop') AS l16
 ordered: false
 expected:
   columns:
@@ -30,3 +30,5 @@ expected:
     - 4341691227789030229
     - -78300442537744119
     - 6080716761534418621
+verified: true
+recorded_at: '2026-10-28T15:56:57Z'

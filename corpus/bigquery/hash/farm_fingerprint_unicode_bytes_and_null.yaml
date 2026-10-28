@@ -1,9 +1,10 @@
-description: FARM_FINGERPRINT hashes a STRING's UTF-8 bytes, so it equals the hash of those BYTES; NULL
-  gives NULL. See https://cloud.google.com/bigquery/docs/reference/standard-sql/hash_functions#farm_fingerprint.
+description: FARM_FINGERPRINT hashes a STRING's UTF-8 bytes, so it equals the hash
+  of those BYTES; NULL gives NULL. See https://cloud.google.com/bigquery/docs/reference/standard-sql/hash_functions#farm_fingerprint.
 tags:
 - hash
-query: SELECT FARM_FINGERPRINT('é日本') AS s, FARM_FINGERPRINT(b'\xc3\xa9\xe6\x97\xa5\xe6\x9c\xac') AS b,
-  FARM_FINGERPRINT(b'\x00\xff') AS raw, FARM_FINGERPRINT(CAST(NULL AS STRING)) AS n
+query: SELECT FARM_FINGERPRINT('é日本') AS s, FARM_FINGERPRINT(b'\xc3\xa9\xe6\x97\xa5\xe6\x9c\xac')
+  AS b, FARM_FINGERPRINT(b'\x00\xff') AS raw, FARM_FINGERPRINT(CAST(NULL AS STRING))
+  AS n
 ordered: false
 expected:
   columns:
@@ -20,3 +21,5 @@ expected:
     - 4794081367076527534
     - 2909837915285000904
     - null
+verified: true
+recorded_at: '2026-10-28T15:56:59Z'

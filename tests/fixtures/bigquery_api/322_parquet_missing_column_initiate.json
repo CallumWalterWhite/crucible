@@ -1,0 +1,45 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/upload/projects/<project>/jobs",
+    "params": {
+      "uploadType": "resumable"
+    },
+    "body": {
+      "jobReference": {
+        "projectId": "<project>",
+        "jobId": "<job-119>"
+      },
+      "configuration": {
+        "load": {
+          "destinationTable": {
+            "projectId": "<project>",
+            "datasetId": "<dataset>",
+            "tableId": "parquet_missing_column"
+          },
+          "schema": {
+            "fields": [
+              {
+                "name": "k",
+                "type": "INTEGER",
+                "mode": "REQUIRED"
+              },
+              {
+                "name": "s",
+                "type": "STRING"
+              }
+            ]
+          },
+          "sourceFormat": "PARQUET",
+          "writeDisposition": "WRITE_APPEND"
+        }
+      }
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "text/plain; charset=utf-8, application/json; charset=UTF-8",
+    "Location": "https://bigquery.googleapis.com/upload/bigquery/v2/projects/<project>/jobs?uploadType=resumable&upload_id=<upload-id>"
+  },
+  "body": null
+}

@@ -64,7 +64,6 @@
           "deletedRowCount": "2",
           "dmlMode": "COARSE_GRAINED_DML"
         },
-        "performanceInsights": {},
         "transferredBytes": "0"
       },
       "totalSlotMs": "<duration>"

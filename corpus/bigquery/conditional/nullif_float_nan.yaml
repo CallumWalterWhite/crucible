@@ -1,11 +1,11 @@
-description: NULLIF compares FLOAT64 by IEEE-754, where NaN equals nothing, so NULLIF(NaN, NaN) is NaN
-  and NULLIF(0, NaN) is 0. See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#floating_point_semantics.
+description: NULLIF compares FLOAT64 by IEEE-754, where NaN equals nothing, so NULLIF(NaN,
+  NaN) is NaN and NULLIF(0, NaN) is 0. See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#floating_point_semantics.
 tags:
 - conditional
 - nan
 query: SELECT NULLIF(CAST('nan' AS FLOAT64), CAST('nan' AS FLOAT64)) AS nan_nan, NULLIF(CAST('nan'
-  AS FLOAT64), 0.0) AS nan_zero, NULLIF(0.0, CAST('nan' AS FLOAT64)) AS zero_nan, NULLIF(0.0, 0.0)
-  AS zero_zero
+  AS FLOAT64), 0.0) AS nan_zero, NULLIF(0.0, CAST('nan' AS FLOAT64)) AS zero_nan,
+  NULLIF(0.0, 0.0) AS zero_zero
 ordered: false
 expected:
   columns:
@@ -22,4 +22,5 @@ expected:
     - NaN
     - 0.0
     - null
-verified: false
+verified: true
+recorded_at: '2026-10-28T15:56:45Z'

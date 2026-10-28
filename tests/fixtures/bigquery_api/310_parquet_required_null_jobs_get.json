@@ -1,0 +1,71 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/jobs/<job-113>",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:<location>.<job-113>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "load": {
+        "schema": {
+          "fields": [
+            {
+              "name": "k",
+              "type": "INTEGER",
+              "mode": "REQUIRED"
+            }
+          ]
+        },
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "parquet_required_null"
+        },
+        "writeDisposition": "WRITE_APPEND",
+        "sourceFormat": "PARQUET"
+      },
+      "jobType": "LOAD"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-113>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "endTime": "<time>",
+      "totalSlotMs": "<duration>",
+      "reservation_id": "<reservation>"
+    },
+    "status": {
+      "errorResult": {
+        "reason": "invalidQuery",
+        "location": "query",
+        "message": "Required field k cannot be null"
+      },
+      "errors": [
+        {
+          "reason": "invalidQuery",
+          "location": "query",
+          "message": "Required field k cannot be null"
+        }
+      ],
+      "state": "DONE"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "request": {
+    "method": "PUT",
+    "path": "/upload/projects/<project>/jobs?uploadType=resumable&upload_id=<upload-id>",
+    "params": {},
+    "body": {
+      "base64": "UEFSMRUEFRAVFEwVBBUAEgAACBwBAAAAAgAAABUAFRIVFiwVBBUQFQYVBhwYBAIAAAAYBAEAAAAWACgEAgAAABgEAQAAABERAAAACSACAAAABAEBAwIVBBksNQAYBnNjaGVtYRUCABUCJQIYAWsAFgQZHBkcJgAcFQIZNQAGEBkYAWsVAhYEFpwBFqQBJjgmCBwYBAIAAAAYBAEAAAAWACgEAgAAABgEAQAAABERABksFQQVABUCABUAFRAVAgA8KQYZJgAEAAAAFpwBFgQmCBakAQAZHBgMQVJST1c6c2NoZW1hGKwBLy8vLy8zZ0FBQUFRQUFBQUFBQUtBQXdBQmdBRkFBZ0FDZ0FBQUFBQkJBQU1BQUFBQ0FBSUFBQUFCQUFJQUFBQUJBQUFBQUVBQUFBVUFBQUFFQUFVQUFnQUJnQUhBQXdBQUFBUUFCQUFBQUFBQUFFQ0VBQUFBQndBQUFBRUFBQUFBQUFBQUFFQUFBQnJBQUFBQ0FBTUFBZ0FCd0FJQUFBQUFBQUFBU0FBQUFBPQAYIHBhcnF1ZXQtY3BwLWFycm93IHZlcnNpb24gMjYuMC4wGRwcAAAAZgEAAFBBUjE="
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:<location>.<job-115>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "load": {
+        "schema": {
+          "fields": [
+            {
+              "name": "k",
+              "type": "INTEGER",
+              "mode": "REQUIRED"
+            }
+          ]
+        },
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "parquet_int32"
+        },
+        "writeDisposition": "WRITE_APPEND",
+        "sourceFormat": "PARQUET"
+      },
+      "jobType": "LOAD"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-115>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "reservation_id": "<reservation>"
+    },
+    "status": {
+      "state": "RUNNING"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

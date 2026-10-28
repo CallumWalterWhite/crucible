@@ -1,5 +1,5 @@
-description: A BYTES variable with a STRING default is an error; a STRING is not coerced to BYTES.
-  Crucible refuses it until the message is recorded. See https://cloud.google.com/bigquery/docs/reference/standard-sql/procedural-language#declare.
+description: A BYTES variable with a STRING default is an error; a STRING is not coerced
+  to BYTES. Crucible refuses it until the message is recorded. See https://cloud.google.com/bigquery/docs/reference/standard-sql/procedural-language#declare.
 tags:
 - scripting
 - bytes
@@ -8,4 +8,7 @@ query: DECLARE x BYTES DEFAULT 'a'; SELECT x
 expected:
   error:
     kind: invalid_query
+    message: 'Query error: Cannot coerce expression ''a'' to type BYTES at [1:25]'
     message_contains: BYTES
+verified: true
+recorded_at: '2026-10-28T15:57:37Z'

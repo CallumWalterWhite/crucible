@@ -1,5 +1,6 @@
-description: In an array of STRUCTs passed to UNNEST, a later unnamed STRUCT takes the first
-  STRUCT's field names; the first uses a correlated column inside a function. See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#constructing_a_struct.
+description: In an array of STRUCTs passed to UNNEST, a later unnamed STRUCT takes
+  the first STRUCT's field names; the first uses a correlated column inside a function.
+  See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#constructing_a_struct.
 tags:
 - unnest
 - struct
@@ -24,3 +25,5 @@ expected:
   - - 1
     - const
     - 0
+verified: true
+recorded_at: '2026-10-28T15:58:25Z'

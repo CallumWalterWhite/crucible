@@ -1,0 +1,58 @@
+{
+  "request": {
+    "method": "PUT",
+    "path": "/upload/projects/<project>/jobs?uploadType=resumable&upload_id=<upload-id>",
+    "params": {},
+    "body": {
+      "base64": "UEFSMRUEFRAVFEwVAhUAEgAACBxA003A7Q0GABUAFRIVFiwVAhUQFQYVBhwYCEDTTcDtDQYAGAhA003A7Q0GABYAKAhA003A7Q0GABgIQNNNwO0NBgAREQAAAAkgAgAAAAIBAQIAFQQZLDUAGAZzY2hlbWEVAgAVBCUCGAJ0cyUUTIwSHCwAAAAAABYCGRwZHCYAHBUEGTUABhAZGAJ0cxUCFgIWvAEWxAEmOCYIHBgIQNNNwO0NBgAYCEDTTcDtDQYAFgAoCEDTTcDtDQYAGAhA003A7Q0GABERABksFQQVABUCABUAFRAVAgA8KQYZJgACAAAAFrwBFgImCBbEAQAZHBgMQVJST1c6c2NoZW1hGKwBLy8vLy8zZ0FBQUFRQUFBQUFBQUtBQXdBQmdBRkFBZ0FDZ0FBQUFBQkJBQU1BQUFBQ0FBSUFBQUFCQUFJQUFBQUJBQUFBQUVBQUFBVUFBQUFFQUFVQUFnQUJnQUhBQXdBQUFBUUFCQUFBQUFBQUFFS0VBQUFBQndBQUFBRUFBQUFBQUFBQUFJQUFBQjBjd0FBQUFBR0FBZ0FCZ0FHQUFBQUFBQUNBQUFBQUFBPQAYIHBhcnF1ZXQtY3BwLWFycm93IHZlcnNpb24gMjYuMC4wGRwcAAAAgwEAAFBBUjE="
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:<location>.<job-117>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "load": {
+        "schema": {
+          "fields": [
+            {
+              "name": "ts",
+              "type": "TIMESTAMP"
+            }
+          ]
+        },
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "parquet_naive_timestamp"
+        },
+        "writeDisposition": "WRITE_APPEND",
+        "sourceFormat": "PARQUET"
+      },
+      "jobType": "LOAD"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-117>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "reservation_id": "<reservation>"
+    },
+    "status": {
+      "state": "RUNNING"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

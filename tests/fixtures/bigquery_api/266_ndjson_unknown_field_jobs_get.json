@@ -44,6 +44,7 @@
       "creationTime": "<time>",
       "startTime": "<time>",
       "endTime": "<time>",
+      "completionRatio": 0,
       "totalSlotMs": "<duration>",
       "reservation_id": "<reservation>"
     },

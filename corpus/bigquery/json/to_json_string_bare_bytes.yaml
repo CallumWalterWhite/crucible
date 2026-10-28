@@ -10,3 +10,5 @@ expected:
     type: STRING
   rows:
   - - '"/w=="'
+verified: true
+recorded_at: '2026-10-28T15:57:01Z'

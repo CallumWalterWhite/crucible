@@ -1,0 +1,63 @@
+{
+  "request": {
+    "method": "PUT",
+    "path": "/upload/projects/<project>/jobs?uploadType=resumable&upload_id=<upload-id>",
+    "params": {},
+    "body": {
+      "base64": "UEFSMRUEFRAVFEwVAhUAEgAACBwBAAAAAAAAABUAFRIVFiwVAhUQFQYVBhwYCAEAAAAAAAAAGAgBAAAAAAAAABYAKAgBAAAAAAAAABgIAQAAAAAAAAAREQAAAAkgAgAAAAIBAQIAFQQZLDUAGAZzY2hlbWEVAgAVBCUCGAFrABYCGRwZHCYAHBUEGTUABhAZGAFrFQIWAha8ARbEASY4JggcGAgBAAAAAAAAABgIAQAAAAAAAAAWACgIAQAAAAAAAAAYCAEAAAAAAAAAEREAGSwVBBUAFQIAFQAVEBUCADwpBhkmAAIAAAAWvAEWAiYIFsQBABkcGAxBUlJPVzpzY2hlbWEYrAEvLy8vLzNnQUFBQVFBQUFBQUFBS0FBd0FCZ0FGQUFnQUNnQUFBQUFCQkFBTUFBQUFDQUFJQUFBQUJBQUlBQUFBQkFBQUFBRUFBQUFVQUFBQUVBQVVBQWdBQmdBSEFBd0FBQUFRQUJBQUFBQUFBQUVDRUFBQUFCd0FBQUFFQUFBQUFBQUFBQUVBQUFCckFBQUFDQUFNQUFnQUJ3QUlBQUFBQUFBQUFVQUFBQUE9ABggcGFycXVldC1jcHAtYXJyb3cgdmVyc2lvbiAyNi4wLjAZHBwAAAB2AQAAUEFSMQ=="
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:<location>.<job-119>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "load": {
+        "schema": {
+          "fields": [
+            {
+              "name": "k",
+              "type": "INTEGER",
+              "mode": "REQUIRED"
+            },
+            {
+              "name": "s",
+              "type": "STRING"
+            }
+          ]
+        },
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "parquet_missing_column"
+        },
+        "writeDisposition": "WRITE_APPEND",
+        "sourceFormat": "PARQUET"
+      },
+      "jobType": "LOAD"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-119>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "reservation_id": "<reservation>"
+    },
+    "status": {
+      "state": "RUNNING"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

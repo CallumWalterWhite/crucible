@@ -1,0 +1,40 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/upload/projects/<project>/jobs",
+    "params": {
+      "uploadType": "resumable"
+    },
+    "body": {
+      "jobReference": {
+        "projectId": "<project>",
+        "jobId": "<job-117>"
+      },
+      "configuration": {
+        "load": {
+          "destinationTable": {
+            "projectId": "<project>",
+            "datasetId": "<dataset>",
+            "tableId": "parquet_naive_timestamp"
+          },
+          "schema": {
+            "fields": [
+              {
+                "name": "ts",
+                "type": "TIMESTAMP"
+              }
+            ]
+          },
+          "sourceFormat": "PARQUET",
+          "writeDisposition": "WRITE_APPEND"
+        }
+      }
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "text/plain; charset=utf-8, application/json; charset=UTF-8",
+    "Location": "https://bigquery.googleapis.com/upload/bigquery/v2/projects/<project>/jobs?uploadType=resumable&upload_id=<upload-id>"
+  },
+  "body": null
+}
