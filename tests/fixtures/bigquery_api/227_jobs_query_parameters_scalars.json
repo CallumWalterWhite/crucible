@@ -1,0 +1,262 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/queries",
+    "params": {},
+    "body": {
+      "query": "SELECT @i + 1 AS i, @f AS f, @n AS n, @b AS b, @s AS s, @y AS y, @d AS d, @dt AS dt, @tm AS tm, @ts AS ts, TO_JSON_STRING(@j) AS j, @nul AS nul",
+      "useLegacySql": false,
+      "maximumBytesBilled": "104857600",
+      "defaultDataset": {
+        "projectId": "<project>",
+        "datasetId": "<dataset>"
+      },
+      "useQueryCache": false,
+      "parameterMode": "NAMED",
+      "queryParameters": [
+        {
+          "parameterType": {
+            "type": "INT64"
+          },
+          "parameterValue": {
+            "value": "5"
+          },
+          "name": "i"
+        },
+        {
+          "parameterType": {
+            "type": "FLOAT64"
+          },
+          "parameterValue": {
+            "value": 1.5
+          },
+          "name": "f"
+        },
+        {
+          "parameterType": {
+            "type": "NUMERIC"
+          },
+          "parameterValue": {
+            "value": "1.25"
+          },
+          "name": "n"
+        },
+        {
+          "parameterType": {
+            "type": "BOOL"
+          },
+          "parameterValue": {
+            "value": "true"
+          },
+          "name": "b"
+        },
+        {
+          "parameterType": {
+            "type": "STRING"
+          },
+          "parameterValue": {
+            "value": "it's"
+          },
+          "name": "s"
+        },
+        {
+          "parameterType": {
+            "type": "BYTES"
+          },
+          "parameterValue": {
+            "value": "Af8="
+          },
+          "name": "y"
+        },
+        {
+          "parameterType": {
+            "type": "DATE"
+          },
+          "parameterValue": {
+            "value": "2024-02-29"
+          },
+          "name": "d"
+        },
+        {
+          "parameterType": {
+            "type": "DATETIME"
+          },
+          "parameterValue": {
+            "value": "2024-01-02T03:04:05.123456"
+          },
+          "name": "dt"
+        },
+        {
+          "parameterType": {
+            "type": "TIME"
+          },
+          "parameterValue": {
+            "value": "04:05:06.500000"
+          },
+          "name": "tm"
+        },
+        {
+          "parameterType": {
+            "type": "TIMESTAMP"
+          },
+          "parameterValue": {
+            "value": "2024-01-02 03:04:05.123456+00:00"
+          },
+          "name": "ts"
+        },
+        {
+          "parameterType": {
+            "type": "JSON"
+          },
+          "parameterValue": {
+            "value": "{\"a\": 1}"
+          },
+          "name": "j"
+        },
+        {
+          "parameterType": {
+            "type": "STRING"
+          },
+          "parameterValue": {
+            "value": null
+          },
+          "name": "nul"
+        }
+      ]
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#queryResponse",
+    "schema": {
+      "fields": [
+        {
+          "name": "i",
+          "type": "INTEGER",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "f",
+          "type": "FLOAT",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "n",
+          "type": "NUMERIC",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "b",
+          "type": "BOOLEAN",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "s",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "y",
+          "type": "BYTES",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "d",
+          "type": "DATE",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "dt",
+          "type": "DATETIME",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "tm",
+          "type": "TIME",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "ts",
+          "type": "TIMESTAMP",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "j",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "nul",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        }
+      ]
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-84>",
+      "location": "<location>"
+    },
+    "totalRows": "1",
+    "rows": [
+      {
+        "f": [
+          {
+            "v": "6"
+          },
+          {
+            "v": "1.5"
+          },
+          {
+            "v": "1.25"
+          },
+          {
+            "v": "true"
+          },
+          {
+            "v": "it's"
+          },
+          {
+            "v": "Af8="
+          },
+          {
+            "v": "2024-02-29"
+          },
+          {
+            "v": "2024-01-02T03:04:05.123456"
+          },
+          {
+            "v": "04:05:06.500000"
+          },
+          {
+            "v": "1.704164645123456E9"
+          },
+          {
+            "v": "{\"a\":1}"
+          },
+          {
+            "v": null
+          }
+        ]
+      }
+    ],
+    "totalBytesProcessed": "0",
+    "jobComplete": true,
+    "cacheHit": false,
+    "queryId": "<query-id>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    },
+    "totalBytesBilled": "0",
+    "totalSlotMs": "<duration>",
+    "location": "<location>",
+    "creationTime": "<time>",
+    "startTime": "<time>",
+    "endTime": "<time>",
+    "pageRowCount": "1",
+    "statementType": "SELECT"
+  }
+}

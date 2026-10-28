@@ -1,0 +1,58 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/jobs/<job-91>",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:<location>.<job-91>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "copy": {
+        "sourceTables": [
+          {
+            "projectId": "<project>",
+            "datasetId": "<dataset>",
+            "tableId": "copy_target"
+          }
+        ],
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "copy_whole"
+        },
+        "operationType": "COPY"
+      },
+      "jobType": "COPY"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-91>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "endTime": "<time>",
+      "copy": {
+        "copiedRows": "2",
+        "copiedLogicalBytes": "2183"
+      }
+    },
+    "status": {
+      "state": "DONE"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

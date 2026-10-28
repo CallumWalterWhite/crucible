@@ -4,7 +4,7 @@
     "path": "/projects/<project>/queries",
     "params": {},
     "body": {
-      "query": "SELECT table_name, option_name, option_type, option_value FROM `<project>`.`<dataset>`.INFORMATION_SCHEMA.TABLE_OPTIONS WHERE table_name IN ('all_types', 'opts', 'partitioned_day', 'partitioned_range', 'streamed') ORDER BY table_name, option_name",
+      "query": "SELECT table_name, option_name, option_type, option_value FROM `<project>`.`<dataset>`.INFORMATION_SCHEMA.TABLE_OPTIONS WHERE table_name IN ('opts', 'partitioned_day', 'partitioned_range', 'streamed') ORDER BY table_name, option_name",
       "useLegacySql": false,
       "maximumBytesBilled": "104857600",
       "defaultDataset": {
@@ -46,27 +46,11 @@
     },
     "jobReference": {
       "projectId": "<project>",
-      "jobId": "<job-73>",
+      "jobId": "<job-80>",
       "location": "<location>"
     },
-    "totalRows": "9",
+    "totalRows": "8",
     "rows": [
-      {
-        "f": [
-          {
-            "v": "all_types"
-          },
-          {
-            "v": "expiration_timestamp"
-          },
-          {
-            "v": "TIMESTAMP"
-          },
-          {
-            "v": "TIMESTAMP \"2026-10-21T13:43:28.258Z\""
-          }
-        ]
-      },
       {
         "f": [
           {
@@ -95,7 +79,7 @@
             "v": "TIMESTAMP"
           },
           {
-            "v": "TIMESTAMP \"2026-10-21T13:46:57.684Z\""
+            "v": "TIMESTAMP \"2026-10-21T15:30:55.452Z\""
           }
         ]
       },
@@ -127,7 +111,7 @@
             "v": "TIMESTAMP"
           },
           {
-            "v": "TIMESTAMP \"2026-10-21T13:46:27.494Z\""
+            "v": "TIMESTAMP \"2026-10-21T15:30:25.318Z\""
           }
         ]
       },
@@ -159,7 +143,7 @@
             "v": "TIMESTAMP"
           },
           {
-            "v": "TIMESTAMP \"2026-10-21T13:46:38.490Z\""
+            "v": "TIMESTAMP \"2026-10-21T15:30:33.849Z\""
           }
         ]
       },
@@ -191,7 +175,7 @@
             "v": "TIMESTAMP"
           },
           {
-            "v": "TIMESTAMP \"2026-10-21T13:46:52.455Z\""
+            "v": "TIMESTAMP \"2026-10-21T15:30:50.394Z\""
           }
         ]
       }
@@ -209,7 +193,7 @@
     "creationTime": "<time>",
     "startTime": "<time>",
     "endTime": "<time>",
-    "pageRowCount": "9",
+    "pageRowCount": "8",
     "statementType": "SELECT"
   }
 }

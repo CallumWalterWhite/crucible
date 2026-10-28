@@ -1,0 +1,61 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/queries/<job-93>",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#getQueryResultsResponse",
+    "etag": "<etag>",
+    "schema": {
+      "fields": [
+        {
+          "name": "d",
+          "type": "DATE",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "k",
+          "type": "INTEGER",
+          "mode": "NULLABLE"
+        }
+      ]
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-93>",
+      "location": "<location>"
+    },
+    "totalRows": "2",
+    "rows": [
+      {
+        "f": [
+          {
+            "v": "2024-01-01"
+          },
+          {
+            "v": "1"
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "2024-01-02"
+          },
+          {
+            "v": "20"
+          }
+        ]
+      }
+    ],
+    "totalBytesProcessed": "32",
+    "jobComplete": true,
+    "cacheHit": false
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/queries",
+    "params": {},
+    "body": {
+      "query": "SELECT ? * 10 AS v, ? AS s",
+      "useLegacySql": false,
+      "maximumBytesBilled": "104857600",
+      "defaultDataset": {
+        "projectId": "<project>",
+        "datasetId": "<dataset>"
+      },
+      "useQueryCache": false,
+      "parameterMode": "POSITIONAL",
+      "queryParameters": [
+        {
+          "parameterType": {
+            "type": "INT64"
+          },
+          "parameterValue": {
+            "value": "2"
+          }
+        },
+        {
+          "parameterType": {
+            "type": "STRING"
+          },
+          "parameterValue": {
+            "value": "b"
+          }
+        }
+      ]
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#queryResponse",
+    "schema": {
+      "fields": [
+        {
+          "name": "v",
+          "type": "INTEGER",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "s",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        }
+      ]
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-85>",
+      "location": "<location>"
+    },
+    "totalRows": "1",
+    "rows": [
+      {
+        "f": [
+          {
+            "v": "20"
+          },
+          {
+            "v": "b"
+          }
+        ]
+      }
+    ],
+    "totalBytesProcessed": "0",
+    "jobComplete": true,
+    "cacheHit": false,
+    "queryId": "<query-id>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    },
+    "totalBytesBilled": "0",
+    "totalSlotMs": "<duration>",
+    "location": "<location>",
+    "creationTime": "<time>",
+    "startTime": "<time>",
+    "endTime": "<time>",
+    "pageRowCount": "1",
+    "statementType": "SELECT"
+  }
+}

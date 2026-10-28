@@ -1,0 +1,16 @@
+description: A persistent function is not found by its bare name, even in the default
+  dataset; a call names its dataset. See https://cloud.google.com/bigquery/docs/user-defined-functions.
+tags:
+- udf
+setup:
+- CREATE TABLE t (a INT64)
+- INSERT INTO t VALUES (1), (2), (3)
+- CREATE FUNCTION double_it(x INT64) RETURNS INT64 AS (x * 2)
+query: SELECT SUM(double_it(a)) AS s FROM t
+expected:
+  error:
+    kind: invalid_query
+    message: 'Function not found: double_it at [1:12]'
+    message_contains: 'Function not found: double_it'
+verified: false
+recorded_at: '2026-10-21T14:25:32Z'

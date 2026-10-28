@@ -1,13 +1,17 @@
-description: SET (var) = (SELECT AS STRUCT ARRAY_AGG(DISTINCT ... IGNORE NULLS) ...) and IN UNNEST(var), as dbt's
-  insert_overwrite script does. See https://cloud.google.com/bigquery/docs/reference/standard-sql/procedural-language#set.
-tags: [scripting]
+description: SET (var) = (SELECT AS STRUCT ARRAY_AGG(DISTINCT ... IGNORE NULLS) ...)
+  and IN UNNEST(var), as dbt's insert_overwrite script does. See https://cloud.google.com/bigquery/docs/reference/standard-sql/procedural-language#set.
+tags:
+- scripting
 setup:
 - CREATE TABLE t (k INT64)
 - INSERT INTO t VALUES (1), (2), (2), (NULL), (5)
-query: DECLARE ks ARRAY<INT64>; SET (ks) = (SELECT AS STRUCT ARRAY_AGG(DISTINCT k IGNORE NULLS) FROM t WHERE k < 5);
-  SELECT COUNT(*) AS n FROM t WHERE k IN UNNEST(ks)
+query: DECLARE ks ARRAY<INT64>; SET (ks) = (SELECT AS STRUCT ARRAY_AGG(DISTINCT k
+  IGNORE NULLS) FROM t WHERE k < 5); SELECT COUNT(*) AS n FROM t WHERE k IN UNNEST(ks)
 expected:
   columns:
-  - {name: n, type: INT64}
+  - name: n
+    type: INT64
   rows:
-  - [3]
+  - - 3
+verified: true
+recorded_at: '2026-10-21T14:25:21Z'

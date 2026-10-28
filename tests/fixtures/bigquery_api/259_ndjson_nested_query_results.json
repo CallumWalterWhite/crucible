@@ -1,0 +1,87 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/queries/<job-99>",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#getQueryResultsResponse",
+    "etag": "<etag>",
+    "schema": {
+      "fields": [
+        {
+          "name": "k",
+          "type": "INTEGER",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "a",
+          "type": "INTEGER",
+          "mode": "REPEATED"
+        },
+        {
+          "name": "r",
+          "type": "RECORD",
+          "mode": "NULLABLE",
+          "fields": [
+            {
+              "name": "x",
+              "type": "INTEGER",
+              "mode": "NULLABLE"
+            },
+            {
+              "name": "z",
+              "type": "STRING",
+              "mode": "NULLABLE"
+            }
+          ]
+        }
+      ]
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-99>",
+      "location": "<location>"
+    },
+    "totalRows": "1",
+    "rows": [
+      {
+        "f": [
+          {
+            "v": "1"
+          },
+          {
+            "v": [
+              {
+                "v": "1"
+              },
+              {
+                "v": "2"
+              }
+            ]
+          },
+          {
+            "v": {
+              "f": [
+                {
+                  "v": "3"
+                },
+                {
+                  "v": "q"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "totalBytesProcessed": "35",
+    "jobComplete": true,
+    "cacheHit": false
+  }
+}

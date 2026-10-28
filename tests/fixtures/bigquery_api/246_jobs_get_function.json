@@ -1,0 +1,68 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/jobs/<job-95>",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:<location>.<job-95>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "query": {
+        "query": "CREATE FUNCTION half(x FLOAT64) RETURNS FLOAT64 AS (x / 2)",
+        "defaultDataset": {
+          "datasetId": "<dataset>",
+          "projectId": "<project>"
+        },
+        "priority": "INTERACTIVE",
+        "useQueryCache": false,
+        "maximumBytesBilled": "104857600",
+        "useLegacySql": false
+      },
+      "jobType": "QUERY"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-95>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "endTime": "<time>",
+      "totalBytesProcessed": "0",
+      "query": {
+        "totalPartitionsProcessed": "0",
+        "totalBytesProcessed": "0",
+        "totalBytesBilled": "0",
+        "billingTier": 0,
+        "totalSlotMs": "<duration>",
+        "cacheHit": false,
+        "statementType": "CREATE_FUNCTION",
+        "ddlOperationPerformed": "CREATE",
+        "ddlTargetRoutine": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "routineId": "half"
+        },
+        "transferredBytes": "0"
+      },
+      "totalSlotMs": "<duration>"
+    },
+    "status": {
+      "state": "DONE"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

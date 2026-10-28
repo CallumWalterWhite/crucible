@@ -1,0 +1,180 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/jobs",
+    "params": {},
+    "body": {
+      "jobReference": {
+        "projectId": "<project>",
+        "jobId": "<job-87>"
+      },
+      "configuration": {
+        "query": {
+          "query": "SELECT @k * 2 AS v",
+          "useLegacySql": false,
+          "maximumBytesBilled": "104857600",
+          "defaultDataset": {
+            "projectId": "<project>",
+            "datasetId": "<dataset>"
+          },
+          "useQueryCache": false,
+          "parameterMode": "NAMED",
+          "queryParameters": [
+            {
+              "parameterType": {
+                "type": "INT64"
+              },
+              "parameterValue": {
+                "value": "21"
+              },
+              "name": "k"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:<location>.<job-87>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "query": {
+        "query": "SELECT @k * 2 AS v",
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<anon-dataset-1>",
+          "tableId": "<anon-table-28>"
+        },
+        "writeDisposition": "WRITE_TRUNCATE",
+        "defaultDataset": {
+          "datasetId": "<dataset>",
+          "projectId": "<project>"
+        },
+        "priority": "INTERACTIVE",
+        "useQueryCache": false,
+        "maximumBytesBilled": "104857600",
+        "useLegacySql": false,
+        "parameterMode": "NAMED",
+        "queryParameters": [
+          {
+            "name": "k",
+            "parameterType": {
+              "type": "INT64"
+            },
+            "parameterValue": {
+              "value": "21"
+            }
+          }
+        ]
+      },
+      "jobType": "QUERY"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-87>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "endTime": "<time>",
+      "totalBytesProcessed": "0",
+      "query": {
+        "queryPlan": [
+          {
+            "name": "S00: Output",
+            "id": "0",
+            "startMs": "<time>",
+            "endMs": "<time>",
+            "waitRatioAvg": 1,
+            "waitMsAvg": "2",
+            "waitRatioMax": 1,
+            "waitMsMax": "2",
+            "readRatioAvg": 0,
+            "readMsAvg": "0",
+            "readRatioMax": 0,
+            "readMsMax": "0",
+            "computeRatioAvg": 0,
+            "computeMsAvg": "0",
+            "computeRatioMax": 0,
+            "computeMsMax": "0",
+            "writeRatioAvg": 0,
+            "writeMsAvg": "0",
+            "writeRatioMax": 0,
+            "writeMsMax": "0",
+            "shuffleOutputBytes": "0",
+            "shuffleOutputBytesSpilled": "0",
+            "recordsRead": "0",
+            "recordsWritten": "1",
+            "parallelInputs": "0",
+            "completedParallelInputs": "0",
+            "status": "COMPLETE",
+            "steps": [
+              {
+                "kind": "COMPUTE",
+                "substeps": [
+                  "$1 := 42"
+                ]
+              },
+              {
+                "kind": "WRITE",
+                "substeps": [
+                  "$1",
+                  "TO __stage00_output"
+                ]
+              }
+            ],
+            "slotMs": "<duration>",
+            "computeMode": "BIGQUERY"
+          }
+        ],
+        "estimatedBytesProcessed": "0",
+        "timeline": [
+          {
+            "elapsedMs": "<duration>",
+            "totalSlotMs": "<duration>",
+            "pendingUnits": "0",
+            "completedUnits": "0",
+            "estimatedRunnableUnits": "0"
+          }
+        ],
+        "totalPartitionsProcessed": "0",
+        "totalBytesProcessed": "0",
+        "totalBytesBilled": "0",
+        "billingTier": 0,
+        "totalSlotMs": "<duration>",
+        "cacheHit": false,
+        "statementType": "SELECT",
+        "queryInfo": {
+          "optimizationDetails": {
+            "optimizations": [
+              {
+                "enhanced_vectorization": "applied"
+              },
+              {
+                "short_query_optimization": "applied"
+              }
+            ]
+          }
+        },
+        "transferredBytes": "0"
+      },
+      "totalSlotMs": "<duration>",
+      "finalExecutionDurationMs": "<duration>"
+    },
+    "status": {
+      "state": "DONE"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/upload/projects/<project>/jobs",
+    "params": {
+      "uploadType": "resumable"
+    },
+    "body": {
+      "jobReference": {
+        "projectId": "<project>",
+        "jobId": "<job-96>"
+      },
+      "configuration": {
+        "load": {
+          "destinationTable": {
+            "projectId": "<project>",
+            "datasetId": "<dataset>",
+            "tableId": "ndjson_types"
+          },
+          "schema": {
+            "fields": [
+              {
+                "name": "k",
+                "type": "INTEGER"
+              },
+              {
+                "name": "f",
+                "type": "FLOAT"
+              },
+              {
+                "name": "n",
+                "type": "NUMERIC"
+              },
+              {
+                "name": "b",
+                "type": "BOOLEAN"
+              },
+              {
+                "name": "s",
+                "type": "STRING"
+              },
+              {
+                "name": "y",
+                "type": "BYTES"
+              },
+              {
+                "name": "d",
+                "type": "DATE"
+              },
+              {
+                "name": "dt",
+                "type": "DATETIME"
+              },
+              {
+                "name": "tm",
+                "type": "TIME"
+              },
+              {
+                "name": "ts",
+                "type": "TIMESTAMP"
+              },
+              {
+                "name": "j",
+                "type": "JSON"
+              }
+            ]
+          },
+          "sourceFormat": "NEWLINE_DELIMITED_JSON",
+          "writeDisposition": "WRITE_TRUNCATE"
+        }
+      }
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "text/plain; charset=utf-8, application/json; charset=UTF-8",
+    "Location": "https://bigquery.googleapis.com/upload/bigquery/v2/projects/<project>/jobs?uploadType=resumable&upload_id=<upload-id>"
+  },
+  "body": null
+}

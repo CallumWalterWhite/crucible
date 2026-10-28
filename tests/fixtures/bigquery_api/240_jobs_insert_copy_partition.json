@@ -1,0 +1,76 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/jobs",
+    "params": {},
+    "body": {
+      "jobReference": {
+        "projectId": "<project>",
+        "jobId": "<job-92>"
+      },
+      "configuration": {
+        "copy": {
+          "sourceTables": [
+            {
+              "projectId": "<project>",
+              "datasetId": "<dataset>",
+              "tableId": "copy_source$20240102"
+            }
+          ],
+          "destinationTable": {
+            "projectId": "<project>",
+            "datasetId": "<dataset>",
+            "tableId": "copy_target$20240102"
+          },
+          "writeDisposition": "WRITE_TRUNCATE"
+        }
+      }
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:<location>.<job-92>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "copy": {
+        "sourceTables": [
+          {
+            "projectId": "<project>",
+            "datasetId": "<dataset>",
+            "tableId": "copy_source$20240102"
+          }
+        ],
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "copy_target$20240102"
+        },
+        "writeDisposition": "WRITE_TRUNCATE",
+        "operationType": "COPY"
+      },
+      "jobType": "COPY"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-92>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>"
+    },
+    "status": {
+      "state": "RUNNING"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

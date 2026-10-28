@@ -3,8 +3,8 @@ tags:
 - probe
 - window
 - nan
-query: SELECT x, ROW_NUMBER() OVER (ORDER BY x) AS n FROM UNNEST([2.0, CAST('nan' AS FLOAT64), CAST('-inf'
-  AS FLOAT64)]) AS x
+query: SELECT x, ROW_NUMBER() OVER (ORDER BY x) AS n FROM UNNEST([2.0, CAST('nan'
+  AS FLOAT64), CAST('-inf' AS FLOAT64)]) AS x
 ordered: false
 expected:
   columns:
@@ -19,3 +19,5 @@ expected:
     - 2
   - - 2.0
     - 3
+verified: true
+recorded_at: '2026-10-21T14:25:48Z'

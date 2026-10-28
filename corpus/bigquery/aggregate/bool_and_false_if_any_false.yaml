@@ -9,5 +9,5 @@ expected:
     kind: invalid_query
     message: 'Function not found: BOOL_AND at [1:8]'
     message_contains: 'Function not found: BOOL_AND'
-verified: false
-recorded_at: '2026-10-21T12:37:55Z'
+verified: true
+recorded_at: '2026-10-21T14:24:24Z'

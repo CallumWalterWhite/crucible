@@ -1,4 +1,5 @@
-description: NaN IN a list containing NaN is FALSE, since NaN = NaN is FALSE. See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#floating_point_semantics.
+description: NaN IN a list containing NaN is FALSE, since NaN = NaN is FALSE. See
+  https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#floating_point_semantics.
 tags:
 - probe
 - math
@@ -11,3 +12,5 @@ expected:
     type: BOOL
   rows:
   - - false
+verified: true
+recorded_at: '2026-10-21T14:24:38Z'

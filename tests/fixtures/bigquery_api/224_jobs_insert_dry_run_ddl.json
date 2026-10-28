@@ -1,0 +1,91 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/jobs",
+    "params": {},
+    "body": {
+      "jobReference": {
+        "projectId": "<project>",
+        "jobId": "<job-82>"
+      },
+      "configuration": {
+        "query": {
+          "query": "CREATE TABLE dry_t (a INT64)",
+          "useLegacySql": false,
+          "maximumBytesBilled": "104857600",
+          "defaultDataset": {
+            "projectId": "<project>",
+            "datasetId": "<dataset>"
+          },
+          "useQueryCache": false
+        },
+        "dryRun": true
+      }
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:<location>.",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "query": {
+        "query": "CREATE TABLE dry_t (a INT64)",
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "dry_t"
+        },
+        "defaultDataset": {
+          "datasetId": "<dataset>",
+          "projectId": "<project>"
+        },
+        "priority": "INTERACTIVE",
+        "useQueryCache": false,
+        "maximumBytesBilled": "104857600",
+        "useLegacySql": false
+      },
+      "dryRun": true,
+      "jobType": "QUERY"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "endTime": "<time>",
+      "totalBytesProcessed": "0",
+      "query": {
+        "totalBytesProcessed": "0",
+        "totalBytesBilled": "0",
+        "cacheHit": false,
+        "schema": {
+          "fields": [
+            {
+              "name": "a",
+              "type": "INTEGER"
+            }
+          ]
+        },
+        "statementType": "CREATE_TABLE",
+        "ddlOperationPerformed": "CREATE",
+        "ddlTargetTable": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "dry_t"
+        },
+        "totalBytesProcessedAccuracy": "PRECISE"
+      }
+    },
+    "status": {
+      "state": "DONE"
+    },
+    "principal_subject": "<principal>"
+  }
+}

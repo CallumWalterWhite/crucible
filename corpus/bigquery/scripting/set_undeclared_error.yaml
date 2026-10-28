@@ -1,7 +1,11 @@
 description: SET of a variable that was never declared is an error. See https://cloud.google.com/bigquery/docs/reference/standard-sql/procedural-language#set.
-tags: [scripting]
+tags:
+- scripting
 query: SET y = 1; SELECT 1
 expected:
   error:
     kind: invalid_query
+    message: 'Undeclared variable: y at [1:5]'
     message_contains: Undeclared variable
+verified: true
+recorded_at: '2026-10-21T14:25:22Z'

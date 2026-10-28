@@ -1,0 +1,183 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/jobs",
+    "params": {},
+    "body": {
+      "jobReference": {
+        "projectId": "<project>",
+        "jobId": "<job-93>"
+      },
+      "configuration": {
+        "query": {
+          "query": "SELECT d, k FROM copy_target ORDER BY d",
+          "useLegacySql": false,
+          "maximumBytesBilled": "104857600",
+          "defaultDataset": {
+            "projectId": "<project>",
+            "datasetId": "<dataset>"
+          },
+          "useQueryCache": false
+        }
+      }
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:<location>.<job-93>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "query": {
+        "query": "SELECT d, k FROM copy_target ORDER BY d",
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<anon-dataset-1>",
+          "tableId": "<anon-table-30>"
+        },
+        "writeDisposition": "WRITE_TRUNCATE",
+        "defaultDataset": {
+          "datasetId": "<dataset>",
+          "projectId": "<project>"
+        },
+        "priority": "INTERACTIVE",
+        "useQueryCache": false,
+        "maximumBytesBilled": "104857600",
+        "useLegacySql": false
+      },
+      "jobType": "QUERY"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-93>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "endTime": "<time>",
+      "totalBytesProcessed": "32",
+      "query": {
+        "queryPlan": [
+          {
+            "name": "S00: Output",
+            "id": "0",
+            "startMs": "<time>",
+            "endMs": "<time>",
+            "waitRatioAvg": 0.1111111111111111,
+            "waitMsAvg": "1",
+            "waitRatioMax": 0.1111111111111111,
+            "waitMsMax": "1",
+            "readRatioAvg": 0.7777777777777778,
+            "readMsAvg": "7",
+            "readRatioMax": 0.7777777777777778,
+            "readMsMax": "7",
+            "computeRatioAvg": 1,
+            "computeMsAvg": "9",
+            "computeRatioMax": 1,
+            "computeMsMax": "9",
+            "writeRatioAvg": 0,
+            "writeMsAvg": "0",
+            "writeRatioMax": 0,
+            "writeMsMax": "0",
+            "shuffleOutputBytes": "0",
+            "shuffleOutputBytesSpilled": "0",
+            "recordsRead": "2",
+            "recordsWritten": "2",
+            "parallelInputs": "2",
+            "completedParallelInputs": "2",
+            "status": "COMPLETE",
+            "steps": [
+              {
+                "kind": "READ",
+                "substeps": [
+                  "$1:d, $2:k",
+                  "FROM copy_target"
+                ]
+              },
+              {
+                "kind": "SORT",
+                "substeps": [
+                  "$1 ASC"
+                ]
+              },
+              {
+                "kind": "WRITE",
+                "substeps": [
+                  "$10, $11",
+                  "TO __stage00_output"
+                ]
+              }
+            ],
+            "slotMs": "<duration>",
+            "computeMode": "BIGQUERY"
+          }
+        ],
+        "estimatedBytesProcessed": "32",
+        "timeline": [
+          {
+            "elapsedMs": "<duration>",
+            "totalSlotMs": "<duration>",
+            "pendingUnits": "0",
+            "completedUnits": "2",
+            "estimatedRunnableUnits": "0"
+          }
+        ],
+        "totalPartitionsProcessed": "2",
+        "totalBytesProcessed": "32",
+        "totalBytesBilled": "10485760",
+        "billingTier": 1,
+        "totalSlotMs": "<duration>",
+        "cacheHit": false,
+        "referencedTables": [
+          {
+            "projectId": "<project>",
+            "datasetId": "<dataset>",
+            "tableId": "copy_target"
+          }
+        ],
+        "statementType": "SELECT",
+        "queryInfo": {
+          "optimizationDetails": {
+            "optimizations": [
+              {
+                "enhanced_vectorization": "applied"
+              },
+              {
+                "short_query_optimization": "applied"
+              }
+            ]
+          }
+        },
+        "transferredBytes": "0",
+        "metadataCacheStatistics": {
+          "tableMetadataCacheUsage": [
+            {
+              "tableReference": {
+                "projectId": "<project>",
+                "datasetId": "<dataset>",
+                "tableId": "copy_target"
+              },
+              "unusedReason": "OTHER_REASON",
+              "explanation": "Table does not have CMETA."
+            }
+          ]
+        }
+      },
+      "totalSlotMs": "<duration>",
+      "finalExecutionDurationMs": "<duration>"
+    },
+    "status": {
+      "state": "DONE"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

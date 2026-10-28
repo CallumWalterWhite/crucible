@@ -1,7 +1,7 @@
 {
   "request": {
     "method": "GET",
-    "path": "/projects/<project>/jobs/<job-77>",
+    "path": "/projects/<project>/jobs/<job-88>",
     "params": {},
     "body": null
   },
@@ -12,16 +12,16 @@
   "body": {
     "kind": "bigquery#job",
     "etag": "<etag>",
-    "id": "<project>:<location>.<job-77>",
+    "id": "<project>:<location>.<job-88>",
     "selfLink": "<self-link>",
     "user_email": "<email>",
     "configuration": {
       "query": {
-        "query": "ALTER TABLE meta_t SET OPTIONS (description = 'altered', labels = [('a', 'b')])",
+        "query": "DECLARE ks ARRAY<INT64>; SET (ks) = (SELECT AS STRUCT ARRAY_AGG(DISTINCT k IGNORE NULLS) FROM streamed); SELECT ARRAY_LENGTH(ks) AS n",
         "destinationTable": {
           "projectId": "<project>",
-          "datasetId": "<dataset>",
-          "tableId": "meta_t"
+          "datasetId": "<anon-dataset-1>",
+          "tableId": "<anon-table-29>"
         },
         "defaultDataset": {
           "datasetId": "<dataset>",
@@ -36,7 +36,7 @@
     },
     "jobReference": {
       "projectId": "<project>",
-      "jobId": "<job-77>",
+      "jobId": "<job-88>",
       "location": "<location>"
     },
     "statistics": {
@@ -45,22 +45,22 @@
       "endTime": "<time>",
       "totalBytesProcessed": "0",
       "query": {
-        "totalPartitionsProcessed": "0",
         "totalBytesProcessed": "0",
         "totalBytesBilled": "0",
-        "billingTier": 0,
         "totalSlotMs": "<duration>",
-        "cacheHit": false,
-        "statementType": "ALTER_TABLE",
-        "ddlOperationPerformed": "ALTER",
-        "ddlTargetTable": {
-          "projectId": "<project>",
-          "datasetId": "<dataset>",
-          "tableId": "meta_t"
+        "schema": {
+          "fields": [
+            {
+              "name": "n",
+              "type": "INTEGER",
+              "mode": "NULLABLE"
+            }
+          ]
         },
-        "transferredBytes": "0"
+        "statementType": "SCRIPT"
       },
-      "totalSlotMs": "<duration>"
+      "totalSlotMs": "<duration>",
+      "numChildJobs": "2"
     },
     "status": {
       "state": "DONE"

@@ -1,0 +1,116 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/jobs/<job-96>",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:<location>.<job-96>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "load": {
+        "schema": {
+          "fields": [
+            {
+              "name": "k",
+              "type": "INTEGER"
+            },
+            {
+              "name": "f",
+              "type": "FLOAT"
+            },
+            {
+              "name": "n",
+              "type": "NUMERIC"
+            },
+            {
+              "name": "b",
+              "type": "BOOLEAN"
+            },
+            {
+              "name": "s",
+              "type": "STRING"
+            },
+            {
+              "name": "y",
+              "type": "BYTES"
+            },
+            {
+              "name": "d",
+              "type": "DATE"
+            },
+            {
+              "name": "dt",
+              "type": "DATETIME"
+            },
+            {
+              "name": "tm",
+              "type": "TIME"
+            },
+            {
+              "name": "ts",
+              "type": "TIMESTAMP"
+            },
+            {
+              "name": "j",
+              "type": "JSON"
+            }
+          ]
+        },
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "ndjson_types"
+        },
+        "writeDisposition": "WRITE_TRUNCATE",
+        "sourceFormat": "NEWLINE_DELIMITED_JSON"
+      },
+      "jobType": "LOAD"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-96>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "endTime": "<time>",
+      "load": {
+        "inputFiles": "1",
+        "inputFileBytes": "201",
+        "outputRows": "1",
+        "outputBytes": "85",
+        "badRecords": "0",
+        "timeline": [
+          {
+            "elapsedMs": "<duration>",
+            "totalSlotMs": "<duration>",
+            "pendingUnits": "0",
+            "completedUnits": "1",
+            "shuffleRamUsageRatio": 1.52587890625e-05,
+            "estimatedRunnableUnits": "0"
+          }
+        ]
+      },
+      "totalSlotMs": "<duration>",
+      "reservation_id": "<reservation>",
+      "finalExecutionDurationMs": "<duration>"
+    },
+    "status": {
+      "state": "DONE"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

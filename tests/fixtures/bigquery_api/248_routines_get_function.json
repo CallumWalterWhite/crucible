@@ -1,0 +1,36 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/datasets/<dataset>/routines/half",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "etag": "<etag>",
+    "routineReference": {
+      "projectId": "<project>",
+      "datasetId": "<dataset>",
+      "routineId": "half"
+    },
+    "routineType": "SCALAR_FUNCTION",
+    "creationTime": "<time>",
+    "lastModifiedTime": "<time>",
+    "language": "SQL",
+    "arguments": [
+      {
+        "name": "x",
+        "dataType": {
+          "typeKind": "FLOAT64"
+        }
+      }
+    ],
+    "definitionBody": "x / 2",
+    "returnType": {
+      "typeKind": "FLOAT64"
+    }
+  }
+}

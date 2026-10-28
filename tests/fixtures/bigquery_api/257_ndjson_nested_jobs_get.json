@@ -1,0 +1,95 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/jobs/<job-98>",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:<location>.<job-98>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "load": {
+        "schema": {
+          "fields": [
+            {
+              "name": "k",
+              "type": "INTEGER"
+            },
+            {
+              "name": "a",
+              "type": "INTEGER",
+              "mode": "REPEATED"
+            },
+            {
+              "name": "r",
+              "type": "RECORD",
+              "fields": [
+                {
+                  "name": "x",
+                  "type": "INTEGER"
+                },
+                {
+                  "name": "z",
+                  "type": "STRING"
+                }
+              ]
+            }
+          ]
+        },
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "ndjson_nested"
+        },
+        "writeDisposition": "WRITE_TRUNCATE",
+        "sourceFormat": "NEWLINE_DELIMITED_JSON"
+      },
+      "jobType": "LOAD"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-98>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "endTime": "<time>",
+      "load": {
+        "inputFiles": "1",
+        "inputFileBytes": "46",
+        "outputRows": "1",
+        "outputBytes": "35",
+        "badRecords": "0",
+        "timeline": [
+          {
+            "elapsedMs": "<duration>",
+            "totalSlotMs": "<duration>",
+            "pendingUnits": "0",
+            "completedUnits": "1",
+            "shuffleRamUsageRatio": 1.52587890625e-05,
+            "estimatedRunnableUnits": "0"
+          }
+        ]
+      },
+      "totalSlotMs": "<duration>",
+      "reservation_id": "<reservation>",
+      "finalExecutionDurationMs": "<duration>"
+    },
+    "status": {
+      "state": "DONE"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}
