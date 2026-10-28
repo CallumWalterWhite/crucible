@@ -2,7 +2,6 @@ description: FARM_FINGERPRINT returns a deterministic INT64 fingerprint of a STR
 tags:
 - probe
 - hash
-- known-divergence
 query: SELECT FARM_FINGERPRINT('a') AS v
 ordered: false
 expected:

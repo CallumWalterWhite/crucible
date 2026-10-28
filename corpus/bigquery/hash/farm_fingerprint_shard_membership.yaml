@@ -1,0 +1,29 @@
+description: MOD(ABS(FARM_FINGERPRINT(k)), n) assigns each key to exactly one shard. See https://cloud.google.com/bigquery/docs/reference/standard-sql/hash_functions#farm_fingerprint.
+tags:
+- hash
+query: SELECT k, MOD(ABS(FARM_FINGERPRINT(k)), 4) AS shard FROM UNNEST(['key-01', 'key-02', 'key-03',
+  'key-04', 'key-05', 'key-06', 'key-07', 'key-08']) AS k
+ordered: false
+expected:
+  columns:
+  - name: k
+    type: STRING
+  - name: shard
+    type: INT64
+  rows:
+  - - key-01
+    - 0
+  - - key-02
+    - 1
+  - - key-03
+    - 3
+  - - key-04
+    - 0
+  - - key-05
+    - 2
+  - - key-06
+    - 3
+  - - key-07
+    - 1
+  - - key-08
+    - 2
