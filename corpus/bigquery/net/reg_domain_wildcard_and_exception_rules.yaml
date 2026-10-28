@@ -1,4 +1,5 @@
-description: Wildcard rules (*.ck) and exception rules (!www.ck, !city.kawasaki.jp) apply. See https://cloud.google.com/bigquery/docs/reference/standard-sql/net_functions#netreg_domain.
+description: Wildcard rules (*.ck) and exception rules (!www.ck, !city.kawasaki.jp)
+  apply. See https://cloud.google.com/bigquery/docs/reference/standard-sql/net_functions#netreg_domain.
 tags:
 - net
 query: SELECT NET.REG_DOMAIN('a.b.ck') AS d0, NET.REG_DOMAIN('www.ck') AS d1, NET.REG_DOMAIN('www.city.kawasaki.jp')
@@ -16,3 +17,5 @@ expected:
   - - a.b.ck
     - www.ck
     - city.kawasaki.jp
+verified: true
+recorded_at: '2026-10-28T15:57:35Z'

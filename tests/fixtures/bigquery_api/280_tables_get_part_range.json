@@ -1,0 +1,79 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/datasets/<dataset>/tables/part_range",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#table",
+    "etag": "<etag>",
+    "id": "<project>:<dataset>.part_range",
+    "selfLink": "<self-link>",
+    "tableReference": {
+      "projectId": "<project>",
+      "datasetId": "<dataset>",
+      "tableId": "part_range"
+    },
+    "schema": {
+      "fields": [
+        {
+          "name": "d",
+          "type": "DATE"
+        },
+        {
+          "name": "ts",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "n",
+          "type": "INTEGER"
+        },
+        {
+          "name": "s",
+          "type": "STRING"
+        },
+        {
+          "name": "f",
+          "type": "FLOAT"
+        }
+      ]
+    },
+    "numBytes": "0",
+    "numLongTermBytes": "0",
+    "numRows": "0",
+    "creationTime": "<time>",
+    "expirationTime": "<time>",
+    "lastModifiedTime": "<time>",
+    "type": "TABLE",
+    "location": "<location>",
+    "clustering": {
+      "fields": [
+        "s",
+        "n"
+      ]
+    },
+    "rangePartitioning": {
+      "field": "n",
+      "range": {
+        "start": "0",
+        "end": "100",
+        "interval": "10"
+      }
+    },
+    "numTotalLogicalBytes": "0",
+    "numActiveLogicalBytes": "0",
+    "numLongTermLogicalBytes": "0",
+    "partitionDefinition": {
+      "partitionedColumn": [
+        {
+          "field": "n"
+        }
+      ]
+    }
+  }
+}

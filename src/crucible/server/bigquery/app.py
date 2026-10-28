@@ -38,6 +38,7 @@ from crucible.server.bigquery.errors import error_response, http_error, job_erro
 from crucible.server.bigquery.jobs import (
     ANONYMOUS_DATASET,
     DEFAULT_LOCATION,
+    QUERY_DESTINATION,
     SCHEMA_IN_RESULTS,
     Job,
     JobStore,
@@ -680,7 +681,10 @@ class BigQueryServer:
             "id": f"{project}:{dataset}.{table}",
             "selfLink": f"{base}/bigquery/v2/projects/{project}/datasets/{dataset}/tables/{table}",
             "tableReference": {"projectId": project, "datasetId": dataset, "tableId": table},
-            "schema": {"fields": _schema(info, with_mode=False)},
+            # A query job's destination lists NULLABLE; a DDL table omits it (tables_get_dest_*).
+            "schema": {
+                "fields": _schema(info, with_mode=bool(info.properties.get(QUERY_DESTINATION)))
+            },
             **ddl.rest_partitioning(info.properties),
         }
         options: dict[str, Any] = info.properties.get("options", {})
@@ -956,6 +960,8 @@ class BigQueryServer:
 
         try:
             return JSONResponse(await run_in_threadpool(self._context_run, project, create))
+        except _InvalidTable as exc:
+            return error_response(400, "invalid", str(exc), "INVALID_ARGUMENT")
         except CrucibleError as exc:
             return http_error(exc)
 
@@ -1336,14 +1342,18 @@ def _partitioning_sql(body: dict[str, Any], fields: list[dict[str, Any]]) -> str
         field = time.get("field")
         if not field:
             raise CrucibleUnsupportedError("ingestion-time partitioning")
-        legacy = _partition_field(by_name, str(field), "time")
+        legacy = _partition_field(by_name, str(field))
         standard = types.type_name(encoding.warehouse_type_from_field(by_name[str(field).lower()]))
         unit = str(time.get("type") or "DAY").upper()
         if standard not in _TIME_TYPES:
-            raise CrucibleError(
-                ErrorKind.INVALID_QUERY,
+            raise _InvalidTable(
                 "The field specified for time partitioning can only be of type TIMESTAMP, DATE or "
-                f"DATETIME. The type found is: {legacy}.",
+                f"DATETIME. The type found is: {legacy}."
+            )
+        if standard == "DATE" and unit == "HOUR":
+            raise _InvalidTable(
+                "The field specified for hourly partitioning can only be of type TIMESTAMP or "
+                "DATETIME. The type found is: DATE."
             )
         column = f"`{str(field).replace('`', '')}`"
         if standard == "DATE" and unit == "DAY":
@@ -1353,12 +1363,11 @@ def _partitioning_sql(body: dict[str, Any], fields: list[dict[str, Any]]) -> str
     if ranged:
         _check_fields(ranged, ("field", "range"), "rangePartitioning")
         field = str(ranged.get("field") or "")
-        legacy = _partition_field(by_name, field, "range")
+        legacy = _partition_field(by_name, field)
         if legacy not in ("INTEGER", "INT64"):
-            raise CrucibleError(
-                ErrorKind.INVALID_QUERY,
-                "The field specified for range partitioning can only be of type INTEGER. The type "
-                f"found is: {legacy}.",
+            raise _InvalidTable(
+                "The field specified for integer range partitioning can only be of type INT64. "
+                f"The type found is: {legacy}."
             )
         bounds = obj(ranged.get("range"))
         try:
@@ -1369,19 +1378,33 @@ def _partitioning_sql(body: dict[str, Any], fields: list[dict[str, Any]]) -> str
         sql += f" PARTITION BY RANGE_BUCKET({column}, GENERATE_ARRAY({start}, {end}, {step}))"
     listed: list[Any] = obj(body.get("clustering")).get("fields") or []
     clustering = [str(f) for f in listed]
+    seen: set[str] = set()
+    for name in clustering:
+        if name.lower() in seen:
+            raise _InvalidTable(
+                f"Field can only appear once in clustering fields. Invalid field: {name}."
+            )
+        seen.add(name.lower())
+        found = by_name.get(name.lower())
+        if found is not None and str(found.get("type", "")).upper() in ("FLOAT", "FLOAT64"):
+            raise _InvalidTable(
+                f"Field {name} has type FLOAT, which is not supported for clustering."
+            )
     if clustering:
         sql += " CLUSTER BY " + ", ".join(f"`{f.replace('`', '')}`" for f in clustering)
     return sql
 
 
-def _partition_field(by_name: dict[str, dict[str, Any]], field: str, kind: str) -> str:
+class _InvalidTable(Exception):
+    """A tables.insert body BigQuery rejects with HTTP 400, reason invalid
+    (tables_insert_bad_*)."""
+
+
+def _partition_field(by_name: dict[str, dict[str, Any]], field: str) -> str:
     """The legacy type of a top-level partitioning field, which must exist and not repeat."""
     found = by_name.get(field.lower())
     if found is None:
-        raise CrucibleError(
-            ErrorKind.INVALID_QUERY,
-            f"The field specified for {kind} partitioning can not be found in the schema",
-        )
+        raise _InvalidTable("The field specified for partitioning cannot be found in the schema.")
     legacy = str(found.get("type", "")).upper()
     return "ARRAY" if _mode(found) == "REPEATED" else legacy
 

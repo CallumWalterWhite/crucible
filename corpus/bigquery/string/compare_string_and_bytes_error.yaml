@@ -1,11 +1,17 @@
-description: Comparing a STRING with BYTES is an error; BigQuery never converts one to the other.
-  Crucible refuses it until the message is recorded. See https://cloud.google.com/bigquery/docs/reference/standard-sql/operators#comparison_operators.
+description: Comparing a STRING with BYTES is an error; BigQuery never converts one
+  to the other. Crucible refuses it until the message is recorded. See https://cloud.google.com/bigquery/docs/reference/standard-sql/operators#comparison_operators.
 tags:
 - string
 - bytes
-- known-divergence
 query: SELECT 'A' = b'A' AS v
 expected:
   error:
     kind: invalid_query
+    message: "No matching signature for operator = for argument types: STRING, BYTES.\
+      \ STRING and BYTES are different types that are not directly comparable. To\
+      \ write a BYTES literal, use a b-prefixed literal such as b'bytes value'\n \
+      \ Signature: T1 = T1\n    Unable to find common supertype for templated argument\
+      \ <T1>\n      Input types for <T1>: {STRING, BYTES} at [1:8]"
     message_contains: No matching signature
+verified: true
+recorded_at: '2026-10-28T15:57:49Z'

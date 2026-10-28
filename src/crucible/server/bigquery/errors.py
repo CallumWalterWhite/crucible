@@ -63,11 +63,23 @@ def http_error(exc: CrucibleError, *, query_parameter: bool = False) -> JSONResp
     return error_response(status, reason, str(exc), status_text, **detail)
 
 
+class DestinationNotFound(CrucibleError):
+    """A query job's CREATE_NEVER destination table is missing; BigQuery's message names no
+    location (jobs_get_dest_never)."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(ErrorKind.NOT_FOUND, message)
+
+
 def job_error(exc: CrucibleError, location: str) -> dict[str, Any]:
     """A failed job's errorResult (also its only status.errors entry)."""
     _, reason, _ = _HTTP[exc.kind]
     message = str(exc)
-    if exc.kind is ErrorKind.NOT_FOUND and _NOT_FOUND_NAME.match(message):
+    if (
+        exc.kind is ErrorKind.NOT_FOUND
+        and not isinstance(exc, DestinationNotFound)
+        and _NOT_FOUND_NAME.match(message)
+    ):
         message = f"{message} was not found in location {location}"
     error: dict[str, Any] = {"reason": reason, "message": message}
     if reason == "invalidQuery":

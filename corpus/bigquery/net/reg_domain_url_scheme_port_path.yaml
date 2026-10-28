@@ -1,5 +1,5 @@
-description: The host is taken from a URL with a scheme, userinfo, port, path, query and fragment. See
-  https://cloud.google.com/bigquery/docs/reference/standard-sql/net_functions#netreg_domain.
+description: The host is taken from a URL with a scheme, userinfo, port, path, query
+  and fragment. See https://cloud.google.com/bigquery/docs/reference/standard-sql/net_functions#netreg_domain.
 tags:
 - net
 query: SELECT NET.REG_DOMAIN('https://www.example.com:8443/a/b?c=1#d') AS d0, NET.REG_DOMAIN('//user:password@a.b:80/path?query')
@@ -17,3 +17,5 @@ expected:
   - - example.com
     - null
     - abc.xyz
+verified: true
+recorded_at: '2026-10-28T15:57:33Z'

@@ -4,7 +4,8 @@ tags:
 - partitioning
 setup:
 - CREATE TABLE p_ts (ts TIMESTAMP, v INT64) PARTITION BY DATE(ts)
-- INSERT INTO p_ts VALUES (TIMESTAMP '2024-01-01 10:00:00+00', 1), (TIMESTAMP '2024-01-02 10:00:00+00', 2)
+- INSERT INTO p_ts VALUES (TIMESTAMP '2024-01-01 10:00:00+00', 1), (TIMESTAMP '2024-01-02
+  10:00:00+00', 2)
 query: SELECT COUNT(*) AS n FROM p_ts
 expected:
   columns:
@@ -12,3 +13,5 @@ expected:
     type: INT64
   rows:
   - - 2
+verified: true
+recorded_at: '2026-10-28T15:57:46Z'

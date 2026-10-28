@@ -1,5 +1,5 @@
-description: REVERSE of BYTES reverses the bytes. Crucible refuses it, because SQLGlot reverses DuckDB's
-  escaped text form of the BLOB. See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions#reverse.
+description: REVERSE of BYTES reverses the bytes. Crucible refuses it, because SQLGlot
+  reverses DuckDB's escaped text form of the BLOB. See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions#reverse.
 tags:
 - string
 - bytes
@@ -12,3 +12,5 @@ expected:
     type: BYTES
   rows:
   - - /wE=
+verified: true
+recorded_at: '2026-10-28T15:57:56Z'

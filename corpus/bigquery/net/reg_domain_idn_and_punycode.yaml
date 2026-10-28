@@ -1,8 +1,9 @@
-description: An internationalised host matches the list in Unicode or Punycode and keeps its spelling.
-  See https://cloud.google.com/bigquery/docs/reference/standard-sql/net_functions#netreg_domain.
+description: An internationalised host matches the list in Unicode or Punycode and
+  keeps its spelling. See https://cloud.google.com/bigquery/docs/reference/standard-sql/net_functions#netreg_domain.
 tags:
 - net
-query: SELECT NET.REG_DOMAIN('http://例子.卷筒纸.中国') AS d0, NET.REG_DOMAIN('shop.xn--fiqs8s') AS d1
+query: SELECT NET.REG_DOMAIN('http://例子.卷筒纸.中国') AS d0, NET.REG_DOMAIN('shop.xn--fiqs8s')
+  AS d1
 ordered: false
 expected:
   columns:
@@ -13,3 +14,5 @@ expected:
   rows:
   - - 卷筒纸.中国
     - shop.xn--fiqs8s
+verified: true
+recorded_at: '2026-10-28T15:57:10Z'

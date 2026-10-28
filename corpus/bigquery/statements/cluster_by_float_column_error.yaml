@@ -6,4 +6,7 @@ query: CREATE TABLE c_bad (f FLOAT64, s STRING) CLUSTER BY f
 expected:
   error:
     kind: invalid_query
-    message_contains: not supported for clustering
+    message: CLUSTER BY expression may not be a floating point type at [1:53]
+    message_contains: may not be a floating point type
+verified: false
+recorded_at: '2026-10-28T15:57:40Z'

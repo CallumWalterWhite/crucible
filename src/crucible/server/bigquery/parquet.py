@@ -5,11 +5,14 @@ reads the result as a registered Arrow table, so no file path reaches SQL (ADR 0
 schema wins: columns are matched to it by name, and a REQUIRED field stays REQUIRED although
 Arrow marks every column nullable.
 
-Accepted, column type to schema type, without loss: int64 to INT64, double to FLOAT64, bool to
-BOOL, date32 to DATE, a UTC timestamp (s, ms, us, or ns with no sub-microsecond part) to
-TIMESTAMP, string to STRING, and an all-NULL column to any of them. Everything else is refused
-until recorded: other types and pairings, nested and repeated fields, a column missing from the
-file or the schema, NULL in a REQUIRED field, and a file pyarrow cannot read.
+Accepted, column type to schema type, without loss: int64 or int32 to INT64, double to FLOAT64,
+bool to BOOL, date32 to DATE, a UTC or zone-less timestamp (read as UTC; s, ms, us, or ns with no
+sub-microsecond part) to TIMESTAMP, string to STRING, and an all-NULL column to any of them. A
+NULLABLE schema field missing from the file loads as NULL; a file column not in the schema is
+ignored. Recorded: parquet_int32, parquet_naive_timestamp, parquet_missing_column,
+parquet_extra_column, parquet_required_null and parquet_unreadable. Everything else is refused
+until recorded: other types and pairings, nested and repeated fields, and a REQUIRED field
+missing from the file.
 """
 
 from __future__ import annotations
@@ -21,19 +24,19 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from crucible.dialects.bigquery import types
-from crucible.engine import CrucibleUnsupportedError
-from crucible.server.bigquery import encoding
+from crucible.engine import CrucibleError, CrucibleUnsupportedError, ErrorKind
+from crucible.server.bigquery import encoding, load
 
 MAX_BYTES = 512 * 1024 * 1024  # read whole into memory, so bounded before parsing (ADR 0015)
 
 _TARGETS: dict[str, tuple[pa.DataType, Callable[[pa.DataType], bool]]] = {
-    "INT64": (pa.int64(), pa.types.is_int64),
+    "INT64": (pa.int64(), lambda t: pa.types.is_int64(t) or pa.types.is_int32(t)),
     "FLOAT64": (pa.float64(), pa.types.is_float64),
     "BOOL": (pa.bool_(), pa.types.is_boolean),
     "DATE": (pa.date32(), pa.types.is_date32),
     "TIMESTAMP": (
         pa.timestamp("us", tz="UTC"),
-        lambda t: pa.types.is_timestamp(t) and t.tz in ("UTC", "+00:00", "Etc/UTC"),
+        lambda t: pa.types.is_timestamp(t) and t.tz in (None, "UTC", "+00:00", "Etc/UTC"),
     ),
     "STRING": (pa.string(), lambda t: pa.types.is_string(t) or pa.types.is_large_string(t)),
 }
@@ -55,21 +58,23 @@ def parse_parquet(data: bytes, fields: list[dict[str, Any]]) -> pa.Table:
         # The stubs leave read_table's keyword arguments partly unknown.
         table: pa.Table = pq.read_table(pa.BufferReader(data))  # pyright: ignore[reportUnknownMemberType]
     except (pa.ArrowException, OSError) as exc:
-        raise CrucibleUnsupportedError("a Parquet file pyarrow cannot read") from exc
+        raise load.LoadError(
+            ["Error while reading data, error message: Input file is not in Parquet format."]
+        ) from exc
     in_file = {name.lower(): name for name in table.column_names}
     if len(in_file) != len(table.column_names):
         raise CrucibleUnsupportedError("a Parquet file with column names that differ only by case")
-    wanted = {str(f["name"]).lower() for f in fields}
-    for name in table.column_names:
-        if name.lower() not in wanted:
-            raise CrucibleUnsupportedError(f"Parquet column {name} that is not in the load schema")
     columns: list[Any] = []  # pyarrow arrays; the stubs type them only partly
     for field, kind in zip(fields, kinds, strict=True):
         name = str(field["name"])
-        if name.lower() not in in_file:
-            raise CrucibleUnsupportedError(f"a Parquet file without the schema's column {name}")
-        column: Any = table.column(in_file[name.lower()])
+        required = str(field.get("mode", "NULLABLE")).upper() == "REQUIRED"
         target, accepts = _TARGETS[kind]
+        if name.lower() not in in_file:
+            if required:
+                raise CrucibleUnsupportedError(f"a Parquet file without the REQUIRED column {name}")
+            columns.append(pa.array([None] * table.num_rows, type=target))
+            continue
+        column: Any = table.column(in_file[name.lower()])
         if pa.types.is_null(column.type):
             column = pa.array([None] * len(column), type=target)
         elif not accepts(column.type):
@@ -83,7 +88,7 @@ def parse_parquet(data: bytes, fields: list[dict[str, Any]]) -> pa.Table:
                 raise CrucibleUnsupportedError(
                     f"Parquet column {name}: a {column.type} value {kind} cannot hold exactly"
                 ) from exc
-        if str(field.get("mode", "NULLABLE")).upper() == "REQUIRED" and column.null_count:
-            raise CrucibleUnsupportedError(f"NULL in the REQUIRED field {name} of a Parquet load")
+        if required and column.null_count:
+            raise CrucibleError(ErrorKind.INVALID_QUERY, f"Required field {name} cannot be null")
         columns.append(column)
     return pa.Table.from_arrays(columns, names=[str(f["name"]) for f in fields])

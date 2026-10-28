@@ -1,0 +1,60 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/datasets/<dataset>/tables",
+    "params": {},
+    "body": {
+      "tableReference": {
+        "projectId": "<project>",
+        "datasetId": "<dataset>",
+        "tableId": "bad_date_hour"
+      },
+      "schema": {
+        "fields": [
+          {
+            "name": "d",
+            "type": "DATE"
+          },
+          {
+            "name": "ts",
+            "type": "TIMESTAMP"
+          },
+          {
+            "name": "n",
+            "type": "INTEGER"
+          },
+          {
+            "name": "s",
+            "type": "STRING"
+          },
+          {
+            "name": "f",
+            "type": "FLOAT"
+          }
+        ]
+      },
+      "timePartitioning": {
+        "type": "HOUR",
+        "field": "d"
+      }
+    }
+  },
+  "status": 400,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "error": {
+      "code": 400,
+      "message": "The field specified for hourly partitioning can only be of type TIMESTAMP or DATETIME. The type found is: DATE.",
+      "errors": [
+        {
+          "message": "The field specified for hourly partitioning can only be of type TIMESTAMP or DATETIME. The type found is: DATE.",
+          "domain": "global",
+          "reason": "invalid"
+        }
+      ],
+      "status": "INVALID_ARGUMENT"
+    }
+  }
+}

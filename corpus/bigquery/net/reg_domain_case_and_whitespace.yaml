@@ -1,8 +1,9 @@
-description: Surrounding whitespace is ignored and the result keeps the input's case. See https://cloud.google.com/bigquery/docs/reference/standard-sql/net_functions#netreg_domain.
+description: Surrounding whitespace is ignored and the result keeps the input's case.
+  See https://cloud.google.com/bigquery/docs/reference/standard-sql/net_functions#netreg_domain.
 tags:
 - net
-query: SELECT NET.REG_DOMAIN('    www.Example.Co.UK    ') AS d0, NET.REG_DOMAIN('MAIL.EXAMPLE.COM') AS
-  d1
+query: SELECT NET.REG_DOMAIN('    www.Example.Co.UK    ') AS d0, NET.REG_DOMAIN('MAIL.EXAMPLE.COM')
+  AS d1
 ordered: false
 expected:
   columns:
@@ -13,3 +14,5 @@ expected:
   rows:
   - - Example.Co.UK
     - EXAMPLE.COM
+verified: true
+recorded_at: '2026-10-28T15:57:06Z'

@@ -1,0 +1,48 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/datasets/<dataset>/tables/dest_t",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#table",
+    "etag": "<etag>",
+    "id": "<project>:<dataset>.dest_t",
+    "selfLink": "<self-link>",
+    "tableReference": {
+      "projectId": "<project>",
+      "datasetId": "<dataset>",
+      "tableId": "dest_t"
+    },
+    "schema": {
+      "fields": [
+        {
+          "name": "k",
+          "type": "INTEGER",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "v",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        }
+      ]
+    },
+    "numBytes": "22",
+    "numLongTermBytes": "0",
+    "numRows": "2",
+    "creationTime": "<time>",
+    "expirationTime": "<time>",
+    "lastModifiedTime": "<time>",
+    "type": "TABLE",
+    "location": "<location>",
+    "numTotalLogicalBytes": "22",
+    "numActiveLogicalBytes": "22",
+    "numLongTermLogicalBytes": "0"
+  }
+}

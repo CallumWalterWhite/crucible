@@ -10,7 +10,8 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
-from crucible.engine import CrucibleUnsupportedError
+from crucible.engine import CrucibleError, CrucibleUnsupportedError
+from crucible.server.bigquery.load import LoadError
 from crucible.server.bigquery.parquet import parse_parquet
 
 FIELDS: list[dict[str, Any]] = [
@@ -74,20 +75,35 @@ def test_an_all_null_column_and_whole_nanosecond_timestamps_load():
     assert table.column("s").null_count == 2
 
 
+def test_int32_naive_timestamps_and_missing_or_extra_columns_load_as_recorded():
+    # parquet_int32, parquet_naive_timestamp, parquet_missing_column, parquet_extra_column
+    data = parquet(
+        k=pa.array([1], pa.int32()),
+        ts=pa.array([datetime(2024, 1, 2, 3, 4, 5)], pa.timestamp("us")),
+        extra=pa.array(["x"]),
+    )
+    fields = [FIELDS[0], FIELDS[4], {"name": "s", "type": "STRING"}]
+    rows = parse_parquet(data, fields).to_pylist()
+    assert rows == [{"k": 1, "ts": datetime(2024, 1, 2, 3, 4, 5, tzinfo=UTC), "s": None}]
+
+
+def test_null_in_a_required_field_and_an_unreadable_file_fail_as_recorded():
+    with pytest.raises(CrucibleError, match=r"^Required field k cannot be null$"):
+        parse_parquet(typed_file(k=pa.array([1, None], pa.int64())), FIELDS)
+    with pytest.raises(LoadError, match="Input file is not in Parquet format"):
+        parse_parquet(b"not a parquet file", FIELDS)
+
+
 @pytest.mark.parametrize(
     ("data", "fields", "construct"),
     [
-        (typed_file(k=pa.array([1, None], pa.int64())), FIELDS, "NULL in the REQUIRED field k"),
-        (typed_file(k=pa.array([1, 2], pa.int32())), FIELDS, "Parquet column k of type int32"),
-        (typed_file(ts=pa.array([0, 1], pa.timestamp("us"))), FIELDS, "Parquet column ts of type"),
+        (typed_file(k=pa.array([1, 2], pa.int16())), FIELDS, "Parquet column k of type int16"),
         (
             typed_file(ts=pa.array([1, 2], pa.timestamp("ns", "UTC"))),
             FIELDS,
             "cannot hold exactly",
         ),
-        (typed_file(extra=pa.array([1, 2])), FIELDS, "Parquet column extra that is not in"),
-        (parquet(k=pa.array([1], pa.int64())), FIELDS, "without the schema's column f"),
-        (b"not a parquet file", FIELDS, "a Parquet file pyarrow cannot read"),
+        (parquet(f=pa.array([1.0], pa.float64())), FIELDS, "without the REQUIRED column k"),
         (typed_file(), [*FIELDS, {"name": "n", "type": "NUMERIC"}], "into a NUMERIC field"),
         (typed_file(), [{"name": "k", "type": "INTEGER", "mode": "REPEATED"}], "ARRAY<INT64>"),
     ],

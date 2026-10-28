@@ -24,7 +24,10 @@ from crucible.engine import CrucibleUnsupportedError
         ("https://u:p@Www.Example.COM:80/p?q#f", "Example.COM"),
         ("mailto:?to=", None),
         ("https://[::1]:80", None),
-        ("a..b.com", None),
+        ("a..b.com", "b.com"),  # recorded: labels before the result are not checked
+        (".example.com", "example.com"),
+        ("my_host.example.com", "example.com"),
+        ("example.com.", "example.com."),  # one trailing dot is kept
         ("", None),
     ],
 )
@@ -41,7 +44,7 @@ def test_only_the_icann_section_is_loaded():
     assert "www.ck" in exception
 
 
-@pytest.mark.parametrize("url", ["example.com.", ".example.com", "my_host.example.com", "a b.com"])
+@pytest.mark.parametrize("url", ["a b.com", "my_host.com", "a..com", "example.com..", "x.a_b"])
 def test_undocumented_hosts_are_unsupported(url):
     with pytest.raises(CrucibleUnsupportedError, match=r"NET\.REG_DOMAIN"):
         net.reg_domain(url)
@@ -49,9 +52,10 @@ def test_undocumented_hosts_are_unsupported(url):
 
 def test_an_unsupported_row_fails_the_query_as_unsupported(bq):
     with pytest.raises(CrucibleUnsupportedError) as info:
-        bq("SELECT NET.REG_DOMAIN(h) FROM UNNEST(['a.com', 'b.com.']) AS h")
+        bq("SELECT NET.REG_DOMAIN(h) FROM UNNEST(['a.com', 'b_c.com']) AS h")
     assert info.value.message == (
-        "Not supported by Crucible: NET.REG_DOMAIN of a host with a leading or trailing dot"
+        "Not supported by Crucible: NET.REG_DOMAIN of a host with an empty label or characters "
+        "other than letters, digits and hyphens"
     )
 
 

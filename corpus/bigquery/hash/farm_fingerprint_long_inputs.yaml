@@ -1,9 +1,10 @@
-description: FARM_FINGERPRINT of 65, 128, 129 and 10000 bytes (the loop over 64-byte blocks). See https://cloud.google.com/bigquery/docs/reference/standard-sql/hash_functions#farm_fingerprint.
+description: FARM_FINGERPRINT of 65, 128, 129 and 10000 bytes (the loop over 64-byte
+  blocks). See https://cloud.google.com/bigquery/docs/reference/standard-sql/hash_functions#farm_fingerprint.
 tags:
 - hash
-query: SELECT FARM_FINGERPRINT(REPEAT('q', 65)) AS l65, FARM_FINGERPRINT(REPEAT('0123456789abcdef', 8))
-  AS l128, FARM_FINGERPRINT(CONCAT(REPEAT('0123456789abcdef', 8), 'z')) AS l129, FARM_FINGERPRINT(REPEAT('crucible',
-  1250)) AS l10000
+query: SELECT FARM_FINGERPRINT(REPEAT('q', 65)) AS l65, FARM_FINGERPRINT(REPEAT('0123456789abcdef',
+  8)) AS l128, FARM_FINGERPRINT(CONCAT(REPEAT('0123456789abcdef', 8), 'z')) AS l129,
+  FARM_FINGERPRINT(REPEAT('crucible', 1250)) AS l10000
 ordered: false
 expected:
   columns:
@@ -20,3 +21,5 @@ expected:
     - -6820113533736367299
     - -2923469528017572725
     - 5184121404591182926
+verified: true
+recorded_at: '2026-10-28T15:56:52Z'

@@ -1,0 +1,65 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/datasets/<dataset>/tables",
+    "params": {},
+    "body": {
+      "tableReference": {
+        "projectId": "<project>",
+        "datasetId": "<dataset>",
+        "tableId": "bad_cluster_five"
+      },
+      "schema": {
+        "fields": [
+          {
+            "name": "d",
+            "type": "DATE"
+          },
+          {
+            "name": "ts",
+            "type": "TIMESTAMP"
+          },
+          {
+            "name": "n",
+            "type": "INTEGER"
+          },
+          {
+            "name": "s",
+            "type": "STRING"
+          },
+          {
+            "name": "f",
+            "type": "FLOAT"
+          }
+        ]
+      },
+      "clustering": {
+        "fields": [
+          "d",
+          "ts",
+          "n",
+          "s",
+          "d"
+        ]
+      }
+    }
+  },
+  "status": 400,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "error": {
+      "code": 400,
+      "message": "Field can only appear once in clustering fields. Invalid field: d.",
+      "errors": [
+        {
+          "message": "Field can only appear once in clustering fields. Invalid field: d.",
+          "domain": "global",
+          "reason": "invalid"
+        }
+      ],
+      "status": "INVALID_ARGUMENT"
+    }
+  }
+}

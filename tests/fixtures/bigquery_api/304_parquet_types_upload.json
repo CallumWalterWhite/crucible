@@ -1,0 +1,79 @@
+{
+  "request": {
+    "method": "PUT",
+    "path": "/upload/projects/<project>/jobs?uploadType=resumable&upload_id=<upload-id>",
+    "params": {},
+    "body": {
+      "base64": "UEFSMRUEFSAVJEwVBBUAEgAAEDwBAAAAAAAAAAIAAAAAAAAAFQAVEhUWLBUEFRAVBhUGHBgIAgAAAAAAAAAYCAEAAAAAAAAAFgAoCAIAAAAAAAAAGAgBAAAAAAAAABERAAAACSACAAAABAEBAwIVBBUQFRRMFQIVABIAAAgcAAAAAAAA+D8VABUSFRYsFQQVEBUGFQYcGAgAAAAAAAD4PxgIAAAAAAAA+D8WAigIAAAAAAAA+D8YCAAAAAAAAPg/EREAAAAJIAIAAAADAQECABUAFQ4VEiwVBBUAFQYVBhwYAQEYAQEWAigBARgBARERAAAABxgCAAAAAwEBFQQVCBUMTBUCFQASAAAEDEZNAAAVABUSFRYsFQQVEBUGFQYcGARGTQAAGARGTQAAFgIoBEZNAAAYBEZNAAAREQAAAAkgAgAAAAMBAQIAFQQVEBUUTBUCFQASAAAIHEbTTcDtDQYAFQAVEhUWLBUEFRAVBhUGHBgIRtNNwO0NBgAYCEbTTcDtDQYAFgIoCEbTTcDtDQYAGAhG003A7Q0GABERAAAACSACAAAAAwEBAgAVBBUKFQ5MFQIVABIAAAUQAQAAAHgVABUSFRYsFQQVEBUGFQYcNgIoAXgYAXgREQAAAAkgAgAAAAMBAQIAFQQZfDUAGAZzY2hlbWEVDAAVBCUCGAFrABUKJQIYAWYAFQAlAhgBYgAVAiUCGAFkJQxMbAAAABUEJQIYAnRzJRRMjBEcLAAAAAAAFQwlAhgBcyUATBwAAAAWBBkcGWwmABwVBBk1AAYQGRgBaxUCFgQWzAEW1AEmSCYIHBgIAgAAAAAAAAAYCAEAAAAAAAAAFgAoCAIAAAAAAAAAGAgBAAAAAAAAABERABksFQQVABUCABUAFRAVAgA8KQYZJgAEAAAAJgAcFQoZNQAGEBkYAWYVAhYEFrwBFsQBJowCJtwBHBgIAAAAAAAA+D8YCAAAAAAAAPg/FgIoCAAAAAAAAPg/GAgAAAAAAAD4PxERABksFQQVABUCABUAFRAVAgA8KQYZJgICAAAAJgAcFQAZJQYAGRgBYhUCFgQWVBZYJqADPBgBARgBARYCKAEBGAEBEREAGRwVABUAFQIAPCkGGSYCAgAAACYAHBUCGTUABhAZGAFkFQIWBBaUARacASagBCb4AxwYBEZNAAAYBEZNAAAWAigERk0AABgERk0AABERABksFQQVABUCABUAFRAVAgA8KQYZJgICAAAAJgAcFQQZNQAGEBkYAnRzFQIWBBa8ARbEASbEBSaUBRwYCEbTTcDtDQYAGAhG003A7Q0GABYCKAhG003A7Q0GABgIRtNNwO0NBgAREQAZLBUEFQAVAgAVABUQFQIAPCkGGSYCAgAAACYAHBUMGTUABhAZGAFzFQIWBBZyFnomggcm2AYcNgIoAXgYAXgREQAZLBUEFQAVAgAVABUQFQIAPBYCGQYZJgICAAAAFp4HFgQmCBbKBwAZHBgMQVJST1c6c2NoZW1hGOwDLy8vLy8yZ0JBQUFRQUFBQUFBQUtBQXdBQmdBRkFBZ0FDZ0FBQUFBQkJBQU1BQUFBQ0FBSUFBQUFCQUFJQUFBQUJBQUFBQVlBQUFBRUFRQUF4QUFBQUpnQUFBQnNBQUFBTEFBQUFBUUFBQUFrLy8vL0FBQUJCUkFBQUFBVUFBQUFCQUFBQUFBQUFBQUJBQUFBY3dBQUFIai8vLzlJLy8vL0FBQUJDaEFBQUFBY0FBQUFCQUFBQUFBQUFBQUNBQUFBZEhNQUFBZ0FEQUFHQUFnQUNBQUFBQUFBQWdBRUFBQUFBd0FBQUZWVVF3Q0UvLy8vQUFBQkNCQUFBQUFVQUFBQUJBQUFBQUFBQUFBQkFBQUFaQUFBQUxMLy8vOEFBQUFBclAvLy93QUFBUVlRQUFBQUdBQUFBQVFBQUFBQUFBQUFBUUFBQUdJQUFBQUVBQVFBQkFBQUFOVC8vLzhBQUFFREVBQUFBQmdBQUFBRUFBQUFBQUFBQUFFQUFBQm1BQVlBQ0FBR0FBWUFBQUFBQUFJQUVBQVVBQWdBQmdBSEFBd0FBQUFRQUJBQUFBQUFBQUVDRUFBQUFCd0FBQUFFQUFBQUFBQUFBQUVBQUFCckFBQUFDQUFNQUFnQUJ3QUlBQUFBQUFBQUFVQUFBQUE9ABggcGFycXVldC1jcHAtYXJyb3cgdmVyc2lvbiAyNi4wLjAZbBwAABwAABwAABwAABwAABwAAACpBAAAUEFSMQ=="
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:<location>.<job-111>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "load": {
+        "schema": {
+          "fields": [
+            {
+              "name": "k",
+              "type": "INTEGER",
+              "mode": "REQUIRED"
+            },
+            {
+              "name": "f",
+              "type": "FLOAT"
+            },
+            {
+              "name": "b",
+              "type": "BOOLEAN"
+            },
+            {
+              "name": "d",
+              "type": "DATE"
+            },
+            {
+              "name": "ts",
+              "type": "TIMESTAMP"
+            },
+            {
+              "name": "s",
+              "type": "STRING"
+            }
+          ]
+        },
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "parquet_types"
+        },
+        "writeDisposition": "WRITE_APPEND",
+        "sourceFormat": "PARQUET"
+      },
+      "jobType": "LOAD"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-111>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "reservation_id": "<reservation>"
+    },
+    "status": {
+      "state": "RUNNING"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

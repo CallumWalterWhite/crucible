@@ -1,5 +1,5 @@
-description: A named STRUCT built from a correlated column with NULLIF, in an array passed to
-  UNNEST, keeps its field names through v.* expansion. See https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#unnest_operator.
+description: A named STRUCT built from a correlated column with NULLIF, in an array
+  passed to UNNEST, keeps its field names through v.* expansion. See https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#unnest_operator.
 tags:
 - unnest
 - struct
@@ -17,6 +17,8 @@ expected:
     type: STRING
   rows:
   - - colour
-    - red
-  - - colour
     - null
+  - - colour
+    - red
+verified: true
+recorded_at: '2026-10-28T15:58:19Z'

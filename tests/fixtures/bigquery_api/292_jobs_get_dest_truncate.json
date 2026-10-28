@@ -1,0 +1,156 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/jobs/<job-107>",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:<location>.<job-107>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "query": {
+        "query": "SELECT @x AS k, 'b' AS v",
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "dest_t"
+        },
+        "writeDisposition": "WRITE_TRUNCATE",
+        "defaultDataset": {
+          "datasetId": "<dataset>",
+          "projectId": "<project>"
+        },
+        "priority": "INTERACTIVE",
+        "useQueryCache": false,
+        "maximumBytesBilled": "104857600",
+        "useLegacySql": false,
+        "parameterMode": "NAMED",
+        "queryParameters": [
+          {
+            "name": "x",
+            "parameterType": {
+              "type": "INT64"
+            },
+            "parameterValue": {
+              "value": "2"
+            }
+          }
+        ]
+      },
+      "jobType": "QUERY"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-107>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "endTime": "<time>",
+      "totalBytesProcessed": "0",
+      "query": {
+        "queryPlan": [
+          {
+            "name": "S00: Output",
+            "id": "0",
+            "startMs": "<time>",
+            "endMs": "<time>",
+            "waitRatioAvg": 1,
+            "waitMsAvg": "127",
+            "waitRatioMax": 1,
+            "waitMsMax": "127",
+            "readRatioAvg": 0,
+            "readMsAvg": "0",
+            "readRatioMax": 0,
+            "readMsMax": "0",
+            "computeRatioAvg": 0.12598425196850394,
+            "computeMsAvg": "16",
+            "computeRatioMax": 0.12598425196850394,
+            "computeMsMax": "16",
+            "writeRatioAvg": 0.007874015748031496,
+            "writeMsAvg": "1",
+            "writeRatioMax": 0.007874015748031496,
+            "writeMsMax": "1",
+            "shuffleOutputBytes": "11",
+            "shuffleOutputBytesSpilled": "0",
+            "recordsRead": "0",
+            "recordsWritten": "1",
+            "parallelInputs": "1",
+            "completedParallelInputs": "1",
+            "status": "COMPLETE",
+            "steps": [
+              {
+                "kind": "EXPORT",
+                "substeps": [
+                  "$1:k, $2:v",
+                  "TO <dataset>.dest_t"
+                ]
+              },
+              {
+                "kind": "COMPUTE",
+                "substeps": [
+                  "$1 := 2",
+                  "$2 := 'b'"
+                ]
+              },
+              {
+                "kind": "WRITE",
+                "substeps": [
+                  "$1, $2",
+                  "TO __stage00_output"
+                ]
+              }
+            ],
+            "slotMs": "<duration>",
+            "computeMode": "BIGQUERY"
+          }
+        ],
+        "estimatedBytesProcessed": "0",
+        "timeline": [
+          {
+            "elapsedMs": "<duration>",
+            "totalSlotMs": "<duration>",
+            "pendingUnits": "0",
+            "completedUnits": "1",
+            "estimatedRunnableUnits": "0"
+          }
+        ],
+        "totalPartitionsProcessed": "0",
+        "totalBytesProcessed": "0",
+        "totalBytesBilled": "0",
+        "billingTier": 0,
+        "totalSlotMs": "<duration>",
+        "cacheHit": false,
+        "statementType": "SELECT",
+        "queryInfo": {
+          "optimizationDetails": {
+            "optimizations": [
+              {
+                "enhanced_vectorization": "applied"
+              }
+            ]
+          }
+        },
+        "transferredBytes": "0"
+      },
+      "totalSlotMs": "<duration>",
+      "finalExecutionDurationMs": "<duration>"
+    },
+    "status": {
+      "state": "DONE"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

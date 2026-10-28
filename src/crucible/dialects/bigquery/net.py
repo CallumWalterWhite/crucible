@@ -8,11 +8,15 @@ BigQuery's rules (https://cloud.google.com/bigquery/docs/reference/standard-sql/
   not listed has no suffix (`a.b` gives NULL).
 - The host is lowercased and non-ASCII labels are Punycode-encoded for the lookup; the result keeps
   the input's spelling.
-- NULL for an empty host, adjacent dots, an IPv6 literal, or a host that is only a suffix.
+- NULL for an empty host, an IPv6 literal, or a host that is only a suffix.
+- Labels before the result are not checked: `a..b.com`, `.example.com` and `my_host.example.com`
+  give `b.com`, `example.com` and `example.com`. One trailing dot is kept: `example.com.` gives
+  `example.com.` (recorded: net/reg_domain_invalid_and_null,
+  net/reg_domain_trailing_and_leading_dot, net/reg_domain_underscore_in_host).
 
 The list is vendored at a pinned commit (data/README.md). BigQuery's own snapshot may differ for
-suffixes added or removed since. Hosts whose answer BigQuery does not document (a leading or
-trailing dot, characters other than letters, digits and hyphens) are refused.
+suffixes added or removed since. A result, or a host with no suffix, that holds an empty label or
+characters other than letters, digits and hyphens is not recorded, so it is refused.
 
 Runs as a DuckDB Python function (`FUNCTION`), registered on the engine on first use.
 """
@@ -80,20 +84,19 @@ def reg_domain(url: str) -> str | None:
     name = host(url)
     if not name or name.startswith("["):
         return None
-    labels = name.split(".")
-    if labels[0] == "" or labels[-1] == "":
-        raise CrucibleUnsupportedError("NET.REG_DOMAIN of a host with a leading or trailing dot")
-    if "" in labels:
-        return None  # adjacent dots
-    for label in labels:
-        if label.isascii() and not _ASCII_LABEL.fullmatch(label):
-            raise CrucibleUnsupportedError(
-                "NET.REG_DOMAIN of a host with characters other than letters, digits and hyphens"
-            )
+    dot = "." if name.endswith(".") else ""
+    labels = name.removesuffix(".").split(".")
     suffix = _suffix_length(labels)
+    checked = labels if suffix is None else labels[-(suffix + 1) :]
+    for label in checked:
+        if label == "" or (label.isascii() and not _ASCII_LABEL.fullmatch(label)):
+            raise CrucibleUnsupportedError(
+                "NET.REG_DOMAIN of a host with an empty label or characters other than letters, "
+                "digits and hyphens"
+            )
     if suffix is None or suffix >= len(labels):
         return None
-    return ".".join(labels[-(suffix + 1) :])
+    return ".".join(checked) + dot
 
 
 def _suffix_length(labels: list[str]) -> int | None:

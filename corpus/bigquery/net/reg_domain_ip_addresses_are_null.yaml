@@ -1,7 +1,8 @@
 description: IP addresses have no public suffix. See https://cloud.google.com/bigquery/docs/reference/standard-sql/net_functions#netreg_domain.
 tags:
 - net
-query: SELECT NET.REG_DOMAIN('192.168.0.1') AS d0, NET.REG_DOMAIN('https://[::1]:80') AS d1
+query: SELECT NET.REG_DOMAIN('192.168.0.1') AS d0, NET.REG_DOMAIN('https://[::1]:80')
+  AS d1
 ordered: false
 expected:
   columns:
@@ -12,3 +13,5 @@ expected:
   rows:
   - - null
     - null
+verified: true
+recorded_at: '2026-10-28T15:57:14Z'

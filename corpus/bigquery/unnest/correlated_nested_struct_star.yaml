@@ -1,13 +1,13 @@
-description: A STRUCT nested inside a correlated STRUCT in UNNEST keeps both levels of field
-  names. See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#struct_type.
+description: A STRUCT nested inside a correlated STRUCT in UNNEST keeps both levels
+  of field names. See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#struct_type.
 tags:
 - unnest
 - struct
 setup:
 - CREATE TABLE src (a STRING)
 - INSERT INTO src VALUES ('q')
-query: SELECT v.outer_name, v.inner_value.x FROM src AS p CROSS JOIN UNNEST([STRUCT('o' AS outer_name,
-  STRUCT(NULLIF(p.a, '') AS x) AS inner_value)]) AS v
+query: SELECT v.outer_name, v.inner_value.x FROM src AS p CROSS JOIN UNNEST([STRUCT('o'
+  AS outer_name, STRUCT(NULLIF(p.a, '') AS x) AS inner_value)]) AS v
 ordered: false
 expected:
   columns:
@@ -18,3 +18,5 @@ expected:
   rows:
   - - o
     - q
+verified: true
+recorded_at: '2026-10-28T15:58:07Z'

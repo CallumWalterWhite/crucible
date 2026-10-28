@@ -1,0 +1,59 @@
+{
+  "request": {
+    "method": "PUT",
+    "path": "/upload/projects/<project>/jobs?uploadType=resumable&upload_id=<upload-id>",
+    "params": {},
+    "body": {
+      "base64": "UEFSMRUEFRAVFEwVAhUAEgAACBwBAAAAAAAAABUAFRIVFiwVAhUQFQYVBhwYCAEAAAAAAAAAGAgBAAAAAAAAABYAKAgBAAAAAAAAABgIAQAAAAAAAAAREQAAAAkgAgAAAAIBAQIAFQQVChUOTBUCFQASAAAFEAEAAAB4FQAVEhUWLBUCFRAVBhUGHDYAKAF4GAF4EREAAAAJIAIAAAACAQECABUEGTw1ABgGc2NoZW1hFQQAFQQlAhgBawAVDCUCGAFzJQBMHAAAABYCGRwZLCYAHBUEGTUABhAZGAFrFQIWAha8ARbEASY4JggcGAgBAAAAAAAAABgIAQAAAAAAAAAWACgIAQAAAAAAAAAYCAEAAAAAAAAAEREAGSwVBBUAFQIAFQAVEBUCADwpBhkmAAIAAAAmABwVDBk1AAYQGRgBcxUCFgIWchZ6JvYBJswBHDYAKAF4GAF4EREAGSwVBBUAFQIAFQAVEBUCADwWAhkGGSYAAgAAABauAhYCJggWvgIAGRwYDEFSUk9XOnNjaGVtYRjsAS8vLy8vNmdBQUFBUUFBQUFBQUFLQUF3QUJnQUZBQWdBQ2dBQUFBQUJCQUFNQUFBQUNBQUlBQUFBQkFBSUFBQUFCQUFBQUFJQUFBQkFBQUFBQkFBQUFOai8vLzhBQUFFRkVBQUFBQmdBQUFBRUFBQUFBQUFBQUFFQUFBQnpBQUFBQkFBRUFBUUFBQUFRQUJRQUNBQUdBQWNBREFBQUFCQUFFQUFBQUFBQUFRSVFBQUFBSEFBQUFBUUFBQUFBQUFBQUFRQUFBR3NBQUFBSUFBd0FDQUFIQUFnQUFBQUFBQUFCUUFBQUFBQUFBQUE9ABggcGFycXVldC1jcHAtYXJyb3cgdmVyc2lvbiAyNi4wLjAZLBwAABwAAAALAgAAUEFSMQ=="
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:<location>.<job-121>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "load": {
+        "schema": {
+          "fields": [
+            {
+              "name": "k",
+              "type": "INTEGER",
+              "mode": "REQUIRED"
+            }
+          ]
+        },
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "parquet_extra_column"
+        },
+        "writeDisposition": "WRITE_APPEND",
+        "sourceFormat": "PARQUET"
+      },
+      "jobType": "LOAD"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-121>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "reservation_id": "<reservation>"
+    },
+    "status": {
+      "state": "RUNNING"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

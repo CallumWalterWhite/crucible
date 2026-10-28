@@ -10,3 +10,5 @@ expected:
     type: BYTES
   rows:
   - - Yf8=
+verified: true
+recorded_at: '2026-10-28T15:57:52Z'

@@ -95,6 +95,10 @@ def now_ms() -> int:
 SCHEMA_IN_RESULTS = ("UPDATE", "DELETE", "TRUNCATE_TABLE")
 
 
+# Table property: the table's schema was last written by a query job's destination.
+QUERY_DESTINATION = "query_destination"
+
+
 @dataclass
 class Job:
     project: str
@@ -248,7 +252,8 @@ class Runner:
         """A SELECT written to configuration.query.destinationTable (REST reference,
         JobConfigurationQuery). The query runs once, into a temp table; the destination is then
         created, replaced or appended to from it in one statement, so a failed job leaves it
-        untouched. The job's rows are the query's."""
+        untouched. The job's rows are the destination's after the write, so an append returns the
+        whole table (get_query_results_dest_append)."""
         destination = obj(config.get("destinationTable"))
         project = str(destination.get("projectId") or job.project)
         dataset, table = destination.get("datasetId"), destination.get("tableId")
@@ -281,17 +286,14 @@ class Runner:
             metadata.check_new_table(ctx, metadata.Name(project, dataset, table))
             info = ctx.catalog.table(project, dataset, table)
             if info is None and create == "CREATE_NEVER":
-                raise CrucibleError(
-                    ErrorKind.NOT_FOUND, f"Not found: Table {project}:{dataset}.{table}"
-                )
+                raise errors.DestinationNotFound(f"Not found: Table {project}:{dataset}.{table}")
             try:
                 try:
                     ctx.run_sql(f"CREATE TEMP TABLE {staging} AS {sql}", returns_rows=False)
                 except CrucibleError as exc:
                     raise reword(exc) from exc
-                result = ctx.run_sql(f"SELECT * FROM {staging}")
-                result.statement_type = "SELECT"
-                check_result_columns(result.columns)
+                staged = ctx.run_sql(f"SELECT * FROM {staging} LIMIT 0")
+                check_result_columns(staged.columns)
                 if info is None or write == "WRITE_TRUNCATE":
                     if info is not None and (
                         info.properties.get("partition_by") or info.properties.get("cluster_by")
@@ -306,6 +308,7 @@ class Runner:
                     # The query's schema replaces the table's; its description and labels stay.
                     kept = {} if info is None else dict(info.properties)
                     kept.pop("field_descriptions", None)
+                    kept[QUERY_DESTINATION] = True
                     ctx.catalog.set_properties(project, dataset, table, kept)
                 else:
                     if write == "WRITE_EMPTY" and ctx.run_sql(f"SELECT 1 FROM {full} LIMIT 1").rows:
@@ -314,7 +317,7 @@ class Runner:
                             f"Already Exists: Table {project}:{dataset}.{table}",
                         )
                     stored = [(c.name, types.type_name(c.type)) for c in info.columns]
-                    wanted = [(c.name, types.type_name(c.type)) for c in result.columns]
+                    wanted = [(c.name, types.type_name(c.type)) for c in staged.columns]
                     if stored != wanted:
                         raise CrucibleUnsupportedError(
                             "appending query results whose schema differs from the table's"
@@ -325,6 +328,8 @@ class Runner:
                         )
                     except CrucibleError as exc:
                         raise reword(exc) from exc
+                result = ctx.run_sql(f"SELECT * FROM {full}")
+                result.statement_type = "SELECT"
             finally:
                 cursor.execute(f"DROP TABLE IF EXISTS {staging}")
         return (project, dataset, table), result

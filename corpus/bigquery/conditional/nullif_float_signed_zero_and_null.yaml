@@ -1,10 +1,11 @@
-description: NULLIF(-0.0, 0.0) is NULL because -0.0 equals 0.0; a NULL first argument gives NULL and a
-  NULL second argument returns the first, NaN included. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conditional_expressions#nullif.
+description: NULLIF(-0.0, 0.0) is NULL because -0.0 equals 0.0; a NULL first argument
+  gives NULL and a NULL second argument returns the first, NaN included. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conditional_expressions#nullif.
 tags:
 - conditional
 - nan
-query: SELECT NULLIF(-0.0, 0.0) AS negzero_zero, NULLIF(CAST(NULL AS FLOAT64), CAST('nan' AS FLOAT64))
-  AS null_nan, NULLIF(CAST('nan' AS FLOAT64), CAST(NULL AS FLOAT64)) AS nan_null
+query: SELECT NULLIF(-0.0, 0.0) AS negzero_zero, NULLIF(CAST(NULL AS FLOAT64), CAST('nan'
+  AS FLOAT64)) AS null_nan, NULLIF(CAST('nan' AS FLOAT64), CAST(NULL AS FLOAT64))
+  AS nan_null
 ordered: false
 expected:
   columns:
@@ -18,4 +19,5 @@ expected:
   - - null
     - null
     - NaN
-verified: false
+verified: true
+recorded_at: '2026-10-28T15:56:48Z'
