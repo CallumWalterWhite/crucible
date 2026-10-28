@@ -396,4 +396,4 @@ def test_bigquery_sql_udfs_and_routines(client, dataset):
     routine = client.get_routine(f"{PROJECT}.{dataset}.g")
     assert routine.type_ == "SCALAR_FUNCTION"
     assert [a.name for a in routine.arguments] == ["x"]
-    assert routine.body == "(x / 2)"
+    assert routine.body == "x / 2"  # routines_get_function
