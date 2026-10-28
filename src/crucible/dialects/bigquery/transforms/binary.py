@@ -12,9 +12,16 @@ and #cast_as_string). DuckDB's own casts use an escaped text form of a BLOB inst
   the other. CONCAT of STRING and BYTES arguments and `STRING = BYTES` give BigQuery's recorded
   errors (string/concat_string_and_bytes_error, string/compare_string_and_bytes_error); the
   others are not recorded, so they are refused.
-- BYTES arguments of the functions SQLGlot runs on DuckDB's text form of a BLOB (LOWER, UPPER,
-  REVERSE, REPLACE, STARTS_WITH, TRIM, LTRIM, RTRIM) are refused: that text has `\\xNN` escapes,
-  so the answer can be wrong. STRING(BYTES) has no BigQuery signature and is refused too.
+- BYTES functions DuckDB has no BLOB version of run on the hex text, two digits per byte, so
+  they stay exact: REVERSE reverses the digit pairs, STARTS_WITH and ENDS_WITH compare hex (both
+  sides have an even length, so a match is byte-aligned), STRING_AGG with a delimiter joins hex
+  and BIT_COUNT counts the bits of the BLOB cast to BIT.
+- Other BYTES functions are refused: those SQLGlot runs on DuckDB's text form of a BLOB (LOWER,
+  UPPER, REPLACE, TRIM, LTRIM, RTRIM), where `\\xNN` escapes could give wrong bytes; those it
+  runs in ways that are wrong for BYTES (STRPOS and INSTR match hex digits across byte
+  boundaries, LPAD and RPAD repeat the whole pattern and never truncate); and those DuckDB has
+  no BLOB version of (LIKE, SUBSTR, SPLIT, the REGEXP functions, CHAR_LENGTH, and
+  ARRAY_TO_STRING of BYTES). STRING(BYTES) has no BigQuery signature and is refused too.
 - A variable's DEFAULT or SET value of the other type (scripting.py marks those casts) is an
   error. A STRING literal for a BYTES variable gives BigQuery's recorded error
   (scripting/declare_bytes_default_string_error); anything else is refused.
@@ -27,7 +34,14 @@ from typing import TYPE_CHECKING
 from sqlglot import exp
 
 from crucible.dialects.bigquery.errors import invalid_at
-from crucible.dialects.bigquery.transforms.common import VOLATILE, T, check, raise_runtime, typed
+from crucible.dialects.bigquery.transforms.common import (
+    VOLATILE,
+    T,
+    check,
+    duck_cast,
+    raise_runtime,
+    typed,
+)
 from crucible.engine import CrucibleUnsupportedError
 
 if TYPE_CHECKING:
@@ -37,7 +51,23 @@ COERCION = "crucible_coercion"  # Cast.meta: a variable assignment, not a CAST t
 
 _BYTES = (T.BLOB, T.BINARY, T.VARBINARY)
 _STRING = (T.TEXT, T.VARCHAR)
-_THROUGH_TEXT = (exp.Lower, exp.Upper, exp.Reverse, exp.Replace, exp.StartsWith, exp.Trim)
+_REFUSED = (
+    exp.Lower,
+    exp.Upper,
+    exp.Replace,
+    exp.Trim,
+    exp.String,
+    exp.StrPosition,
+    exp.Pad,
+    exp.Like,
+    exp.Substring,
+    exp.Split,
+    exp.RegexpLike,
+    exp.RegexpExtract,
+    exp.RegexpExtractAll,
+    exp.RegexpReplace,
+    exp.RegexpInstr,
+)
 # Operands of these may differ in type: STRUCT fields, a CAST's target, FORMAT (strings.py
 # refuses its BYTES arguments).
 _MIXED_OK = (exp.Struct, exp.Cast, exp.Format)
@@ -70,6 +100,80 @@ def _mixed(node: exp.Expr) -> bool:
 def _name(node: exp.Expr) -> str:
     # A BYTES literal's SQL can hold raw non-UTF-8 bytes, so a function is named, not printed.
     return node.sql_name() if isinstance(node, exp.Func) else node.sql("bigquery")
+
+
+def _call(name: str, kind: str, *args: exp.Expr) -> exp.Expr:
+    return typed(exp.Anonymous(this=name, expressions=list(args)), kind)
+
+
+def _hex(value: exp.Expr) -> exp.Expr:
+    return _call("hex", "STRING", value)
+
+
+def _exact(node: exp.Expr) -> exp.Expr | None:
+    """The hex or BIT form of a BYTES function DuckDB has no BLOB version of; None if `node` is
+    not one."""
+    if isinstance(node, exp.Reverse) and _is(node.this, _BYTES):
+        pairs = _call(
+            "regexp_extract_all", "ARRAY<STRING>", _hex(node.this), exp.Literal.string("..")
+        )
+        reversed_ = _call("list_reverse", "ARRAY<STRING>", pairs)
+        joined = _call("array_to_string", "STRING", reversed_, exp.Literal.string(""))
+        return _call("unhex", "BYTES", joined)
+    if isinstance(node, exp.StartsWith | exp.EndsWith) and _is(node.this, _BYTES):
+        name = "starts_with" if isinstance(node, exp.StartsWith) else "ends_with"
+        return _call(name, "BOOL", _hex(node.this), _hex(node.expression))
+    if isinstance(node, exp.BitwiseCount) and _is(node.this, (T.BIGINT, T.INT)):
+        # DuckDB keeps a small integer literal 32 bits wide; BigQuery counts INT64's 64 bits.
+        node.set("this", duck_cast(node.this, "BIGINT"))
+        return node
+    if isinstance(node, exp.BitwiseCount) and _is(node.this, _BYTES):
+        # DuckDB cannot cast an empty BLOB to BIT; CASE does not evaluate ELSE for it.
+        empty = exp.EQ(
+            this=_call("octet_length", "INT64", node.this.copy()), expression=exp.Literal.number(0)
+        )
+        bits = duck_cast(node.this, "BIT")
+        counted = exp.Case(
+            ifs=[exp.If(this=empty, true=exp.Literal.number(0))],
+            default=_call("bit_count", "INT64", bits),
+        )
+        return typed(counted, "INT64")
+    if isinstance(node, exp.GroupConcat) and _is(node, _BYTES) and node.args.get("separator"):
+        holder: exp.Expr = node
+        orders: list[exp.Order] = []
+        while isinstance(holder.this, exp.Limit | exp.Order):
+            holder = holder.this
+            if isinstance(holder, exp.Order):
+                orders.append(holder)
+        if isinstance(holder.this, exp.Distinct):
+            holder = holder.this
+            values = list(holder.expressions)
+            holder.set("expressions", [_hex(v) for v in values])
+            # DuckDB orders a DISTINCT aggregate only by its argument; hex sorts as the bytes do.
+            for ordered in (o for order in orders for o in order.expressions):
+                if isinstance(ordered, exp.Ordered) and ordered.this in values:
+                    ordered.set("this", _hex(ordered.this))
+        else:
+            holder.set("this", _hex(holder.this))
+        node.set("separator", _hex(node.args["separator"]))
+        typed(node, "STRING")
+        window = node.parent
+        if isinstance(window, exp.Window):  # unhex the window's value, not the aggregate in it
+            typed(window, "STRING")
+            window.replace(_call("unhex", "BYTES", window.copy()))
+            return node
+        return _call("unhex", "BYTES", node.copy())
+    return None
+
+
+def _refused(node: exp.Expr) -> bool:
+    if isinstance(node, exp.Length) and not node.args.get("binary"):
+        return _is(node.this, _BYTES)  # CHAR_LENGTH, which BigQuery defines for STRING only
+    if isinstance(node, exp.ArrayToString):
+        kind = node.this.type
+        elements: list[exp.DataType] = kind.expressions if kind and kind.is_type(T.ARRAY) else []
+        return bool(elements) and elements[0].this in _BYTES
+    return isinstance(node, _REFUSED) and any(_is(o, _BYTES) for o in node.iter_expressions())
 
 
 def _cast(node: exp.Cast) -> exp.Expr:
@@ -146,10 +250,15 @@ def transform(tree: exp.Expr, ctx: TransformContext) -> exp.Expr:
                 if node is tree:
                     tree = new
             continue
-        if isinstance(node, (*_THROUGH_TEXT, exp.String)) and any(
-            _is(o, _BYTES) for o in node.iter_expressions()
-        ):
-            raise CrucibleUnsupportedError(f"{node.sql_name()} of BYTES")
+        exact = _exact(node)
+        if exact is not None:
+            node.replace(exact)
+            if node is tree:
+                tree = exact
+            continue
+        if _refused(node):
+            name = "LIKE" if isinstance(node, exp.Like) else node.meta.get("bigquery_name")
+            raise CrucibleUnsupportedError(f"{name or node.key.upper()} of BYTES")
         if (
             isinstance(node, (exp.Func, exp.Binary, exp.Predicate))
             and not isinstance(node, _MIXED_OK)

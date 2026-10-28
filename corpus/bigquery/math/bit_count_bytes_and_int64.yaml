@@ -1,0 +1,24 @@
+description: BIT_COUNT counts the set bits of BYTES and of an INT64's 64-bit two's complement,
+  so BIT_COUNT(-1) is 64. See https://cloud.google.com/bigquery/docs/reference/standard-sql/bit_functions#bit_count.
+tags:
+- math
+- bytes
+query: SELECT BIT_COUNT(b'\xff\x01') AS b, BIT_COUNT(b'') AS empty, BIT_COUNT(-1) AS minus_one,
+  BIT_COUNT(CAST(NULL AS BYTES)) AS n
+ordered: false
+expected:
+  columns:
+  - name: b
+    type: INT64
+  - name: empty
+    type: INT64
+  - name: minus_one
+    type: INT64
+  - name: n
+    type: INT64
+  rows:
+  - - 9
+    - 0
+    - 64
+    - null
+verified: false

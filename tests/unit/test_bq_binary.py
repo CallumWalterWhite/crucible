@@ -63,13 +63,53 @@ def test_string_and_bytes_operands_are_refused(bq, sql):
 
 
 @pytest.mark.parametrize(
-    "call",
-    ["REVERSE(b'ab')", "LTRIM(b'xa', b'x')", "TRIM(b'a')", "REPLACE(b'ab', b'a', b'c')",
-     "STARTS_WITH(b'ab', b'a')", "UPPER(b'a')", "STRING(b'a')"],
+    ("call", "name"),
+    [("LTRIM(b'xa', b'x')", "LTRIM"), ("TRIM(b'a')", "TRIM"),
+     ("REPLACE(b'ab', b'a', b'c')", "REPLACE"), ("UPPER(b'a')", "UPPER"),
+     ("STRING(b'a')", "STRING"),
+     ("b'ab' LIKE b'a%'", "LIKE"), ("b'ab' NOT LIKE b'a%'", "LIKE"), ("SUBSTR(b'ab', 2)", "SUBSTR"),
+     ("SUBSTRING(b'ab', 1, 1)", "SUBSTRING"), ("SPLIT(b'a,b', b',')", "SPLIT"),
+     ("REGEXP_CONTAINS(b'ab', b'b')", "REGEXP_CONTAINS"),
+     ("REGEXP_REPLACE(b'ab', b'b', b'c')", "REGEXP_REPLACE"), ("CHAR_LENGTH(b'a')", "CHAR_LENGTH"),
+     ("ARRAY_TO_STRING([b'a'], b',')", "ARRAY_TO_STRING"),
+     ("STRPOS(b'\\x12\\x34', b'\\x23')", "STRPOS"), ("INSTR(b'ab', b'b')", "INSTR"),
+     ("LPAD(b'a', 4, b'xy')", "LPAD"), ("RPAD(b'abc', 2)", "RPAD")],
 )  # fmt: skip
-def test_functions_on_the_text_form_of_bytes_are_refused(bq, call):
-    with pytest.raises(CrucibleUnsupportedError, match="of BYTES"):
+def test_bytes_functions_without_an_exact_form_are_refused(bq, call, name):
+    with pytest.raises(
+        CrucibleUnsupportedError, match=f"^Not supported by Crucible: {name} of BYTES$"
+    ):
         bq(f"SELECT {call}")
+
+
+def test_reverse_starts_with_and_ends_with_work_on_whole_bytes(bq):
+    sql = (
+        r"SELECT REVERSE(b'\x01\xff\\'), REVERSE(b''), STARTS_WITH(b'\x12\x34', b'\x12'),"
+        r" ENDS_WITH(b'\x12\x34', b'\x34'), ENDS_WITH(b'\x12\x34', b'\x23')"
+    )
+    assert values(bq(sql)) == [["XP8B", "", True, True, False]]
+
+
+def test_bit_count_of_bytes_and_of_int64(bq):
+    sql = "SELECT BIT_COUNT(b'\\xff\\x01'), BIT_COUNT(b''), BIT_COUNT(x) FROM UNNEST([-1, 5]) AS x"
+    assert values(bq(sql)) == [[9, 0, 64], [9, 0, 2]]
+
+
+@pytest.mark.parametrize(
+    ("call", "expected"),
+    [
+        ("STRING_AGG(x, b'\\xff' ORDER BY x)", "Af8B/xD/YQ=="),
+        ("STRING_AGG(DISTINCT x, b'-' ORDER BY x DESC)", "YS0QLQE="),
+    ],
+)
+def test_string_agg_of_bytes_with_a_bytes_delimiter(bq, call, expected):
+    sql = f"SELECT {call} AS v FROM UNNEST([b'\\x10', b'\\x01', b'a', b'\\x01']) AS x"
+    assert values(bq(sql)) == [[expected]]
+
+
+def test_string_agg_of_bytes_over_a_window(bq):
+    sql = "SELECT STRING_AGG(x, b',') OVER (ORDER BY x) FROM UNNEST([b'a', b'b']) AS x"
+    assert values(bq(sql)) == [["YQ=="], ["YSxi"]]
 
 
 def test_concat_of_string_and_bytes_is_bigquerys_signature_error(bq):
