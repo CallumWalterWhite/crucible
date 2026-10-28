@@ -1,0 +1,11 @@
+description: CAST of BYTES that are not valid UTF-8 to STRING is an error. Crucible refuses it until
+  BigQuery's message is recorded. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions#cast_as_string.
+tags:
+- cast
+- bytes
+- known-divergence
+query: SELECT CAST(b'\xff' AS STRING) AS v
+expected:
+  error:
+    kind: invalid_query
+    message_contains: UTF-8

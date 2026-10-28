@@ -255,13 +255,17 @@ def fix_annotation(tree: exp.Expr) -> None:
     for column in tree.find_all(exp.Column):
         if (column.table, column.name) in offsets:
             column.type = exp.DataType.build("BIGINT")
-    # `a || b` on arrays is ARRAY_CONCAT and returns the array type; SQLGlot types it STRING.
-    # Innermost first, so a chain `a || b || c` sees its left operand already re-typed.
+    # `a || b` on arrays is ARRAY_CONCAT and returns the array type, and on BYTES returns BYTES;
+    # SQLGlot types both STRING. Innermost first, so a chain `a || b || c` sees its left operand
+    # already re-typed.
     for node in reversed(list(tree.find_all(exp.DPipe))):
         for operand in (node.left, node.right):
             if operand.type is not None and operand.type.this == exp.DataType.Type.ARRAY:
                 node.type = operand.type.copy()
                 break
+        binary = (exp.DType.BINARY, exp.DType.VARBINARY, exp.DType.BLOB)
+        if all(o.is_type(*binary) for o in (node.left, node.right)):
+            node.type = exp.DataType.build("BYTES", dialect="bigquery")
 
 
 def _storage_casts(tree: exp.Expr) -> None:

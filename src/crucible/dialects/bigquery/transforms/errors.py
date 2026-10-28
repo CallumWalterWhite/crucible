@@ -16,12 +16,12 @@ are handled where results are written (translate.py, `finalize_value`).
 
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING
 
 from sqlglot import exp
 
 from crucible.dialects.bigquery.transforms.common import (
+    VOLATILE,
     T,
     check,
     duck_cast,
@@ -49,7 +49,6 @@ TEMPORAL_TEXT = {
     T.TIMESTAMP: ("datetime", rf"^{_DATE}([ Tt]{_TIME})?$"),
     T.TIMESTAMPTZ: ("timestamp", rf"^{_DATE}([ Tt]{_TIME})?{_ZONE}?$"),
 }
-_VOLATILE = re.compile(r"\b(rand|generate_uuid)\s*\(", re.IGNORECASE)
 
 
 def _is(node: exp.Expr, *kinds: exp.DType) -> bool:
@@ -58,7 +57,7 @@ def _is(node: exp.Expr, *kinds: exp.DType) -> bool:
 
 def _zero_check(node: exp.Binary, operator: str) -> exp.Expr:
     divisor = node.expression
-    if _VOLATILE.search(divisor.sql("bigquery")):
+    if VOLATILE.search(divisor.sql("bigquery")):
         # The check evaluates the divisor twice; a volatile divisor could differ between the two.
         raise CrucibleUnsupportedError(f"a non-deterministic divisor in {node.sql('bigquery')}")
     failure = raise_runtime("division by zero: ", node.this.copy(), f" {operator} ", divisor.copy())

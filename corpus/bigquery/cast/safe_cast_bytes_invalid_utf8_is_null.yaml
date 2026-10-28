@@ -1,0 +1,15 @@
+description: SAFE_CAST of BYTES that are not valid UTF-8 to STRING gives NULL. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions#safe_casting.
+tags:
+- cast
+- bytes
+query: SELECT SAFE_CAST(b'\xff' AS STRING) AS lone_byte, SAFE_CAST(b'a\xc3' AS STRING) AS truncated
+ordered: false
+expected:
+  columns:
+  - name: lone_byte
+    type: STRING
+  - name: truncated
+    type: STRING
+  rows:
+  - - null
+    - null

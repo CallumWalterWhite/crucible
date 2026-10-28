@@ -1,0 +1,12 @@
+description: TO_JSON_STRING of a bare BYTES value is a base64 JSON string. See https://cloud.google.com/bigquery/docs/reference/standard-sql/json_functions#to_json_string.
+tags:
+- json
+- bytes
+query: SELECT TO_JSON_STRING(b'\xff') AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: STRING
+  rows:
+  - - '"/w=="'

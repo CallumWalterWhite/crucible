@@ -16,6 +16,7 @@ from sqlglot import exp
 
 from crucible.dialects.bigquery.transforms import (
     arrays,
+    binary,
     dates,
     errors,
     json,
@@ -39,13 +40,15 @@ class TransformContext:
 Transform = Callable[[exp.Expr, TransformContext], exp.Expr]
 
 # Order matters: structure first (unnest), then NaN rules on the user's comparisons, then
+# STRING/BYTES casts and refusals (`binary`, before `strings` rewrites UPPER and LOWER), then
 # functions, then literal typing last so every literal a transform introduces is typed by
-# BigQuery rules too. `safe` runs after `errors`
-# because SAFE. turns the checks `errors` adds into NULLs. `structs` runs late: earlier transforms
+# BigQuery rules too. `safe` runs after `errors` because SAFE. turns the checks `errors` adds into
+# NULLs. `structs` runs late: earlier transforms
 # read STRUCT literals' field names.
 PIPELINE: tuple[tuple[str, Transform], ...] = (
     ("unnest", unnest.transform),
     ("nan", nan.transform),
+    ("binary", binary.transform),
     ("json", json.transform),
     ("regexp", regexp.transform),
     ("strings", strings.transform),

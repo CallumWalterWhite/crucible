@@ -1,0 +1,11 @@
+description: CONCAT of a STRING and BYTES is an error; BigQuery never converts one to the other.
+  Crucible refuses it until the message is recorded. See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions#concat.
+tags:
+- string
+- bytes
+- known-divergence
+query: SELECT CONCAT('a', b'b') AS v
+expected:
+  error:
+    kind: invalid_query
+    message_contains: No matching signature

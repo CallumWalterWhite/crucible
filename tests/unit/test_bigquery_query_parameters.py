@@ -43,6 +43,14 @@ def test_named_scalars_of_each_type(client):
     ]  # fmt: skip
 
 
+def test_bytes_parameter_casts_to_and_from_string_as_utf8(client):
+    params = [scalar("y", "BYTES", "w6k="), scalar("s", "STRING", "\\x41")]  # C3 A9 is é
+    body = run_query(
+        client, "SELECT CAST(@y AS STRING), CAST(@s AS BYTES)", queryParameters=params
+    ).json()
+    assert cells(body) == ["é", "XHg0MQ=="]
+
+
 def test_positional_parameters_bind_in_order(client):
     params = [scalar(None, "INT64", "2"), scalar(None, "STRING", "b")]
     body = run_query(client, "SELECT ? * 10, ?", queryParameters=params, parameterMode="POSITIONAL")

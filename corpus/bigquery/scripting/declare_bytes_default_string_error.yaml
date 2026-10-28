@@ -1,0 +1,11 @@
+description: A BYTES variable with a STRING default is an error; a STRING is not coerced to BYTES.
+  Crucible refuses it until the message is recorded. See https://cloud.google.com/bigquery/docs/reference/standard-sql/procedural-language#declare.
+tags:
+- scripting
+- bytes
+- known-divergence
+query: DECLARE x BYTES DEFAULT 'a'; SELECT x
+expected:
+  error:
+    kind: invalid_query
+    message_contains: BYTES

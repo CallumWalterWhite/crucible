@@ -1,0 +1,14 @@
+description: REVERSE of BYTES reverses the bytes. Crucible refuses it, because SQLGlot reverses DuckDB's
+  escaped text form of the BLOB. See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions#reverse.
+tags:
+- string
+- bytes
+- known-divergence
+query: SELECT REVERSE(b'\x01\xff') AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: BYTES
+  rows:
+  - - /wE=
