@@ -1,0 +1,19 @@
+description: A subdomain collapses to the public suffix plus one label, including multi-part suffixes
+  such as co.uk. See https://cloud.google.com/bigquery/docs/reference/standard-sql/net_functions#netreg_domain.
+tags:
+- net
+query: SELECT NET.REG_DOMAIN('mail.example.co.uk') AS d0, NET.REG_DOMAIN('a.b.example.com') AS d1, NET.REG_DOMAIN('example.org')
+  AS d2
+ordered: false
+expected:
+  columns:
+  - name: d0
+    type: STRING
+  - name: d1
+    type: STRING
+  - name: d2
+    type: STRING
+  rows:
+  - - example.co.uk
+    - example.com
+    - example.org

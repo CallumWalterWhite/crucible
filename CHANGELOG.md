@@ -7,6 +7,12 @@ and this project does not yet follow semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+- `NET.REG_DOMAIN`, using the ICANN section of a vendored, pinned Public Suffix List (MPL-2.0, in
+  `NOTICE`). Hosts whose answer BigQuery does not document are refused. numpy is now a dependency:
+  DuckDB needs it to run Python functions.
+
 ### Fixed
 
 - A named STRUCT built from a correlated column in an array passed to UNNEST failed with

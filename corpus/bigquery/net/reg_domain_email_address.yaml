@@ -1,0 +1,11 @@
+description: An email address is parsed like userinfo and a host. See https://cloud.google.com/bigquery/docs/reference/standard-sql/net_functions#netreg_domain.
+tags:
+- net
+query: SELECT NET.REG_DOMAIN('someone@mail.example.org') AS d0
+ordered: false
+expected:
+  columns:
+  - name: d0
+    type: STRING
+  rows:
+  - - example.org

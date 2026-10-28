@@ -227,6 +227,13 @@ The client and dbt suites (`tests/clients`, `tests/dbt`) need a running server; 
 | SHA512 | Not supported | no test yet | Refused with a DuckDB message (`DuckDB only supports SHA256 hashing algorithm`). |
 | FARM_FINGERPRINT | Not supported | [`hash/farm_fingerprint`](../corpus/bigquery/hash/farm_fingerprint.yaml)<br>[`test_farm_fingerprint_is_unsupported_at_plan_time`](../tests/unit/test_bq_strings.py) | Known divergence. The function is refused today: `Not supported by Crucible: FARM_FINGERPRINT`. |
 
+### Net functions
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| NET.REG_DOMAIN | Tested | [`net/reg_domain_subdomain_multipart_suffix`](../corpus/bigquery/net/reg_domain_subdomain_multipart_suffix.yaml)<br>[`net/reg_domain_private_suffix_is_a_label`](../corpus/bigquery/net/reg_domain_private_suffix_is_a_label.yaml)<br>[`net/reg_domain_idn_and_punycode`](../corpus/bigquery/net/reg_domain_idn_and_punycode.yaml)<br>[`net/reg_domain_wildcard_and_exception_rules`](../corpus/bigquery/net/reg_domain_wildcard_and_exception_rules.yaml)<br>[`net/reg_domain_over_table_rows`](../corpus/bigquery/net/reg_domain_over_table_rows.yaml)<br>[`test_reg_domain`](../tests/unit/test_bq_net.py) | The ICANN section of a vendored, pinned Public Suffix List ([data/README.md](../src/crucible/dialects/bigquery/data/README.md)), with no implicit `*` rule; private-section suffixes are ordinary labels. The host is parsed best-effort from a URL, lowercased and Punycode-encoded for the lookup, and returned as written. BigQuery's list snapshot may differ for recently added or removed suffixes. Refused: a host with a leading or trailing dot or with characters other than letters, digits and hyphens ([`net/reg_domain_trailing_and_leading_dot`](../corpus/bigquery/net/reg_domain_trailing_and_leading_dot.yaml)). Unverified corpus cases. |
+| NET.HOST, NET.PUBLIC_SUFFIX and other NET functions | Not supported | [`test_other_net_functions_are_unsupported`](../tests/unit/test_bq_net.py) | `Not supported by Crucible: function NET.HOST`. |
+
 ### Errors and SAFE. prefix
 
 | Feature | Status | Evidence | Notes |

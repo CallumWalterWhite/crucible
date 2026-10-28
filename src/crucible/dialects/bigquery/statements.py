@@ -17,6 +17,7 @@ from crucible.dialects.bigquery import (
     dml,
     errors,
     metadata,
+    net,
     parameters,
     scripting,
     types,
@@ -198,6 +199,8 @@ def _refuse_unmodelled(tree: exp.Expr) -> None:
 
 
 def _plan(tree: exp.Expr, ctx: ExecContext) -> Plan:
+    # Crucible's Python functions, registered once per engine (NET.REG_DOMAIN).
+    ctx.engine.create_function(net.FUNCTION, net.udf, ["VARCHAR"], "VARCHAR")
     if isinstance(tree, exp.Create) and (tree.kind or "").upper() == "FUNCTION":
         return udfs.plan_create(tree, ctx)  # its body is checked when the function is called
     if isinstance(tree, exp.Drop) and (tree.kind or "").upper() == "FUNCTION":

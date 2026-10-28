@@ -2,3 +2,8 @@ Crucible
 Copyright 2026 The Crucible Authors
 
 This product includes software developed by The Crucible Authors.
+
+This product includes the Public Suffix List
+(src/crucible/dialects/bigquery/data/public_suffix_list.dat), from https://publicsuffix.org/,
+which is subject to the Mozilla Public License, v. 2.0. A copy of the MPL is available at
+https://mozilla.org/MPL/2.0/. The file is distributed unmodified.

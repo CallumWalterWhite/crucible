@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import shutil
 import threading
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 
 import duckdb
+from duckdb.func import FunctionNullHandling
 
 from crucible.engine.catalog import META, Catalog, quote
 from crucible.engine.session import Session
@@ -54,6 +55,7 @@ class Engine:
         for ddl in _META_DDL:
             self._con.execute(ddl)
         self._attached: set[str] = set()
+        self._functions: set[str] = set()
         for name, file in self._con.execute(
             f"select name, file from {META}.main.catalogs"
         ).fetchall():
@@ -78,6 +80,27 @@ class Engine:
     def _attach(self, name: str, file: str | None) -> None:
         self._con.execute(f"attach {_literal(file or ':memory:')} as {quote(name)}")
         self._attached.add(name)
+
+    # --- functions --------------------------------------------------------------------------
+    def create_function(
+        self, name: str, function: Callable[..., Any], parameters: list[str], return_type: str
+    ) -> None:
+        """Register a Python scalar function for every cursor, once; later calls do nothing.
+        It receives NULL arguments as None and may return None. A dialect raises its errors from it
+        with the prefixes in engine.errors (ADR 0011)."""
+        with self._lock:
+            if name in self._functions:
+                return
+            # The stubs leave one overload partly unknown and type the list as invariant.
+            self._con.create_function(  # pyright: ignore[reportUnknownMemberType]
+                name,
+                function,
+                [duckdb.sqltype(p) for p in parameters],
+                duckdb.sqltype(return_type),
+                null_handling=FunctionNullHandling.SPECIAL,
+                side_effects=False,
+            )
+            self._functions.add(name)
 
     # --- requests ---------------------------------------------------------------------------
     @contextmanager

@@ -1,0 +1,15 @@
+description: Surrounding whitespace is ignored and the result keeps the input's case. See https://cloud.google.com/bigquery/docs/reference/standard-sql/net_functions#netreg_domain.
+tags:
+- net
+query: SELECT NET.REG_DOMAIN('    www.Example.Co.UK    ') AS d0, NET.REG_DOMAIN('MAIL.EXAMPLE.COM') AS
+  d1
+ordered: false
+expected:
+  columns:
+  - name: d0
+    type: STRING
+  - name: d1
+    type: STRING
+  rows:
+  - - Example.Co.UK
+    - EXAMPLE.COM
