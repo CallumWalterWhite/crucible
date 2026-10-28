@@ -7,6 +7,8 @@ and this project does not yet follow semantic versioning.
 
 ## [Unreleased]
 
+## [0.1.0a4] - 2026-10-28
+
 ### Added
 
 - `tables.insert` with `timePartitioning`, `rangePartitioning` and `clustering` (`create_table` with a
