@@ -1,0 +1,22 @@
+description: A named STRUCT built from a correlated column with NULLIF, in an array passed to
+  UNNEST, keeps its field names through v.* expansion. See https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#unnest_operator.
+tags:
+- unnest
+- struct
+setup:
+- CREATE TABLE src (colour STRING)
+- INSERT INTO src VALUES ('red'), ('')
+query: SELECT v.* FROM src AS s CROSS JOIN UNNEST([STRUCT('colour' AS label, NULLIF(TRIM(s.colour),
+  '') AS shade)]) AS v
+ordered: false
+expected:
+  columns:
+  - name: label
+    type: STRING
+  - name: shade
+    type: STRING
+  rows:
+  - - colour
+    - red
+  - - colour
+    - null

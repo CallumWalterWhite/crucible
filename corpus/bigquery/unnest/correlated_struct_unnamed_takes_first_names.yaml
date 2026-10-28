@@ -1,0 +1,26 @@
+description: In an array of STRUCTs passed to UNNEST, a later unnamed STRUCT takes the first
+  STRUCT's field names; the first uses a correlated column inside a function. See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#constructing_a_struct.
+tags:
+- unnest
+- struct
+setup:
+- CREATE TABLE src (id INT64, tags ARRAY<STRING>)
+- INSERT INTO src VALUES (1, ['a', 'b'])
+query: SELECT p.id, v.k, v.n FROM src AS p, UNNEST([STRUCT('rev' AS k, ARRAY_LENGTH(ARRAY_REVERSE(p.tags))
+  AS n), STRUCT('const', 0)]) AS v
+ordered: false
+expected:
+  columns:
+  - name: id
+    type: INT64
+  - name: k
+    type: STRING
+  - name: n
+    type: INT64
+  rows:
+  - - 1
+    - rev
+    - 2
+  - - 1
+    - const
+    - 0

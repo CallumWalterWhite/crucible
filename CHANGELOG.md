@@ -7,6 +7,14 @@ and this project does not yet follow semantic versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- A named STRUCT built from a correlated column in an array passed to UNNEST failed with
+  `Binder Error: Need named argument for struct pack` when a field called NULLIF or another function
+  DuckDB implements as a macro. Such STRUCTs are now built as typed ROWs.
+- An aliased UNNEST of a literal STRUCT array, read through `v.field`, failed with `Referenced table
+  not found`.
+
 ## [0.1.0a3] - 2026-10-28
 
 ### Added

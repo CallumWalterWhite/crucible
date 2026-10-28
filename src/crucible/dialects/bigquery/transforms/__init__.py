@@ -24,6 +24,7 @@ from crucible.dialects.bigquery.transforms import (
     regexp,
     safe,
     strings,
+    structs,
     unnest,
 )
 from crucible.engine import Session
@@ -39,7 +40,8 @@ Transform = Callable[[exp.Expr, TransformContext], exp.Expr]
 # Order matters: structure first (unnest), then NaN rules on the user's comparisons, then
 # functions, then literal typing last so every literal a transform introduces is typed by
 # BigQuery rules too. `safe` runs after `errors`
-# because SAFE. turns the checks `errors` adds into NULLs.
+# because SAFE. turns the checks `errors` adds into NULLs. `structs` runs late: earlier transforms
+# read STRUCT literals' field names.
 PIPELINE: tuple[tuple[str, Transform], ...] = (
     ("unnest", unnest.transform),
     ("nan", nan.transform),
@@ -50,6 +52,7 @@ PIPELINE: tuple[tuple[str, Transform], ...] = (
     ("arrays", arrays.transform),
     ("errors", errors.transform),
     ("safe", safe.transform),
+    ("structs", structs.transform),
     ("literals", literals.transform),
 )
 

@@ -141,6 +141,10 @@ def _rewrite(node: exp.Unnest) -> exp.Expr | None:
 
 def transform(tree: exp.Expr, ctx: TransformContext) -> exp.Expr:
     for node in list(tree.find_all(exp.Unnest)):
+        # SQLGlot's BigQuery parser flags a literal STRUCT array (explode_array) and its DuckDB
+        # generator then emits `(SELECT UNNEST(..., max_depth => 2)) AS v`, which drops the table
+        # alias qualify gave the UNNEST. This transform exposes the fields itself (_rewrite).
+        node.set("explode_array", False)
         parent = node.parent
         if not isinstance(parent, exp.From | exp.Join):
             continue
