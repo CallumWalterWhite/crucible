@@ -7,24 +7,13 @@ and this project does not yet follow semantic versioning.
 
 ## [Unreleased]
 
+## [0.1.0a3] - 2026-10-28
+
 ### Added
 
 - `NET.REG_DOMAIN`, using the ICANN section of a vendored, pinned Public Suffix List (MPL-2.0, in
   `NOTICE`). Hosts whose answer BigQuery does not document are refused. numpy is now a dependency:
   DuckDB needs it to run Python functions.
-
-### Fixed
-
-- A named STRUCT built from a correlated column in an array passed to UNNEST failed with
-  `Binder Error: Need named argument for struct pack` when a field called NULLIF or another function
-  DuckDB implements as a macro. Such STRUCTs are now built as typed ROWs.
-- An aliased UNNEST of a literal STRUCT array, read through `v.field`, failed with `Referenced table
-  not found`.
-
-## [0.1.0a3] - 2026-10-28
-
-### Added
-
 - SQL user-defined functions: `CREATE TEMP FUNCTION`, `CREATE [OR REPLACE] FUNCTION`, `DROP FUNCTION`, typed
   arguments and RETURNS with BigQuery's `No matching signature` error, and persistent functions in
   `routines.list` and `routines.get`. JavaScript, remote, table-valued and ANY TYPE functions are refused.
@@ -59,6 +48,11 @@ and this project does not yet follow semantic versioning.
 
 ### Fixed
 
+- A named STRUCT built from a correlated column in an array passed to UNNEST failed with
+  `Binder Error: Need named argument for struct pack` when a field called NULLIF or another function
+  DuckDB implements as a macro. Such STRUCTs are now built as typed ROWs.
+- An aliased UNNEST of a literal STRUCT array, read through `v.field`, failed with `Referenced table
+  not found`.
 - Reconciled with the Milestone 1 recording: UPDATE/DELETE without WHERE report `at [line:col]`;
   TRUNCATE TABLE reports the rows it removed and its destination table; getQueryResults of UPDATE,
   DELETE and TRUNCATE carries the table's schema; CREATE TABLE and ALTER TABLE jobs report their
