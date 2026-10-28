@@ -1,0 +1,17 @@
+description: A host that is only a public suffix has no registrable domain. See https://cloud.google.com/bigquery/docs/reference/standard-sql/net_functions#netreg_domain.
+tags:
+- net
+query: SELECT NET.REG_DOMAIN('co.uk') AS d0, NET.REG_DOMAIN('com') AS d1, NET.REG_DOMAIN('a.b') AS d2
+ordered: false
+expected:
+  columns:
+  - name: d0
+    type: STRING
+  - name: d1
+    type: STRING
+  - name: d2
+    type: STRING
+  rows:
+  - - null
+    - null
+    - null

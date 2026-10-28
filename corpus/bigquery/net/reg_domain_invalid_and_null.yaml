@@ -1,0 +1,21 @@
+description: An empty string, adjacent dots, a URI without a host and NULL give NULL. See https://cloud.google.com/bigquery/docs/reference/standard-sql/net_functions#netreg_domain.
+tags:
+- net
+query: SELECT NET.REG_DOMAIN('') AS d0, NET.REG_DOMAIN('a..b.com') AS d1, NET.REG_DOMAIN('mailto:?to=&subject=&body=')
+  AS d2, NET.REG_DOMAIN(CAST(NULL AS STRING)) AS d3
+ordered: false
+expected:
+  columns:
+  - name: d0
+    type: STRING
+  - name: d1
+    type: STRING
+  - name: d2
+    type: STRING
+  - name: d3
+    type: STRING
+  rows:
+  - - null
+    - null
+    - null
+    - null

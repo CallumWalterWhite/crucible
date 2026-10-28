@@ -57,7 +57,10 @@ class CrucibleUnsupportedError(CrucibleError):
 
 def _after(text: str, prefix: str) -> str | None:
     index = text.find(prefix)
-    return None if index < 0 else text[index + len(prefix) :]
+    if index < 0:
+        return None
+    # A Python function's exception (Engine.create_function) is followed by its traceback.
+    return text[index + len(prefix) :].split("\n\nAt:\n", 1)[0]
 
 
 def runtime_error_message(exc: duckdb.Error) -> str | None:
