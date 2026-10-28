@@ -1400,3 +1400,93 @@ def test_tables_insert_refuses_partitioning_that_would_change_results(client, bo
     make_dataset(client)
     response = insert_table(client, "refused", **body)
     assert response.json()["error"]["message"] == f"Not supported by Crucible: {construct}"
+
+
+# --- query jobs with a destination table ----------------------------------------------------
+def to_table(table: str, **extra: Any) -> dict[str, Any]:
+    reference = {"projectId": PROJECT, "datasetId": "ds", "tableId": table}
+    return {"destinationTable": reference, **extra}
+
+
+def table_rows(client: TestClient, table: str) -> list[str]:
+    return values(run_query(client, f"SELECT * FROM ds.{table} ORDER BY 1").json().get("rows", []))
+
+
+def test_a_query_creates_its_destination_and_returns_its_rows(client):
+    make_dataset(client)
+    job = insert_query(client, "SELECT 1 AS k, 'a' AS v", configuration_extra=to_table("dest"))
+    body = job.json()
+    assert body["status"] == {"state": "DONE"}
+    assert body["configuration"]["query"]["destinationTable"]["tableId"] == "dest"
+    results = client.get(f"{API}/queries/{body['jobReference']['jobId']}").json()
+    assert values(results["rows"]) == ["1", "a"]
+    assert client.get(f"{API}/datasets/ds/tables/dest").json()["numRows"] == "1"
+
+
+def test_write_truncate_replaces_and_write_append_adds(client):
+    make_dataset(client)
+    insert_query(client, "SELECT 1 AS k", configuration_extra=to_table("dest"))
+    truncate = to_table("dest", writeDisposition="WRITE_TRUNCATE")
+    insert_query(client, "SELECT 2 AS k", configuration_extra=truncate)
+    assert table_rows(client, "dest") == ["2"]
+    append = to_table("dest", writeDisposition="WRITE_APPEND")
+    insert_query(client, "SELECT 3 AS k", configuration_extra=append)
+    assert table_rows(client, "dest") == ["2", "3"]
+    assert client.get(f"{API}/datasets/ds/tables/dest").json()["numRows"] == "2"
+
+
+def test_write_empty_fails_on_a_table_with_rows(client):
+    make_dataset(client)
+    insert_query(client, "SELECT 1 AS k", configuration_extra=to_table("dest"))
+    job = insert_query(client, "SELECT 2 AS k", configuration_extra=to_table("dest")).json()
+    assert job["status"]["errorResult"]["message"].startswith("Already Exists: Table")
+    assert table_rows(client, "dest") == ["1"]
+
+
+def test_create_never_needs_an_existing_table(client):
+    make_dataset(client)
+    never = to_table("missing", createDisposition="CREATE_NEVER")
+    job = insert_query(client, "SELECT 1 AS k", configuration_extra=never).json()
+    assert job["status"]["errorResult"]["reason"] == "notFound"
+
+
+def test_a_failed_query_leaves_the_destination_untouched(client):
+    make_dataset(client)
+    insert_query(client, "SELECT 1 AS k", configuration_extra=to_table("dest"))
+    truncate = to_table("dest", writeDisposition="WRITE_TRUNCATE")
+    job = insert_query(client, "SELECT 1 / 0 AS k", configuration_extra=truncate).json()
+    assert "errorResult" in job["status"]
+    assert table_rows(client, "dest") == ["1"]
+
+
+def test_named_parameters_reach_a_destination_query(client):
+    make_dataset(client)
+    extra = to_table(
+        "dest",
+        parameterMode="NAMED",
+        queryParameters=[
+            {"name": "x", "parameterType": {"type": "INT64"}, "parameterValue": {"value": "7"}}
+        ],
+    )
+    insert_query(client, "SELECT @x AS k", configuration_extra=extra)
+    assert table_rows(client, "dest") == ["7"]
+
+
+@pytest.mark.parametrize(
+    ("sql", "extra", "construct"),
+    [
+        ("INSERT INTO ds.t VALUES (1)", {}, "a destination table for a INSERT statement"),
+        ("SELECT 1 AS k; SELECT 2 AS k", {}, "a destination table for a multi-statement query"),
+        (
+            "SELECT 1 AS k",
+            {"writeDisposition": "WRITE_APPEND", "k": 1},
+            "query job configuration field k",
+        ),
+    ],
+)
+def test_destination_shapes_crucible_does_not_emulate_are_refused(client, sql, extra, construct):
+    make_dataset(client)
+    run_query(client, "CREATE TABLE ds.t (k INT64)")
+    job = insert_query(client, sql, configuration_extra=to_table("dest", **extra)).json()
+    message = job.get("status", {}).get("errorResult", {}).get("message") or job["error"]["message"]
+    assert message == f"Not supported by Crucible: {construct}"

@@ -18,9 +18,11 @@ from sqlglot import exp
 
 from crucible.dialects.bigquery import metadata, types
 from crucible.dialects.bigquery.dialect import DIALECT
+from crucible.dialects.bigquery.errors import reword
 from crucible.dialects.bigquery.parameters import STATE as PARAMETERS_STATE
 from crucible.engine import (
     Column,
+    CommandPlan,
     CrucibleError,
     CrucibleUnsupportedError,
     Engine,
@@ -64,6 +66,9 @@ _IGNORED_QUERY_KEYS = frozenset(
         "useQueryCache",  # Crucible has no query cache: every answer is a fresh one
         "queryParameters",  # bound by params.py
         "parameterMode",
+        "destinationTable",  # written by Runner._query_into_table
+        "writeDisposition",
+        "createDisposition",
     }
 )
 _LOAD_KEYS = frozenset(
@@ -193,6 +198,14 @@ def check_query_config(config: dict[str, Any]) -> None:
         raise CrucibleError(ErrorKind.INVALID_QUERY, "Required parameter is missing: query")
 
 
+def check_result_columns(columns: list[Column]) -> None:
+    """Raise for a result column BigQuery's wire format cannot carry here."""
+    for column in columns:
+        if any(t.this == exp.DType.INTERVAL for t in column.type.find_all(exp.DataType)):
+            raise CrucibleUnsupportedError("INTERVAL value in a query result")
+        encoding.schema_field(column.name, column.type)  # raises for unmapped types
+
+
 class Runner:
     def __init__(self, engine: Engine, store: JobStore) -> None:
         self.engine = engine
@@ -213,8 +226,13 @@ class Runner:
             )
             parameters = params.parse(config)
             session.state[PARAMETERS_STATE] = parameters.types
-            results = self.pipeline.execute(session, config["query"], parameters.values)
-            self._record(job, session, results)
+            if config.get("destinationTable"):
+                target, result = self._query_into_table(job, session, config, parameters.values)
+                self._record(job, session, [result])
+                job.anonymous_table, job.target = None, target
+            else:
+                results = self.pipeline.execute(session, config["query"], parameters.values)
+                self._record(job, session, results)
         except CrucibleError as exc:
             job.fail(exc)
         except Exception as exc:  # noqa: BLE001 - a Crucible bug: fail the job, never leave it RUNNING
@@ -223,6 +241,93 @@ class Runner:
         job.ended_ms = now_ms()
         self.store.finished(pending, job)
         return job
+
+    def _query_into_table(
+        self, job: Job, session: Any, config: dict[str, Any], values: dict[str, Any]
+    ) -> tuple[tuple[str, str, str], Result]:
+        """A SELECT written to configuration.query.destinationTable (REST reference,
+        JobConfigurationQuery). The query runs once, into a temp table; the destination is then
+        created, replaced or appended to from it in one statement, so a failed job leaves it
+        untouched. The job's rows are the query's."""
+        destination = obj(config.get("destinationTable"))
+        project = str(destination.get("projectId") or job.project)
+        dataset, table = destination.get("datasetId"), destination.get("tableId")
+        if not dataset or not table:
+            raise CrucibleError(
+                ErrorKind.INVALID_QUERY, "destinationTable needs datasetId and tableId"
+            )
+        dataset, table = str(dataset), str(table)
+        if "$" in table:
+            raise CrucibleUnsupportedError("a query destination with a partition decorator")
+        write = str(config.get("writeDisposition") or "WRITE_EMPTY").upper()
+        create = str(config.get("createDisposition") or "CREATE_IF_NEEDED").upper()
+        if write not in ("WRITE_TRUNCATE", "WRITE_APPEND", "WRITE_EMPTY"):
+            raise CrucibleUnsupportedError(f"query job writeDisposition {write}")
+        if create not in ("CREATE_IF_NEEDED", "CREATE_NEVER"):
+            raise CrucibleUnsupportedError(f"query job createDisposition {create}")
+        statements = DIALECT.split(config["query"])
+        if len(statements) != 1:
+            raise CrucibleUnsupportedError("a destination table for a multi-statement query")
+        full = qualified(project, dataset, table)
+        staging = qualified(f"crucible_query_{uuid.uuid4().hex}")
+        with self.engine.cursor(session) as cursor:
+            ctx = ExecContext(self.engine, DIALECT, session, cursor, values)
+            plan = DIALECT.plan(statements[0], ctx)
+            sql = plan.columns_sql if isinstance(plan, CommandPlan) else None
+            if plan.statement_type != "SELECT" or sql is None:
+                raise CrucibleUnsupportedError(
+                    f"a destination table for a {plan.statement_type} statement"
+                )
+            metadata.check_new_table(ctx, metadata.Name(project, dataset, table))
+            info = ctx.catalog.table(project, dataset, table)
+            if info is None and create == "CREATE_NEVER":
+                raise CrucibleError(
+                    ErrorKind.NOT_FOUND, f"Not found: Table {project}:{dataset}.{table}"
+                )
+            try:
+                try:
+                    ctx.run_sql(f"CREATE TEMP TABLE {staging} AS {sql}", returns_rows=False)
+                except CrucibleError as exc:
+                    raise reword(exc) from exc
+                result = ctx.run_sql(f"SELECT * FROM {staging}")
+                result.statement_type = "SELECT"
+                check_result_columns(result.columns)
+                if info is None or write == "WRITE_TRUNCATE":
+                    if info is not None and (
+                        info.properties.get("partition_by") or info.properties.get("cluster_by")
+                    ):
+                        raise CrucibleUnsupportedError(
+                            "WRITE_TRUNCATE into a partitioned or clustered table"
+                        )
+                    ctx.run_sql(
+                        f"CREATE OR REPLACE TABLE {full} AS SELECT * FROM {staging}",
+                        returns_rows=False,
+                    )
+                    # The query's schema replaces the table's; its description and labels stay.
+                    kept = {} if info is None else dict(info.properties)
+                    kept.pop("field_descriptions", None)
+                    ctx.catalog.set_properties(project, dataset, table, kept)
+                else:
+                    if write == "WRITE_EMPTY" and ctx.run_sql(f"SELECT 1 FROM {full} LIMIT 1").rows:
+                        raise CrucibleError(
+                            ErrorKind.ALREADY_EXISTS,
+                            f"Already Exists: Table {project}:{dataset}.{table}",
+                        )
+                    stored = [(c.name, types.type_name(c.type)) for c in info.columns]
+                    wanted = [(c.name, types.type_name(c.type)) for c in result.columns]
+                    if stored != wanted:
+                        raise CrucibleUnsupportedError(
+                            "appending query results whose schema differs from the table's"
+                        )
+                    try:
+                        ctx.run_sql(
+                            f"INSERT INTO {full} SELECT * FROM {staging}", returns_rows=False
+                        )
+                    except CrucibleError as exc:
+                        raise reword(exc) from exc
+            finally:
+                cursor.execute(f"DROP TABLE IF EXISTS {staging}")
+        return (project, dataset, table), result
 
     def run_copy(self, job: Job) -> Job:
         """Run a copy job to completion (copy.py); failures become the job's error."""
@@ -249,6 +354,8 @@ class Runner:
         config = job.configuration["query"]
         try:
             check_query_config(config)
+            if config.get("destinationTable"):
+                raise CrucibleUnsupportedError("a dry run with a destination table")
             default = obj(config.get("defaultDataset"))
             session = DIALECT.new_session(
                 default.get("projectId") or job.project, default.get("datasetId")
@@ -288,10 +395,7 @@ class Runner:
             project, dataset, name = (str(part) for part in cast("tuple[Any, ...]", routine))
             job.routine = (project, dataset, name)
         if last.statement_type == "SELECT":
-            for column in last.columns:
-                if any(t.this == exp.DType.INTERVAL for t in column.type.find_all(exp.DataType)):
-                    raise CrucibleUnsupportedError("INTERVAL value in a query result")
-                encoding.schema_field(column.name, column.type)  # raises for unmapped types
+            check_result_columns(last.columns)
             job.columns = last.columns
             job.rows = last.rows
             job.anonymous_table = f"anon{uuid.uuid4().hex}"

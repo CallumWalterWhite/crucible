@@ -492,6 +492,58 @@ class Recorder:
         self.record_udfs(p)
         self.record_ndjson_loads()
         self.record_partitioned_tables(p, tables)
+        self.record_destination_queries(p, tables)
+
+    def record_destination_queries(self, p: str, tables: str) -> None:
+        """Query jobs with configuration.query.destinationTable: create, WRITE_TRUNCATE with a
+        named parameter, WRITE_APPEND (and what getQueryResults returns after it), WRITE_EMPTY
+        into a table with rows, and CREATE_NEVER for a missing table."""
+        jobs = f"{API}/projects/{p}/jobs"
+
+        def config(sql: str, table: str, **extra: Any) -> dict[str, Any]:
+            query = self.query_config(sql)
+            reference = {"projectId": p, "datasetId": self.dataset, "tableId": table}
+            query["query"] |= {"destinationTable": reference, **extra}
+            return query
+
+        for name, sql, extra in (
+            ("create", "SELECT 1 AS k, 'a' AS v", {}),
+            (
+                "truncate",
+                "SELECT @x AS k, 'b' AS v",
+                {
+                    "writeDisposition": "WRITE_TRUNCATE",
+                    "parameterMode": "NAMED",
+                    "queryParameters": [
+                        {
+                            "name": "x",
+                            "parameterType": {"type": "INT64"},
+                            "parameterValue": {"value": "2"},
+                        }
+                    ],
+                },
+            ),
+            ("append", "SELECT 3 AS k, 'c' AS v", {"writeDisposition": "WRITE_APPEND"}),
+        ):
+            job = self.insert_job(
+                f"jobs_insert_dest_{name}", f"dest_{name}", config(sql, "dest_t", **extra)
+            )
+            self.wait_ok(job, f"destination {name}")
+            self.call(f"jobs_get_dest_{name}", "GET", f"{jobs}/{job}")
+            self.call(f"get_query_results_dest_{name}", "GET", f"{API}/projects/{p}/queries/{job}")
+            self.call(f"tables_get_dest_{name}", "GET", f"{tables}/dest_t")
+        for name, extra in (
+            ("empty", {}),
+            ("never", {"createDisposition": "CREATE_NEVER"}),
+        ):
+            table = "dest_t" if name == "empty" else "dest_missing"
+            job = self.insert_job(
+                f"jobs_insert_dest_{name}",
+                f"dest_{name}",
+                config("SELECT 4 AS k, 'd' AS v", table, **extra),
+            )
+            self.wait(job)
+            self.call(f"jobs_get_dest_{name}", "GET", f"{jobs}/{job}")
 
     def record_partitioned_tables(self, p: str, tables: str) -> None:
         """tables.insert with timePartitioning, rangePartitioning and clustering, as
