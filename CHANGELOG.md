@@ -38,6 +38,8 @@ and this project does not yet follow semantic versioning.
   they ran on DuckDB's escaped text form and could give wrong bytes.
 - TO_JSON_STRING of a bare BYTES, TIMESTAMP or TIME value gives a JSON string; it raised a DuckDB
   error.
+- NULLIF over FLOAT64 follows IEEE-754 (NaN equals nothing), so `NULLIF(NaN, NaN)` is NaN. It was
+  refused.
 
 ## [0.1.0a3] - 2026-10-28
 

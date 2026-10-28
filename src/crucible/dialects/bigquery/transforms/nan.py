@@ -9,10 +9,11 @@ recorded: math/nan_comparisons_are_false, ordering/nan_ordering_asc, aggregate/m
   are rewritten into those comparisons;
 - ORDER BY (queries, windows, aggregates) sorts NaN next to -inf, on the NULL side;
 - MIN, LEAST and GREATEST return NaN when an input is NaN (MAX already does in DuckDB);
+- NULLIF(a, b) returns a when b is NaN, since NaN equals nothing;
 - GROUP BY and DISTINCT already treat every NaN as one value, as BigQuery does.
 
-Other constructs that compare FLOAT64 values (IN subqueries, IS DISTINCT FROM, NULLIF, simple
-CASE, range-offset window frames) are refused rather than guessed.
+Other constructs that compare FLOAT64 values (IN subqueries, IS DISTINCT FROM, simple CASE,
+range-offset window frames) are refused rather than guessed.
 """
 
 from __future__ import annotations
@@ -86,8 +87,13 @@ def _rewrite(node: exp.Expr) -> exp.Expr:
         _is_float(node.this) or _is_float(node.expression)
     ):
         raise CrucibleUnsupportedError("IS [NOT] DISTINCT FROM over FLOAT64 values that may be NaN")
-    if isinstance(node, exp.Nullif) and (_is_float(node.this) or _is_float(node.expression)):
-        raise CrucibleUnsupportedError("NULLIF over FLOAT64 values that may be NaN")
+    if isinstance(node, exp.Nullif) and _is_float(node.expression):
+        # The inner NULLIF turns a NaN b into NULL (DuckDB's NaN equals NaN), so NULLIF(NaN, NaN)
+        # is NaN, as under BigQuery's IEEE comparison; a NULL b already returns a.
+        b = node.expression
+        inner = exp.Nullif(this=b.copy(), expression=_nan())
+        node.set("expression", typed(inner, b.type or "FLOAT64"))
+        return node
     if isinstance(node, exp.Case) and _is_float(node.this):
         raise CrucibleUnsupportedError("CASE <FLOAT64 value> WHEN ... (NaN equality)")
     if isinstance(node, exp.Order):
