@@ -13,6 +13,9 @@ and this project does not yet follow semantic versioning.
   partitioned or clustered `Table`), returned by `tables.get`. Partition expiry, ingestion-time
   partitioning and `requirePartitionFilter: true` are refused.
 - `PARTITION BY DATE(<timestamp or datetime column>)`.
+- Query jobs with a `destinationTable` (`QueryJobConfig(destination=...)`), with `WRITE_EMPTY`,
+  `WRITE_TRUNCATE`, `WRITE_APPEND`, `CREATE_NEVER` and query parameters. A failed job leaves the
+  destination untouched.
 
 ### Fixed
 

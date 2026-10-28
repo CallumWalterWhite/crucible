@@ -200,6 +200,8 @@ NOT_RECORDED_YET: list[str] = [
     "tables_insert_part_*",
     "tables_get_part_*",
     "tables_insert_bad_*",
+    # Query jobs with a destination table (record_api.record_destination_queries).
+    "*_dest_*",
 ]
 
 

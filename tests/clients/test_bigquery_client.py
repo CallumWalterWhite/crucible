@@ -424,3 +424,21 @@ def test_bigquery_create_table_with_partitioning_and_clustering(client, dataset)
     got = client.get_table(f"{PROJECT}.{dataset}.ranged")
     assert got.range_partitioning.field == "n"
     assert got.range_partitioning.range_.interval == 10
+
+
+def test_bigquery_query_into_a_destination_table_with_parameters(client, dataset):
+    """QueryJobConfig(destination=..., write_disposition=WRITE_TRUNCATE) with named parameters,
+    then the destination's num_rows."""
+    destination = f"{PROJECT}.{dataset}.scored"
+    for value in (1, 2):
+        config = bigquery.QueryJobConfig(
+            destination=destination,
+            write_disposition="WRITE_TRUNCATE",
+            query_parameters=[bigquery.ScalarQueryParameter("x", "INT64", value)],
+        )
+        rows = list(client.query("SELECT @x AS k UNION ALL SELECT @x + 10", job_config=config))
+        assert sorted(r.k for r in rows) == [value, value + 10]
+    assert client.get_table(destination).num_rows == 2
+    appended = bigquery.QueryJobConfig(destination=destination, write_disposition="WRITE_APPEND")
+    client.query("SELECT 99 AS k", job_config=appended).result()
+    assert client.get_table(destination).num_rows == 3
