@@ -299,3 +299,10 @@ def test_a_rerun_removes_stale_fixtures_with_three_digit_numbers(tmp_path: Path)
     assert not (tmp_path / "07_old.json").exists()
     assert not (tmp_path / "123_old.json").exists()
     assert (tmp_path / "notes.txt").exists()
+
+
+def test_a_binary_upload_is_kept_as_base64():
+    from crucible.corpus.record_api import _upload_body  # pyright: ignore[reportPrivateUsage]
+
+    assert _upload_body(b"a,b\n") == "a,b\n"
+    assert _upload_body(b"PAR1\xff\x00") == {"base64": "UEFSMf8A"}

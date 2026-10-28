@@ -137,7 +137,8 @@ jobs:
           CLIENT_SPEC: ${{ matrix.client }}
           DIALECT: ${{ matrix.dialect }}
           CRUCIBLE_URL: http://127.0.0.1:${{ matrix.port }}
-        run: uv run --with "$CLIENT_SPEC" pytest -m clients tests/clients -k "$DIALECT"
+        # --extra server brings pyarrow, which the Parquet load test writes its file with.
+        run: uv run --extra server --with "$CLIENT_SPEC" pytest -m clients tests/clients -k "$DIALECT"
 
   dbt:
     needs: docker

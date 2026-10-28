@@ -202,6 +202,8 @@ NOT_RECORDED_YET: list[str] = [
     "tables_insert_bad_*",
     # Query jobs with a destination table (record_api.record_destination_queries).
     "*_dest_*",
+    # PARQUET loads (record_api.record_parquet_loads).
+    "parquet_*",
 ]
 
 

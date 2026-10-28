@@ -442,3 +442,40 @@ def test_bigquery_query_into_a_destination_table_with_parameters(client, dataset
     appended = bigquery.QueryJobConfig(destination=destination, write_disposition="WRITE_APPEND")
     client.query("SELECT 99 AS k", job_config=appended).result()
     assert client.get_table(destination).num_rows == 3
+
+
+def test_bigquery_load_table_from_file_parquet(client, dataset, tmp_path):
+    """load_table_from_file with a Parquet file and an explicit schema, as an ingestion pipeline
+    uploads one: WRITE_APPEND twice, a REQUIRED field, and output_rows."""
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    path = tmp_path / "rows.parquet"
+    pq.write_table(
+        pa.table(
+            {
+                "id": pa.array([1, 2], pa.int64()),
+                "score": pa.array([0.5, None], pa.float64()),
+                "seen": pa.array([datetime.datetime(2024, 1, 2, tzinfo=datetime.UTC), None]),
+            }
+        ),
+        path,
+    )
+    config = bigquery.LoadJobConfig(
+        source_format=bigquery.SourceFormat.PARQUET,
+        write_disposition="WRITE_APPEND",
+        schema=[
+            bigquery.SchemaField("id", "INTEGER", mode="REQUIRED"),
+            bigquery.SchemaField("score", "FLOAT"),
+            bigquery.SchemaField("seen", "TIMESTAMP"),
+        ],
+    )
+    ref = f"{PROJECT}.{dataset}.scores"
+    for _ in range(2):
+        with path.open("rb") as handle:
+            job = client.load_table_from_file(handle, ref, job_config=config)
+            job.result()
+        assert job.output_rows == 2
+    table = client.get_table(ref)
+    assert table.num_rows == 4
+    assert table.schema[0].mode == "REQUIRED"
