@@ -6,18 +6,22 @@
     "body": {
       "jobReference": {
         "projectId": "<project>",
-        "jobId": "<job-77>"
+        "jobId": "<job-91>"
       },
       "configuration": {
-        "query": {
-          "query": "ALTER TABLE meta_t SET OPTIONS (description = 'altered', labels = [('a', 'b')])",
-          "useLegacySql": false,
-          "maximumBytesBilled": "104857600",
-          "defaultDataset": {
+        "copy": {
+          "sourceTables": [
+            {
+              "projectId": "<project>",
+              "datasetId": "<dataset>",
+              "tableId": "copy_target"
+            }
+          ],
+          "destinationTable": {
             "projectId": "<project>",
-            "datasetId": "<dataset>"
-          },
-          "useQueryCache": false
+            "datasetId": "<dataset>",
+            "tableId": "copy_whole"
+          }
         }
       }
     }
@@ -29,39 +33,35 @@
   "body": {
     "kind": "bigquery#job",
     "etag": "<etag>",
-    "id": "<project>:<location>.<job-77>",
+    "id": "<project>:<location>.<job-91>",
     "selfLink": "<self-link>",
     "user_email": "<email>",
     "configuration": {
-      "query": {
-        "query": "ALTER TABLE meta_t SET OPTIONS (description = 'altered', labels = [('a', 'b')])",
+      "copy": {
+        "sourceTables": [
+          {
+            "projectId": "<project>",
+            "datasetId": "<dataset>",
+            "tableId": "copy_target"
+          }
+        ],
         "destinationTable": {
           "projectId": "<project>",
           "datasetId": "<dataset>",
-          "tableId": "meta_t"
+          "tableId": "copy_whole"
         },
-        "defaultDataset": {
-          "datasetId": "<dataset>",
-          "projectId": "<project>"
-        },
-        "priority": "INTERACTIVE",
-        "useQueryCache": false,
-        "maximumBytesBilled": "104857600",
-        "useLegacySql": false
+        "operationType": "COPY"
       },
-      "jobType": "QUERY"
+      "jobType": "COPY"
     },
     "jobReference": {
       "projectId": "<project>",
-      "jobId": "<job-77>",
+      "jobId": "<job-91>",
       "location": "<location>"
     },
     "statistics": {
       "creationTime": "<time>",
-      "startTime": "<time>",
-      "query": {
-        "statementType": "ALTER_TABLE"
-      }
+      "startTime": "<time>"
     },
     "status": {
       "state": "RUNNING"

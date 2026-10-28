@@ -1,8 +1,13 @@
-description: DECLARE with a DEFAULT sets the variable, and a later statement reads it. See https://cloud.google.com/bigquery/docs/reference/standard-sql/procedural-language#declare.
-tags: [scripting]
+description: DECLARE with a DEFAULT sets the variable, and a later statement reads
+  it. See https://cloud.google.com/bigquery/docs/reference/standard-sql/procedural-language#declare.
+tags:
+- scripting
 query: DECLARE x INT64 DEFAULT 5; SELECT x * 2 AS v
 expected:
   columns:
-  - {name: v, type: INT64}
+  - name: v
+    type: INT64
   rows:
-  - [10]
+  - - 10
+verified: true
+recorded_at: '2026-10-21T14:24:49Z'

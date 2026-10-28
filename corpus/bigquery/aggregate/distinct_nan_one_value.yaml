@@ -3,7 +3,8 @@ tags:
 - probe
 - aggregate
 - nan
-query: SELECT DISTINCT x FROM UNNEST([CAST('nan' AS FLOAT64), CAST('nan' AS FLOAT64), 1.0]) AS x
+query: SELECT DISTINCT x FROM UNNEST([CAST('nan' AS FLOAT64), CAST('nan' AS FLOAT64),
+  1.0]) AS x
 ordered: false
 expected:
   columns:
@@ -12,3 +13,5 @@ expected:
   rows:
   - - NaN
   - - 1.0
+verified: true
+recorded_at: '2026-10-21T14:24:27Z'

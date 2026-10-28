@@ -3,8 +3,8 @@ tags:
 - probe
 - math
 - nan
-query: SELECT GREATEST(1.0, CAST('nan' AS FLOAT64)) AS g, LEAST(1.0, CAST('nan' AS FLOAT64)) AS l, LEAST(CAST(NULL
-  AS FLOAT64), CAST('nan' AS FLOAT64)) AS n
+query: SELECT GREATEST(1.0, CAST('nan' AS FLOAT64)) AS g, LEAST(1.0, CAST('nan' AS
+  FLOAT64)) AS l, LEAST(CAST(NULL AS FLOAT64), CAST('nan' AS FLOAT64)) AS n
 ordered: false
 expected:
   columns:
@@ -18,3 +18,5 @@ expected:
   - - NaN
     - NaN
     - null
+verified: true
+recorded_at: '2026-10-21T14:24:32Z'

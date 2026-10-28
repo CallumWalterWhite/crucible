@@ -1,0 +1,37 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/queries",
+    "params": {},
+    "body": {
+      "query": "SELECT `<dataset>`.half('a') AS v",
+      "useLegacySql": false,
+      "maximumBytesBilled": "104857600",
+      "defaultDataset": {
+        "projectId": "<project>",
+        "datasetId": "<dataset>"
+      },
+      "useQueryCache": false
+    }
+  },
+  "status": 400,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "error": {
+      "code": 400,
+      "message": "No matching signature for function <dataset>.half\n  Argument types: STRING\n  Signature: <dataset>.half(FLOAT64)\n    Argument 1: Unable to coerce type STRING to expected type FLOAT64 at [1:8]",
+      "errors": [
+        {
+          "message": "No matching signature for function <dataset>.half\n  Argument types: STRING\n  Signature: <dataset>.half(FLOAT64)\n    Argument 1: Unable to coerce type STRING to expected type FLOAT64 at [1:8]",
+          "domain": "global",
+          "reason": "invalidQuery",
+          "location": "q",
+          "locationType": "parameter"
+        }
+      ],
+      "status": "INVALID_ARGUMENT"
+    }
+  }
+}

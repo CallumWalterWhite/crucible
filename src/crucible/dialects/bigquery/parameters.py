@@ -10,11 +10,12 @@ from __future__ import annotations
 
 from sqlglot import exp
 
-from crucible.dialects.bigquery import errors
-from crucible.engine import ExecContext
+from crucible.engine import CrucibleError, ErrorKind, ExecContext
+from crucible.engine.errors import Location
 
 STATE = "query_parameters"
 POSITION = "crucible_parameter_position"  # Placeholder.meta, set by statements.split
+LOCATION = "crucible_parameter_location"  # Parameter.meta, set by statements.split
 
 
 def bind(query: exp.Expr, ctx: ExecContext) -> None:
@@ -28,6 +29,11 @@ def bind(query: exp.Expr, ctx: ExecContext) -> None:
             name = node.name.lower()
             missing = f"Query parameter '{node.name}' not found"
         if name not in declared:
-            raise errors.invalid(missing)
+            location = node.meta.get(LOCATION)
+            raise CrucibleError(
+                ErrorKind.INVALID_QUERY,
+                missing,
+                location=location if isinstance(location, Location) else None,
+            )
         kind = exp.DataType.build(declared[name], dialect="bigquery")
         node.replace(exp.Cast(this=exp.Placeholder(this=f"p_{name}"), to=kind))

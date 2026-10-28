@@ -1,0 +1,104 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/jobs",
+    "params": {},
+    "body": {
+      "jobReference": {
+        "projectId": "<project>",
+        "jobId": "<job-81>"
+      },
+      "configuration": {
+        "query": {
+          "query": "SELECT k, s, 1 / 0 AS z FROM streamed",
+          "useLegacySql": false,
+          "maximumBytesBilled": "104857600",
+          "defaultDataset": {
+            "projectId": "<project>",
+            "datasetId": "<dataset>"
+          },
+          "useQueryCache": false
+        },
+        "dryRun": true
+      }
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:<location>.",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "query": {
+        "query": "SELECT k, s, 1 / 0 AS z FROM streamed",
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<anon-dataset-1>",
+          "tableId": "<anon-table-27>"
+        },
+        "writeDisposition": "WRITE_TRUNCATE",
+        "defaultDataset": {
+          "datasetId": "<dataset>",
+          "projectId": "<project>"
+        },
+        "priority": "INTERACTIVE",
+        "useQueryCache": false,
+        "maximumBytesBilled": "104857600",
+        "useLegacySql": false
+      },
+      "dryRun": true,
+      "jobType": "QUERY"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "endTime": "<time>",
+      "totalBytesProcessed": "0",
+      "query": {
+        "totalBytesProcessed": "0",
+        "totalBytesBilled": "0",
+        "cacheHit": false,
+        "referencedTables": [
+          {
+            "projectId": "<project>",
+            "datasetId": "<dataset>",
+            "tableId": "streamed"
+          }
+        ],
+        "schema": {
+          "fields": [
+            {
+              "name": "k",
+              "type": "INTEGER",
+              "mode": "NULLABLE"
+            },
+            {
+              "name": "s",
+              "type": "STRING",
+              "mode": "NULLABLE"
+            },
+            {
+              "name": "z",
+              "type": "FLOAT",
+              "mode": "NULLABLE"
+            }
+          ]
+        },
+        "statementType": "SELECT",
+        "totalBytesProcessedAccuracy": "PRECISE"
+      }
+    },
+    "status": {
+      "state": "DONE"
+    },
+    "principal_subject": "<principal>"
+  }
+}

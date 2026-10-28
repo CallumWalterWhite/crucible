@@ -3,8 +3,8 @@ tags:
 - probe
 - aggregate
 - nan
-query: SELECT x, COUNT(*) AS c FROM UNNEST([CAST('nan' AS FLOAT64), CAST('nan' AS FLOAT64), 1.0]) AS x
-  GROUP BY x
+query: SELECT x, COUNT(*) AS c FROM UNNEST([CAST('nan' AS FLOAT64), CAST('nan' AS
+  FLOAT64), 1.0]) AS x GROUP BY x
 ordered: false
 expected:
   columns:
@@ -17,3 +17,5 @@ expected:
     - 2
   - - 1.0
     - 1
+verified: true
+recorded_at: '2026-10-21T14:24:29Z'

@@ -1,0 +1,76 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/jobs/<job-100>",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:<location>.<job-100>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "load": {
+        "schema": {
+          "fields": [
+            {
+              "name": "k",
+              "type": "INTEGER"
+            }
+          ]
+        },
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "ndjson_bad_value"
+        },
+        "writeDisposition": "WRITE_TRUNCATE",
+        "sourceFormat": "NEWLINE_DELIMITED_JSON"
+      },
+      "jobType": "LOAD"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-100>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "endTime": "<time>",
+      "totalSlotMs": "<duration>",
+      "reservation_id": "<reservation>"
+    },
+    "status": {
+      "errorResult": {
+        "reason": "invalid",
+        "message": "Error while reading data, error message: JSON table encountered too many errors, giving up. Rows: 1; errors: 1. Please look into the errors[] collection for more details."
+      },
+      "errors": [
+        {
+          "reason": "invalid",
+          "message": "Error while reading data, error message: JSON table encountered too many errors, giving up. Rows: 1; errors: 1. Please look into the errors[] collection for more details."
+        },
+        {
+          "reason": "invalid",
+          "message": "Error while reading data, error message: JSON processing encountered too many errors, giving up. Rows: 1; errors: 1; max bad: 0; error percent: 0"
+        },
+        {
+          "reason": "invalid",
+          "message": "Error while reading data, error message: JSON parsing error in row starting at position 0: Could not convert value 'string_value: \t \"abc\"' to integer. Field: k; Value: abc"
+        }
+      ],
+      "state": "DONE"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

@@ -11,3 +11,5 @@ expected:
     type: BOOL
   rows:
   - - false
+verified: true
+recorded_at: '2026-10-21T14:24:35Z'

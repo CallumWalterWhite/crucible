@@ -1,0 +1,57 @@
+{
+  "request": {
+    "method": "PUT",
+    "path": "/upload/projects/<project>/jobs?uploadType=resumable&upload_id=<upload-id>",
+    "params": {},
+    "body": "{\"k\": 1, \"nope\": 1}"
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:<location>.<job-104>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "load": {
+        "schema": {
+          "fields": [
+            {
+              "name": "k",
+              "type": "INTEGER"
+            }
+          ]
+        },
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "ndjson_ignore_unknown"
+        },
+        "writeDisposition": "WRITE_TRUNCATE",
+        "sourceFormat": "NEWLINE_DELIMITED_JSON",
+        "ignoreUnknownValues": true
+      },
+      "jobType": "LOAD"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-104>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "reservation_id": "<reservation>"
+    },
+    "status": {
+      "state": "RUNNING"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

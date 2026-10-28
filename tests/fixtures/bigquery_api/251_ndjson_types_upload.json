@@ -1,0 +1,96 @@
+{
+  "request": {
+    "method": "PUT",
+    "path": "/upload/projects/<project>/jobs?uploadType=resumable&upload_id=<upload-id>",
+    "params": {},
+    "body": "{\"k\": 1, \"f\": 1.5, \"n\": \"1.25\", \"b\": true, \"s\": \"x\", \"y\": \"Af8=\", \"d\": \"2024-02-29\", \"dt\": \"2024-01-02T03:04:05.123456\", \"tm\": \"04:05:06.500000\", \"ts\": \"2024-01-02T03:04:05.123456Z\", \"j\": \"{\\\"a\\\": 1}\"}"
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:<location>.<job-96>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "load": {
+        "schema": {
+          "fields": [
+            {
+              "name": "k",
+              "type": "INTEGER"
+            },
+            {
+              "name": "f",
+              "type": "FLOAT"
+            },
+            {
+              "name": "n",
+              "type": "NUMERIC"
+            },
+            {
+              "name": "b",
+              "type": "BOOLEAN"
+            },
+            {
+              "name": "s",
+              "type": "STRING"
+            },
+            {
+              "name": "y",
+              "type": "BYTES"
+            },
+            {
+              "name": "d",
+              "type": "DATE"
+            },
+            {
+              "name": "dt",
+              "type": "DATETIME"
+            },
+            {
+              "name": "tm",
+              "type": "TIME"
+            },
+            {
+              "name": "ts",
+              "type": "TIMESTAMP"
+            },
+            {
+              "name": "j",
+              "type": "JSON"
+            }
+          ]
+        },
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "tableId": "ndjson_types"
+        },
+        "writeDisposition": "WRITE_TRUNCATE",
+        "sourceFormat": "NEWLINE_DELIMITED_JSON"
+      },
+      "jobType": "LOAD"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-96>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "reservation_id": "<reservation>"
+    },
+    "status": {
+      "state": "RUNNING"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

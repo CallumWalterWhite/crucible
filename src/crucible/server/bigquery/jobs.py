@@ -111,6 +111,8 @@ class Job:
     anonymous_table: str | None = None
     load_statistics: dict[str, str] | None = None
     copied_rows: int | None = None  # copy jobs: rows written to the destination
+    child_jobs: int | None = None  # script jobs: statistics.numChildJobs
+    routine: tuple[str, str, str] | None = None  # CREATE FUNCTION: ddlTargetRoutine
     dry_run: bool = False  # planned, not run, and never stored (REST: configuration.dryRun)
 
     @property
@@ -259,6 +261,7 @@ class Runner:
                 for column in result.columns:
                     encoding.schema_field(column.name, column.type)  # raises for unmapped types
                 job.columns = result.columns
+                job.anonymous_table = f"anon{uuid.uuid4().hex}"  # jobs_insert_dry_run_select
         except CrucibleError as exc:
             job.fail(exc)
         job.ended_ms = now_ms()
@@ -266,9 +269,24 @@ class Runner:
 
     def _record(self, job: Job, session: Any, results: list[Result]) -> None:
         last = results[-1]
-        # shortcut: a multi-statement request reports its last statement's result as a SCRIPT
-        # job without child jobs; upgrade with BigQuery scripting (Phase 4).
-        job.statement_type = "SCRIPT" if len(results) > 1 else last.statement_type
+        # A temporary function belongs to the query that follows it, not a script of its own
+        # (jobs_query_temp_function is a SELECT).
+        statements = [r for r in results if not r.info.get("temporary_function")]
+        script = len(statements) > 1
+        job.statement_type = "SCRIPT" if script else last.statement_type
+        if script:
+            # shortcut: a child job per statement that runs a query, DECLARE and SET only when they
+            # read a subquery (jobs_get_script: DECLARE; SET from a subquery; SELECT has 2);
+            # record other scripts to confirm.
+            job.child_jobs = sum(
+                1
+                for r in statements
+                if r.statement_type not in ("DECLARE", "SET") or r.info.get("queried")
+            )
+        routine = last.info.get("routine")
+        if not script and isinstance(routine, tuple):
+            project, dataset, name = (str(part) for part in cast("tuple[Any, ...]", routine))
+            job.routine = (project, dataset, name)
         if last.statement_type == "SELECT":
             for column in last.columns:
                 if any(t.this == exp.DType.INTERVAL for t in column.type.find_all(exp.DataType)):
@@ -278,7 +296,7 @@ class Runner:
             job.rows = last.rows
             job.anonymous_table = f"anon{uuid.uuid4().hex}"
             return
-        if len(results) > 1:
+        if script:
             return
         if last.statement_type in ("INSERT", "MERGE", "UPDATE", "DELETE", "TRUNCATE_TABLE"):
             job.dml_affected_rows = last.rowcount

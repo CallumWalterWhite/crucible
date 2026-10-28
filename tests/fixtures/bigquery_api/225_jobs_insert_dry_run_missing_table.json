@@ -1,0 +1,44 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/jobs",
+    "params": {},
+    "body": {
+      "jobReference": {
+        "projectId": "<project>",
+        "jobId": "<job-83>"
+      },
+      "configuration": {
+        "query": {
+          "query": "SELECT * FROM no_such_table",
+          "useLegacySql": false,
+          "maximumBytesBilled": "104857600",
+          "defaultDataset": {
+            "projectId": "<project>",
+            "datasetId": "<dataset>"
+          },
+          "useQueryCache": false
+        },
+        "dryRun": true
+      }
+    }
+  },
+  "status": 404,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "error": {
+      "code": 404,
+      "message": "Not found: Table <project>:<dataset>.no_such_table was not found in location <location>",
+      "errors": [
+        {
+          "message": "Not found: Table <project>:<dataset>.no_such_table was not found in location <location>",
+          "domain": "global",
+          "reason": "notFound"
+        }
+      ],
+      "status": "NOT_FOUND"
+    }
+  }
+}

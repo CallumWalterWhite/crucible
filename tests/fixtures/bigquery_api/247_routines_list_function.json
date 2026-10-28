@@ -1,0 +1,28 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/projects/<project>/datasets/<dataset>/routines",
+    "params": {},
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "routines": [
+      {
+        "etag": "<etag>",
+        "routineReference": {
+          "projectId": "<project>",
+          "datasetId": "<dataset>",
+          "routineId": "half"
+        },
+        "routineType": "SCALAR_FUNCTION",
+        "creationTime": "<time>",
+        "lastModifiedTime": "<time>",
+        "language": "SQL"
+      }
+    ]
+  }
+}

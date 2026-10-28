@@ -19,7 +19,7 @@ import re
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from typing import Any, NoReturn
+from typing import Any, NoReturn, cast
 
 from crucible.engine import CrucibleUnsupportedError
 from crucible.server.bigquery import stream
@@ -145,6 +145,9 @@ def parse_ndjson(
     (client.py: load_table_from_json). Nested RECORD and REPEATED fields are allowed here.
     """
     _refuse_required(fields)
+    for field in fields:
+        if any(str(f["type"]).upper() == "JSON" for f in _nested(field)):
+            raise CrucibleUnsupportedError("NDJSON load into a JSON field inside a RECORD")
     if data.startswith(b"\xef\xbb\xbf"):
         raise CrucibleUnsupportedError("NDJSON with a byte order mark")
     if b"\r" in data:
@@ -164,11 +167,64 @@ def parse_ndjson(
             row = json.loads(text, parse_constant=_no_json_constant)
         except ValueError as exc:
             raise CrucibleUnsupportedError(f"NDJSON line {number} is not JSON") from exc
+        if isinstance(row, dict):
+            for field in fields:
+                value = cast("dict[str, Any]", row).get(field["name"])
+                if str(field["type"]).upper() == "JSON" and isinstance(value, str):
+                    # A JSON column takes the value itself, so a string stays a JSON string
+                    # (ndjson_types_query_results); insertAll parses it instead.
+                    row[field["name"]] = json.dumps(value)
         try:
             rows.append(tuple(stream.parse_row(row, fields, ignore_unknown=ignore_unknown)))
         except stream.RowError as exc:
-            raise CrucibleUnsupportedError(f"NDJSON line {number}: {exc.message}") from exc
+            detail = _ndjson_rejection(exc, row) if len(lines) == 1 else None
+            if detail is None:
+                raise CrucibleUnsupportedError(f"NDJSON line {number}: {exc.message}") from exc
+            # shortcut: only a one-row file is recorded (ndjson_bad_value_jobs_get,
+            # ndjson_unknown_field_jobs_get); record more rows to learn the counts.
+            raise LoadError(
+                [
+                    _JSON_SUMMARY.format(rows=1),
+                    _JSON_PROCESSING.format(rows=1),
+                    _JSON_ROW_ERROR.format(offset=0, detail=detail),
+                ]
+            ) from exc
     return rows
+
+
+_JSON_SUMMARY = (
+    "Error while reading data, error message: JSON table encountered too many errors, giving up. "
+    "Rows: {rows}; errors: 1. Please look into the errors[] collection for more details."
+)
+_JSON_PROCESSING = (
+    "Error while reading data, error message: JSON processing encountered too many errors, giving "
+    "up. Rows: {rows}; errors: 1; max bad: 0; error percent: 0"
+)
+_JSON_ROW_ERROR = (
+    "Error while reading data, error message: JSON parsing error in row starting at position "
+    "{offset}: {detail}"
+)
+_PLAIN_TEXT = re.compile(r"[A-Za-z0-9 ._-]*")
+
+
+def _ndjson_rejection(exc: stream.RowError, row: Any) -> str | None:
+    """BigQuery's detail for a rejected NDJSON row, for the recorded cases only."""
+    if exc.message.startswith("no such field: "):
+        return f"No such field: {exc.location}."
+    value = cast("dict[str, Any]", row).get(exc.location) if isinstance(row, dict) else None
+    plain = isinstance(value, str) and _PLAIN_TEXT.fullmatch(value)
+    if exc.message.startswith("Cannot convert value to integer") and plain:
+        # The value is printed as a protobuf string_value, so only plain text is safe to quote.
+        return (
+            f"Could not convert value 'string_value: \t \"{value}\"' to integer. "
+            f"Field: {exc.location}; Value: {value}"
+        )
+    return None
+
+
+def _nested(field: dict[str, Any]) -> list[dict[str, Any]]:
+    inner: list[dict[str, Any]] = field.get("fields", [])
+    return [deep for f in inner for deep in (f, *_nested(f))]
 
 
 def _refuse_required(fields: list[dict[str, Any]]) -> None:

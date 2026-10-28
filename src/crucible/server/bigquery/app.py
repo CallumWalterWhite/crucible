@@ -196,21 +196,19 @@ class BigQueryServer:
             k: (dict(v) if isinstance(v, dict) else v)  # pyright: ignore[reportUnknownArgumentType]
             for k, v in job.configuration.items()
         }
-        statistics: dict[str, Any] = {
-            "creationTime": str(job.created_ms),
-            "startTime": str(job.created_ms),
-        }
+        statistics: dict[str, Any] = {"creationTime": str(job.created_ms)}
+        if not job.dry_run:  # a dry run never starts (jobs_insert_dry_run_select)
+            statistics["startTime"] = str(job.created_ms)
         if job.job_type == "QUERY":
             query: dict[str, Any] = configuration["query"]
-            if job.dry_run:
-                pass  # nothing ran, so there is no destination table
-            elif job.anonymous_table is not None:
+            if job.anonymous_table is not None:
                 query["destinationTable"] = {
                     "projectId": job.project,
                     "datasetId": ANONYMOUS_DATASET,
                     "tableId": job.anonymous_table,
                 }
-                query["writeDisposition"] = "WRITE_TRUNCATE"
+                if job.statement_type != "SCRIPT":  # jobs_get_script has none
+                    query["writeDisposition"] = "WRITE_TRUNCATE"
             elif job.target is not None:
                 project, dataset, table = job.target
                 query["destinationTable"] = {
@@ -225,12 +223,36 @@ class BigQueryServer:
                     statistics["totalBytesProcessed"] = "0"
         elif job.load_statistics is not None:
             statistics["load"] = job.load_statistics
+        elif job.job_type == "COPY":
+            configuration["copy"].setdefault("operationType", "COPY")  # jobs_get_copy_table
+            if job.copied_rows is not None:
+                # JobStatistics5 (REST reference, Job); logical bytes are not emulated.
+                statistics["copy"] = {
+                    "copiedRows": str(job.copied_rows),
+                    "copiedLogicalBytes": "0",
+                }
         configuration["jobType"] = job.job_type
         if job.done:
             statistics["endTime"] = str(job.ended_ms)
+        if job.child_jobs is not None:
+            statistics["numChildJobs"] = str(job.child_jobs)  # jobs_get_script
         status: dict[str, Any] = {"state": "DONE" if job.done else "RUNNING"}
         if job.error is not None:
             status = {"errorResult": job.error, "errors": job.errors, **status}
+        if job.dry_run:
+            # A dry run has no job id: "id" ends at the location (jobs_insert_dry_run_select).
+            reference = {"projectId": job.project, "location": job.location}
+            return {
+                "kind": "bigquery#job",
+                "etag": _etag(),
+                "id": f"{job.project}:{job.location}.",
+                "selfLink": f"{base}/bigquery/v2/projects/{job.project}/jobs/?location="
+                f"{job.location}",
+                "configuration": configuration,
+                "jobReference": reference,
+                "statistics": statistics,
+                "status": status,
+            }
         return {
             "kind": "bigquery#job",
             "etag": _etag(),
@@ -253,9 +275,20 @@ class BigQueryServer:
             "cacheHit": False,
             "statementType": job.statement_type,
         }
-        if job.dry_run and job.columns is not None:
-            # JobStatistics2.schema: a dry-run query's result schema (REST reference, Job).
+        if job.statement_type == "SCRIPT":
+            del stats["cacheHit"]  # jobs_get_script
+        if (job.dry_run or job.statement_type == "SCRIPT") and job.columns is not None:
+            # JobStatistics2.schema: a dry run's, or a script's last statement's, result schema
+            # (REST reference, Job; jobs_get_script).
             stats["schema"] = encoding.schema([(c.name, c.type) for c in job.columns])
+        if job.routine is not None:
+            project, dataset, routine = job.routine
+            # JobStatistics2.ddlTargetRoutine (jobs_get_function).
+            stats["ddlTargetRoutine"] = {
+                "projectId": project,
+                "datasetId": dataset,
+                "routineId": routine,
+            }
         if job.dml_affected_rows is not None:
             stats["numDmlAffectedRows"] = str(job.dml_affected_rows)
             # JobStatistics2.dmlStats: https://cloud.google.com/bigquery/docs/reference/rest/v2/Job#DmlStats
@@ -307,7 +340,12 @@ class BigQueryServer:
                 return JSONResponse(self.job_resource(done, self._base(request)))
             if configuration.get("dryRun"):
                 # A dry run is planned and answered, never stored: jobs.get does not find it.
+                # A failed one is an HTTP error, not a failed job
+                # (jobs_insert_dry_run_missing_table).
                 job = await run_in_threadpool(self.runner.dry_run_query, job)
+                if job.error is not None:
+                    assert job.error_kind is not None
+                    return job_error_response(job.error, job.error_kind)
                 return JSONResponse(self.job_resource(job, self._base(request)))
             self.store.add(job)
         except CrucibleError as exc:
@@ -408,7 +446,8 @@ class BigQueryServer:
                 **rows,
                 "totalBytesProcessed": "0",
                 "jobComplete": True,
-                "cacheHit": False,
+                # get_query_results_script has no cacheHit
+                **({} if job.statement_type == "SCRIPT" else {"cacheHit": False}),
             }
         )
 
@@ -456,6 +495,11 @@ class BigQueryServer:
                         "totalBytesProcessed": "0",
                         "jobComplete": True,
                         "cacheHit": False,
+                        "totalBytesBilled": "0",  # jobs_query_dry_run
+                        "location": job.location,
+                        "creationTime": str(job.created_ms),
+                        "endTime": str(job.ended_ms),
+                        "statementType": job.statement_type,
                     }
                 )
             self.store.add(job)

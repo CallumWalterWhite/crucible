@@ -1,0 +1,165 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/jobs",
+    "params": {},
+    "body": {
+      "jobReference": {
+        "projectId": "<project>",
+        "jobId": "<job-97>"
+      },
+      "configuration": {
+        "query": {
+          "query": "SELECT * FROM ndjson_types",
+          "useLegacySql": false,
+          "maximumBytesBilled": "104857600",
+          "defaultDataset": {
+            "projectId": "<project>",
+            "datasetId": "<dataset>"
+          },
+          "useQueryCache": false
+        }
+      }
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#job",
+    "etag": "<etag>",
+    "id": "<project>:<location>.<job-97>",
+    "selfLink": "<self-link>",
+    "user_email": "<email>",
+    "configuration": {
+      "query": {
+        "query": "SELECT * FROM ndjson_types",
+        "destinationTable": {
+          "projectId": "<project>",
+          "datasetId": "<anon-dataset-1>",
+          "tableId": "<anon-table-31>"
+        },
+        "writeDisposition": "WRITE_TRUNCATE",
+        "defaultDataset": {
+          "datasetId": "<dataset>",
+          "projectId": "<project>"
+        },
+        "priority": "INTERACTIVE",
+        "useQueryCache": false,
+        "maximumBytesBilled": "104857600",
+        "useLegacySql": false
+      },
+      "jobType": "QUERY"
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-97>",
+      "location": "<location>"
+    },
+    "statistics": {
+      "creationTime": "<time>",
+      "startTime": "<time>",
+      "endTime": "<time>",
+      "totalBytesProcessed": "85",
+      "query": {
+        "queryPlan": [
+          {
+            "name": "S00: Output",
+            "id": "0",
+            "startMs": "<time>",
+            "endMs": "<time>",
+            "waitRatioAvg": 0.1,
+            "waitMsAvg": "1",
+            "waitRatioMax": 0.1,
+            "waitMsMax": "1",
+            "readRatioAvg": 0.7,
+            "readMsAvg": "7",
+            "readRatioMax": 0.7,
+            "readMsMax": "7",
+            "computeRatioAvg": 1,
+            "computeMsAvg": "10",
+            "computeRatioMax": 1,
+            "computeMsMax": "10",
+            "writeRatioAvg": 0.3,
+            "writeMsAvg": "3",
+            "writeRatioMax": 0.3,
+            "writeMsMax": "3",
+            "shuffleOutputBytes": "89",
+            "shuffleOutputBytesSpilled": "0",
+            "recordsRead": "1",
+            "recordsWritten": "1",
+            "parallelInputs": "1",
+            "completedParallelInputs": "1",
+            "status": "COMPLETE",
+            "steps": [
+              {
+                "kind": "READ",
+                "substeps": [
+                  "$1:k, $2:f, $3:n, $4:b, $5:s, $6:y, $7:d, $8:dt, $9:tm, $10:ts, $11:j",
+                  "FROM ndjson_types"
+                ]
+              },
+              {
+                "kind": "WRITE",
+                "substeps": [
+                  "$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11",
+                  "TO __stage00_output"
+                ]
+              }
+            ],
+            "slotMs": "<duration>",
+            "computeMode": "BIGQUERY"
+          }
+        ],
+        "estimatedBytesProcessed": "85",
+        "timeline": [
+          {
+            "elapsedMs": "<duration>",
+            "totalSlotMs": "<duration>",
+            "pendingUnits": "0",
+            "completedUnits": "1",
+            "estimatedRunnableUnits": "0"
+          }
+        ],
+        "totalPartitionsProcessed": "0",
+        "totalBytesProcessed": "85",
+        "totalBytesBilled": "10485760",
+        "billingTier": 1,
+        "totalSlotMs": "<duration>",
+        "cacheHit": false,
+        "referencedTables": [
+          {
+            "projectId": "<project>",
+            "datasetId": "<dataset>",
+            "tableId": "ndjson_types"
+          }
+        ],
+        "statementType": "SELECT",
+        "transferredBytes": "0",
+        "metadataCacheStatistics": {
+          "tableMetadataCacheUsage": [
+            {
+              "tableReference": {
+                "projectId": "<project>",
+                "datasetId": "<dataset>",
+                "tableId": "ndjson_types"
+              },
+              "unusedReason": "OTHER_REASON",
+              "explanation": "Table does not have CMETA."
+            }
+          ]
+        }
+      },
+      "totalSlotMs": "<duration>",
+      "finalExecutionDurationMs": "<duration>"
+    },
+    "status": {
+      "state": "DONE"
+    },
+    "principal_subject": "<principal>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    }
+  }
+}

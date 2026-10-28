@@ -31,6 +31,19 @@ def invalid_at_statement(tree: exp.Expr, message: str) -> CrucibleError:
     )
 
 
+def location_of(node: exp.Expr) -> Location | None:
+    """Where `node`'s token starts in the request; SQLGlot's meta `col` is its last character."""
+    meta = node.meta
+    if not {"line", "col", "start", "end"} <= meta.keys():
+        return None
+    return Location(int(meta["line"]), int(meta["col"]) - (int(meta["end"]) - int(meta["start"])))
+
+
+def invalid_at(node: exp.Expr, message: str) -> CrucibleError:
+    """An invalid-query error located at `node`, as BigQuery reports it."""
+    return CrucibleError(ErrorKind.INVALID_QUERY, message, location=location_of(node))
+
+
 def reword(exc: CrucibleError) -> CrucibleError:
     """BigQuery's wording for runtime errors DuckDB raises itself (recorded messages).
 

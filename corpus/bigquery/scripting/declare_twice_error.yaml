@@ -1,7 +1,11 @@
 description: Declaring the same variable twice is an error. See https://cloud.google.com/bigquery/docs/reference/standard-sql/procedural-language#declare.
-tags: [scripting]
+tags:
+- scripting
 query: DECLARE x INT64; DECLARE x INT64; SELECT 1
 expected:
   error:
     kind: invalid_query
-    message_contains: already declared
+    message: Variable 'x' redeclaration at [1:26]
+    message_contains: redeclaration
+verified: false
+recorded_at: '2026-10-21T14:24:58Z'

@@ -1,30 +1,30 @@
-description: dbt-bigquery's dynamic insert_overwrite script (macros insert_overwrite.sql, 1.9 and 1.12) replaces the
-  partitions present in the new data and keeps the others.
-tags: [scripting, dbt]
+description: dbt-bigquery's dynamic insert_overwrite script (macros insert_overwrite.sql,
+  1.9 and 1.12) replaces the partitions present in the new data and keeps the others.
+tags:
+- scripting
+- dbt
 setup:
 - CREATE TABLE m (event_date DATE, id INT64) PARTITION BY event_date
 - INSERT INTO m VALUES (DATE '2024-01-01', 1), (DATE '2024-01-02', 2)
-query: |-
-  declare dbt_partitions_for_replacement array<date>;
-  create or replace table m__dbt_tmp partition by event_date as (select DATE '2024-01-02' as event_date, 20 as id);
-  set (dbt_partitions_for_replacement) = (
-      select as struct
-          array_agg(distinct date(event_date) IGNORE NULLS)
-      from m__dbt_tmp
-  );
-  merge into m as DBT_INTERNAL_DEST
-      using (select * from m__dbt_tmp) as DBT_INTERNAL_SOURCE
-      on FALSE
-  when not matched by source
-       and date(DBT_INTERNAL_DEST.event_date) in unnest(dbt_partitions_for_replacement)
-   then delete
-  when not matched then insert (event_date, id) values (event_date, id);
-  drop table if exists m__dbt_tmp;
-  select event_date, id from m
+query: "declare dbt_partitions_for_replacement array<date>;\ncreate or replace table\
+  \ m__dbt_tmp partition by event_date as (select DATE '2024-01-02' as event_date,\
+  \ 20 as id);\nset (dbt_partitions_for_replacement) = (\n    select as struct\n \
+  \       array_agg(distinct date(event_date) IGNORE NULLS)\n    from m__dbt_tmp\n\
+  );\nmerge into m as DBT_INTERNAL_DEST\n    using (select * from m__dbt_tmp) as DBT_INTERNAL_SOURCE\n\
+  \    on FALSE\nwhen not matched by source\n     and date(DBT_INTERNAL_DEST.event_date)\
+  \ in unnest(dbt_partitions_for_replacement)\n then delete\nwhen not matched then\
+  \ insert (event_date, id) values (event_date, id);\ndrop table if exists m__dbt_tmp;\n\
+  select event_date, id from m"
 expected:
   columns:
-  - {name: event_date, type: DATE}
-  - {name: id, type: INT64}
+  - name: event_date
+    type: DATE
+  - name: id
+    type: INT64
   rows:
-  - ['2024-01-01', 1]
-  - ['2024-01-02', 20]
+  - - '2024-01-02'
+    - 20
+  - - '2024-01-01'
+    - 1
+verified: true
+recorded_at: '2026-10-21T14:25:10Z'

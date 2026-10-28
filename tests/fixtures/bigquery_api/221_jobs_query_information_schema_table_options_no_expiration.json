@@ -1,0 +1,119 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/queries",
+    "params": {},
+    "body": {
+      "query": "SELECT table_name, option_name, option_type, option_value FROM `<project>`.`<dataset>_noexp`.INFORMATION_SCHEMA.TABLE_OPTIONS ORDER BY table_name, option_name",
+      "useLegacySql": false,
+      "maximumBytesBilled": "104857600",
+      "defaultDataset": {
+        "projectId": "<project>",
+        "datasetId": "<dataset>"
+      },
+      "useQueryCache": false
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#queryResponse",
+    "schema": {
+      "fields": [
+        {
+          "name": "table_name",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "option_name",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "option_type",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "option_value",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        }
+      ]
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-79>",
+      "location": "<location>"
+    },
+    "totalRows": "3",
+    "rows": [
+      {
+        "f": [
+          {
+            "v": "opts"
+          },
+          {
+            "v": "description"
+          },
+          {
+            "v": "STRING"
+          },
+          {
+            "v": "\"Say \\\"hi\\\"\""
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "opts"
+          },
+          {
+            "v": "labels"
+          },
+          {
+            "v": "ARRAY<STRUCT<STRING, STRING>>"
+          },
+          {
+            "v": "[STRUCT(\"team\", \"data\")]"
+          }
+        ]
+      },
+      {
+        "f": [
+          {
+            "v": "parts"
+          },
+          {
+            "v": "require_partition_filter"
+          },
+          {
+            "v": "BOOL"
+          },
+          {
+            "v": "false"
+          }
+        ]
+      }
+    ],
+    "totalBytesProcessed": "10485760",
+    "jobComplete": true,
+    "cacheHit": false,
+    "queryId": "<query-id>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    },
+    "totalBytesBilled": "10485760",
+    "totalSlotMs": "<duration>",
+    "location": "<location>",
+    "creationTime": "<time>",
+    "startTime": "<time>",
+    "endTime": "<time>",
+    "pageRowCount": "3",
+    "statementType": "SELECT"
+  }
+}

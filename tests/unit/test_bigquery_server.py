@@ -287,8 +287,10 @@ def test_a_dry_run_statement_changes_nothing(client):
 
 def test_a_dry_run_reports_plan_time_errors(client):
     make_dataset(client)
-    job = dry_run(client, "SELECT * FROM ds.missing").json()
-    assert job["status"]["errorResult"]["reason"] == "notFound"
+    response = dry_run(client, "SELECT * FROM ds.missing")
+    # An HTTP error, not a failed job (jobs_insert_dry_run_missing_table).
+    assert response.status_code == 404
+    assert response.json()["error"]["errors"][0]["reason"] == "notFound"
 
 
 def test_jobs_query_dry_run_has_a_schema_and_no_rows_or_job_id(client):
@@ -965,7 +967,7 @@ def test_an_ndjson_load_keeps_repeated_and_record_fields(client):
 
 def test_an_ndjson_value_outside_the_confirmed_spellings_fails_the_job_as_unsupported(client):
     make_dataset(client)
-    job = load_ndjson(client, "bad", b'{"id": "abc", "s": "x"}')
+    job = load_ndjson(client, "bad", b'{"id": "abc", "s": "x"}\n{"id": 2, "s": "y"}')
     error = job["status"]["errorResult"]
     assert error["reason"] == "invalidQuery"
     assert error["message"].startswith("Not supported by Crucible")
@@ -977,7 +979,11 @@ def test_an_unknown_ndjson_field_fails_unless_ignore_unknown_values_is_set(clien
     make_dataset(client)
     data = b'{"id": 1, "s": "a", "nope": 2}'
     refused = load_ndjson(client, "unknown", data)
-    assert refused["status"]["errorResult"]["reason"] == "invalidQuery"
+    # BigQuery's three messages (ndjson_unknown_field_jobs_get).
+    assert refused["status"]["errorResult"]["reason"] == "invalid"
+    assert refused["status"]["errors"][-1]["message"].endswith(
+        "JSON parsing error in row starting at position 0: No such field: nope."
+    )
     loaded = load_ndjson(client, "ignored", data, ignoreUnknownValues=True)
     assert loaded["status"]["state"] == "DONE"
     rows = run_query(client, "SELECT id, s FROM ds.ignored").json()["rows"]
@@ -1289,4 +1295,4 @@ def test_routines_list_and_get_report_persistent_functions(client):
     assert routine["language"] == "SQL"
     assert routine["arguments"] == [{"name": "x", "dataType": {"typeKind": "FLOAT64"}}]
     assert routine["returnType"] == {"typeKind": "FLOAT64"}
-    assert routine["definitionBody"] == "(x * 2)"
+    assert routine["definitionBody"] == "x * 2"  # routines_get_function

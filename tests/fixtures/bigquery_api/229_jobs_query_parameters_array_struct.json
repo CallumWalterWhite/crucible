@@ -1,0 +1,114 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/projects/<project>/queries",
+    "params": {},
+    "body": {
+      "query": "SELECT ARRAY_LENGTH(@a) AS l, @st.x AS x",
+      "useLegacySql": false,
+      "maximumBytesBilled": "104857600",
+      "defaultDataset": {
+        "projectId": "<project>",
+        "datasetId": "<dataset>"
+      },
+      "useQueryCache": false,
+      "parameterMode": "NAMED",
+      "queryParameters": [
+        {
+          "name": "a",
+          "parameterType": {
+            "type": "ARRAY",
+            "arrayType": {
+              "type": "INT64"
+            }
+          },
+          "parameterValue": {
+            "arrayValues": [
+              {
+                "value": "1"
+              },
+              {
+                "value": "2"
+              }
+            ]
+          }
+        },
+        {
+          "name": "st",
+          "parameterType": {
+            "type": "STRUCT",
+            "structTypes": [
+              {
+                "name": "x",
+                "type": {
+                  "type": "INT64"
+                }
+              }
+            ]
+          },
+          "parameterValue": {
+            "structValues": {
+              "x": {
+                "value": "7"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=UTF-8"
+  },
+  "body": {
+    "kind": "bigquery#queryResponse",
+    "schema": {
+      "fields": [
+        {
+          "name": "l",
+          "type": "INTEGER",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "x",
+          "type": "INTEGER",
+          "mode": "NULLABLE"
+        }
+      ]
+    },
+    "jobReference": {
+      "projectId": "<project>",
+      "jobId": "<job-86>",
+      "location": "<location>"
+    },
+    "totalRows": "1",
+    "rows": [
+      {
+        "f": [
+          {
+            "v": "2"
+          },
+          {
+            "v": "7"
+          }
+        ]
+      }
+    ],
+    "totalBytesProcessed": "0",
+    "jobComplete": true,
+    "cacheHit": false,
+    "queryId": "<query-id>",
+    "jobCreationReason": {
+      "code": "REQUESTED"
+    },
+    "totalBytesBilled": "0",
+    "totalSlotMs": "<duration>",
+    "location": "<location>",
+    "creationTime": "<time>",
+    "startTime": "<time>",
+    "endTime": "<time>",
+    "pageRowCount": "1",
+    "statementType": "SELECT"
+  }
+}

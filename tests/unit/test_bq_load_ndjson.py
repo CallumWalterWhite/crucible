@@ -15,7 +15,7 @@ from typing import Any
 import pytest
 
 from crucible.engine import CrucibleUnsupportedError
-from crucible.server.bigquery.load import parse_ndjson
+from crucible.server.bigquery.load import LoadError, parse_ndjson
 
 SCHEMA: list[dict[str, Any]] = [
     {"name": "id", "type": "INTEGER"},
@@ -89,7 +89,7 @@ def test_the_client_spellings_of_each_type_load_as_their_values():
         datetime(2024, 1, 2, 3, 4, 5, 123456),
         time(4, 5, 6, 500000),
         datetime(2024, 1, 2, 3, 4, 5, 123456, tzinfo=UTC),
-        '{"a": 1}',
+        '"{\\"a\\": 1}"',  # a JSON string, not an object (ndjson_types_query_results)
     )
 
 
@@ -109,10 +109,38 @@ def test_a_standard_struct_name_loads_as_a_record():
     assert parse(b'{"r": {"x": 3}}', fields) == [({"x": 3},)]
 
 
-def test_an_unknown_field_is_unsupported_unless_ignored():
-    with pytest.raises(CrucibleUnsupportedError, match="NDJSON line 1: no such field: nope"):
+def test_an_unknown_field_is_rejected_unless_ignored():
+    with pytest.raises(LoadError) as info:
         parse(b'{"id": 1, "nope": 2}')
+    assert info.value.messages == [
+        "Error while reading data, error message: JSON table encountered too many errors, giving "
+        "up. Rows: 1; errors: 1. Please look into the errors[] collection for more details.",
+        "Error while reading data, error message: JSON processing encountered too many errors, "
+        "giving up. Rows: 1; errors: 1; max bad: 0; error percent: 0",
+        "Error while reading data, error message: JSON parsing error in row starting at position "
+        "0: No such field: nope.",
+    ]  # ndjson_unknown_field_jobs_get
     assert parse(b'{"id": 1, "nope": 2}', ignore_unknown=True) == [(1, None)]
+    # Only a one-row file is recorded.
+    with pytest.raises(CrucibleUnsupportedError, match="NDJSON line 2: no such field: nope"):
+        parse(b'{"id": 1}\n{"id": 1, "nope": 2}')
+
+
+def test_a_json_column_takes_strings_only_at_the_top_level():
+    json_field = {"name": "j", "type": "JSON"}
+    with pytest.raises(CrucibleUnsupportedError):  # an object for a JSON column: not recorded
+        parse(b'{"j": {"a": 1}}', [json_field])
+    with pytest.raises(CrucibleUnsupportedError, match="JSON field inside a RECORD"):
+        parse(b"{}", [{"name": "r", "type": "RECORD", "fields": [json_field]}])
+
+
+def test_a_string_that_is_not_an_integer_is_rejected():
+    with pytest.raises(LoadError) as info:
+        parse(b'{"id": "abc"}')
+    assert info.value.messages[-1] == (
+        "Error while reading data, error message: JSON parsing error in row starting at position "
+        "0: Could not convert value 'string_value: \t \"abc\"' to integer. Field: id; Value: abc"
+    )  # ndjson_bad_value_jobs_get
 
 
 def test_an_unknown_nested_field_is_unsupported_even_when_ignored():
@@ -142,7 +170,7 @@ def test_a_required_column_is_unsupported_because_a_missing_value_is_a_rejection
 @pytest.mark.parametrize(
     "line",
     [
-        b'{"id": "abc"}',  # a rejection in BigQuery; its message is not recorded
+        b'{"id": "a\\"b"}',  # a rejection whose quoting is not recorded
         b'{"id": 9223372036854775808}',  # out of INT64 range
         b'{"id": 1.5}',  # a JSON float for an INTEGER
         b'{"s": 2}',  # a number for a STRING

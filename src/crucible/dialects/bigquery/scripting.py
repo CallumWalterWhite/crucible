@@ -83,13 +83,14 @@ def plan_declare(
             for identifier in names:
                 name = identifier.name.lower()
                 if name in variables:
-                    raise errors.invalid_at_statement(
-                        tree, f"Variable {identifier.name} is already declared"
+                    # recorded: "Variable 'x' redeclaration at [1:26]", at the second name
+                    raise errors.invalid_at(
+                        identifier, f"Variable '{identifier.name}' redeclaration"
                     )
                 assert type_sql is not None
                 variables[name] = type_sql
                 _assign(c, name, value)
-        return Result("DECLARE")
+        return Result("DECLARE", info={"queried": _reads_table(tree)})
 
     return CommandPlan(run, "DECLARE")
 
@@ -104,12 +105,14 @@ def plan_set(tree: exp.Set, ctx: ExecContext, plan_query: Callable[[exp.Expr], P
             target = assignment.this
             targets = target.expressions if isinstance(target, exp.Tuple) else [target]
             targets = [t.this if isinstance(t, exp.Paren) else t for t in targets]
-            names = [t.name.lower() for t in targets if isinstance(t, exp.Column)]
-            if len(names) != len(targets):
+            columns = [t for t in targets if isinstance(t, exp.Column)]
+            if len(columns) != len(targets):
                 raise CrucibleUnsupportedError(f"SET target {target.sql('bigquery')}")
-            for name in names:
-                if name not in variables:
-                    raise errors.invalid_at_statement(tree, f"Undeclared variable: {name}")
+            names = [t.name.lower() for t in columns]
+            for column in columns:
+                if column.name.lower() not in variables:
+                    # recorded: "Undeclared variable: y at [1:5]", at the name
+                    raise errors.invalid_at(column.this, f"Undeclared variable: {column.name}")
             source = assignment.expression
             if len(names) == 1 and not _is_struct_subquery(source):
                 kind = exp.DataType.build(variables[names[0]], dialect="bigquery")
@@ -132,9 +135,14 @@ def plan_set(tree: exp.Set, ctx: ExecContext, plan_query: Callable[[exp.Expr], P
                 )
             for name, value in zip(names, row, strict=True):
                 _assign(c, name, value)
-        return Result("SET")
+        return Result("SET", info={"queried": _reads_table(tree)})
 
     return CommandPlan(run, "SET")
+
+
+def _reads_table(tree: exp.Expr) -> bool:
+    """A DECLARE or SET whose value is a subquery runs as a child job of the script."""
+    return tree.find(exp.Select) is not None
 
 
 def _is_struct_subquery(node: exp.Expr) -> bool:

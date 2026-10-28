@@ -12,6 +12,7 @@ JavaScript, remote, table-valued and templated (ANY TYPE) functions are refused.
 
 from __future__ import annotations
 
+import itertools
 import time
 from typing import Any
 
@@ -28,11 +29,14 @@ from crucible.engine import (
     Plan,
     Result,
 )
+from crucible.engine.errors import Location
 
 TEMP_STATE = "temp_functions"  # session.state: lower name -> definition
 ROUTINES = "routines"  # dataset properties: lower name -> definition
-_CHECK = "crucible_udf_check"  # Cast.meta: (function name, "argument" | "return")
+_CHECK = "crucible_udf_check"  # Cast.meta: (name, definition, call number, argument, location)
+_START = "crucible_udf_start"  # Dot.meta: where a qualified call's name starts
 _MAX_DEPTH = 16
+_CALLS = itertools.count()  # tells apart the argument casts of separate calls
 
 
 def _definition(tree: exp.Create) -> dict[str, Any]:
@@ -52,6 +56,8 @@ def _definition(tree: exp.Create) -> dict[str, Any]:
     body = tree.expression
     if not isinstance(body, exp.Expr) or isinstance(body, exp.Literal):
         raise CrucibleUnsupportedError("a function body that is not a SQL expression")
+    if isinstance(body, exp.Paren):
+        body = body.this  # AS (x / 2) is stored as "x / 2" (routines_get_function)
     arguments: list[dict[str, str]] = []
     for param in udf.expressions:
         assert isinstance(param, exp.ColumnDef)
@@ -84,7 +90,7 @@ def plan_create(tree: exp.Create, ctx: ExecContext) -> Plan:
         def run_temp(c: ExecContext) -> Result:
             functions: dict[str, Any] = c.session.state.setdefault(TEMP_STATE, {})
             functions[target.name.lower()] = definition
-            return Result("CREATE_FUNCTION")
+            return Result("CREATE_FUNCTION", info={"temporary_function": True})
 
         return CommandPlan(run_temp, "CREATE_FUNCTION")
     project = target.catalog or ctx.session.default_catalog
@@ -107,7 +113,7 @@ def plan_create(tree: exp.Create, ctx: ExecContext) -> Plan:
                 )
         routines[key] = definition
         c.catalog.set_properties(project, dataset, "", props | {ROUTINES: routines})
-        return Result("CREATE_FUNCTION")
+        return Result("CREATE_FUNCTION", info={"routine": (project, dataset, target.name)})
 
     return CommandPlan(run, "CREATE_FUNCTION")
 
@@ -148,12 +154,13 @@ def _lookup(call: exp.Expr, ctx: ExecContext) -> tuple[str, dict[str, Any], list
         definition = temp.get(call.name.lower())
         project, dataset = ctx.session.default_catalog, ctx.session.default_schema
         if definition is None and project and dataset and dataset in ctx.catalog.schemas(project):
-            # shortcut: an unqualified name falls back to the default dataset's functions; the
-            # corpus case udf/persistent_function_over_table settles it when recorded.
             stored: dict[str, Any] = (
                 ctx.catalog.properties(project, dataset, "").get(ROUTINES) or {}
             )
-            definition = stored.get(call.name.lower())
+            if call.name.lower() in stored:
+                # A persistent function needs its dataset even in the default dataset
+                # (recorded: udf/persistent_function_unqualified_not_found).
+                raise errors.invalid_at(call, f"Function not found: {call.name}")
         return (call.name, definition, list(call.expressions)) if definition else None
     if isinstance(call, exp.Dot) and isinstance(call.expression, exp.Anonymous):
         parts: list[str] = []
@@ -162,6 +169,7 @@ def _lookup(call: exp.Expr, ctx: ExecContext) -> tuple[str, dict[str, Any], list
             parts[:0] = node.expression.name.split(".")
             node = node.this
         parts[:0] = node.name.split(".")  # `p.ds`.f(...) quotes both parts in one identifier
+        call.meta[_START] = errors.location_of(node)  # BigQuery reports the name's start
         if len(parts) not in (1, 2):
             return None
         dataset = parts[-1]
@@ -189,15 +197,19 @@ def expand(tree: exp.Expr, ctx: ExecContext, depth: int = 0) -> exp.Expr:
             return node
         name, definition, args = found
         params: list[dict[str, str]] = definition["arguments"]
+        # Locations inside a body would point into the body's text, not the request.
+        location = (node.meta.get(_START) or errors.location_of(node)) if depth == 0 else None
         if len(args) != len(params):
-            raise _no_signature(name, definition, [])
+            raise _no_signature(name, definition, None, location)
+        call = next(_CALLS)
         bound: dict[str, exp.Expr] = {}
-        for param, arg in zip(params, args, strict=True):
+        for index, (param, arg) in enumerate(zip(params, args, strict=True)):
             kind = exp.DataType.build(param["type"], dialect="bigquery")
             cast = exp.Cast(this=arg.copy(), to=kind)
-            cast.meta[_CHECK] = (name, definition)
+            cast.meta[_CHECK] = (name, definition, call, index, location)
             bound[param["name"].lower()] = cast
-        body = sqlglot.parse_one(definition["body"], read="bigquery")
+        # Parenthesised, so a body that is only a parameter (`AS (x)`) has a parent to replace in.
+        body = sqlglot.parse_one(f"({definition['body']})", read="bigquery")
         for column in list(body.find_all(exp.Column)):
             if not column.table and column.name.lower() in bound:
                 column.replace(bound[column.name.lower()].copy())
@@ -206,38 +218,59 @@ def expand(tree: exp.Expr, ctx: ExecContext, depth: int = 0) -> exp.Expr:
             ret = exp.Cast(
                 this=body, to=exp.DataType.build(definition["return_type"], dialect="bigquery")
             )
-            ret.meta[_CHECK] = (name, definition | {"returns": True})
+            ret.meta[_CHECK] = (name, definition | {"returns": True}, call, 0, location)
             return exp.Paren(this=ret)
-        return exp.Paren(this=body)
+        return body
 
     return tree.transform(replace, copy=False)
 
 
 def check(query: exp.Expr) -> None:
     """After annotation: each argument must coerce to its parameter's type, the body to RETURNS."""
+    calls: dict[tuple[int, bool], list[exp.Cast]] = {}
     for cast in query.find_all(exp.Cast):
         marked = cast.meta.get(_CHECK)
-        if marked is None:
-            continue
-        name, definition = marked
-        source = cast.this.type
-        if source is None or source.this in (exp.DType.UNKNOWN, exp.DType.NULL):
-            continue
-        literal = isinstance(cast.this, exp.Literal) and cast.this.is_string
-        if types.coerces(source, cast.to, literal_string=literal):
-            continue
-        if definition.get("returns"):
-            raise errors.invalid(
-                f"Function {name} declared to return {types.type_name(cast.to)} but the function "
-                f"body produces incompatible type {types.type_name(source)}"
+        if marked is not None:
+            calls.setdefault((marked[2], bool(marked[1].get("returns"))), []).append(cast)
+    for casts in calls.values():
+        casts.sort(key=lambda c: c.meta[_CHECK][3])
+        name, definition, _, _, location = casts[0].meta[_CHECK]
+        given = [c.this.type for c in casts]
+        for cast, source in zip(casts, given, strict=True):
+            if source is None or source.this in (exp.DType.UNKNOWN, exp.DType.NULL):
+                continue
+            literal = isinstance(cast.this, exp.Literal) and cast.this.is_string
+            if types.coerces(source, cast.to, literal_string=literal):
+                continue
+            if definition.get("returns"):
+                raise errors.invalid(
+                    f"Function {name} declared to return {types.type_name(cast.to)} but the "
+                    f"function body produces incompatible type {types.type_name(source)}"
+                )
+            index = cast.meta[_CHECK][3]
+            shown = [types.type_name(t) if t is not None else "NULL" for t in given]
+            mismatch = (
+                f"Argument {index + 1}: Unable to coerce type {types.type_name(source)} to "
+                f"expected type {types.type_name(cast.to)}"
             )
-        raise _no_signature(name, definition, [types.type_name(source)])
+            raise _no_signature(name, definition, (shown, mismatch), location)
 
 
-def _no_signature(name: str, definition: dict[str, Any], given: list[str]) -> CrucibleError:
+def _no_signature(
+    name: str,
+    definition: dict[str, Any],
+    given: tuple[list[str], str] | None,
+    location: Location | None,
+) -> CrucibleError:
+    """Recorded (udf/temp_function_signature_error): "No matching signature for function f\n
+    Argument types: STRING\n  Signature: f(INT64)\n    Argument 1: Unable to coerce type STRING to
+    expected type INT64 at [1:48]". The wrong-number-of-arguments detail is not recorded."""
     supported = ", ".join(a["type"] for a in definition["arguments"])
-    shown = ", ".join(given) if given else "(wrong number of arguments)"
-    return errors.invalid(
-        f"No matching signature for function {name} for argument types: {shown}. "
-        f"Supported signature: {name}({supported})"
+    shown, detail = given if given else (["(wrong number of arguments)"], "")
+    message = (
+        f"No matching signature for function {name}\n  Argument types: {', '.join(shown)}\n"
+        f"  Signature: {name}({supported})"
     )
+    if detail:
+        message += f"\n    {detail}"
+    return CrucibleError(ErrorKind.INVALID_QUERY, message, location=location)
