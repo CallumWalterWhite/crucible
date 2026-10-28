@@ -205,10 +205,13 @@ def test_placeholders_are_consistent_and_error_locations_survive(recorded):
 
 def test_the_final_check_refuses_leaks():
     redactor = Redactor("p-1", "ds_1")
-    for leak in ('{"x": "a@b.c"}', '{"x": "p-1"}', '{"t": "ya29.abcdef"}', '{"h": "Bearer abc"}'):
+    leaks = ('{"x": "a@b.c"}', '{"u": "?e=a%40b.c"}', '{"x": "p-1"}', '{"t": "ya29.abcdef"}')
+    for leak in (*leaks, '{"h": "Bearer abc"}'):
         with pytest.raises(RecordApiError):
             redactor.check(leak)
     redactor.check('{"x": "<project>"}')
+    redactor.check('{"q": "SELECT @x", "u": "?q=%40x"}')
+    assert redactor.text("?e=a%40b.example") == "?e=<email>"
 
 
 # An unquoted reserved keyword as an alias is a syntax error in BigQuery (corpus case

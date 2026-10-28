@@ -61,6 +61,7 @@ def split(sql: str) -> list[object]:
     statements: list[object] = []
     _refuse_unknown_functions(sql)
     starts = _statement_starts(sql)
+    _locate_parameters([t for t in trees if t is not None], sql)
     position = 0  # positional parameters (`?`) count across the whole request
     for index, tree in enumerate(trees):
         if tree is not None:
@@ -95,6 +96,23 @@ def _refuse_unknown_functions(sql: str) -> None:
                 f"Function not found: {token.text}",
                 location=_location_of(sql, token.start),
             )
+
+
+def _locate_parameters(trees: list[exp.Expr], sql: str) -> None:
+    """Mark each `@name` with where it starts, for "Query parameter 'x' not found at [1:8]"
+    (jobs_query_parameters_missing). SQLGlot keeps no position on parameters."""
+    tokens = BigQuery().tokenize(sql)
+    starts = [
+        _location_of(sql, token.start)
+        for i, token in enumerate(tokens)
+        if token.token_type == TokenType.PARAMETER
+        and (i == 0 or tokens[i - 1].token_type != TokenType.PARAMETER)
+        and (i + 1 == len(tokens) or tokens[i + 1].token_type != TokenType.PARAMETER)
+    ]
+    nodes = [n for tree in trees for n in tree.find_all(exp.Parameter, bfs=False)]
+    if len(nodes) == len(starts):  # otherwise (`@@` system variables) leave them unlocated
+        for node, start in zip(nodes, starts, strict=True):
+            node.meta[parameters.LOCATION] = start
 
 
 def _statement_starts(sql: str) -> list[Location]:

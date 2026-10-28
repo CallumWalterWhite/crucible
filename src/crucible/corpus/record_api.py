@@ -49,11 +49,13 @@ PLACEHOLDER_KEYS: dict[str, str] = {
     "endMs": "<time>",
     "reservation_id": "<reservation>",
 }
-_EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+")
+# %40 is `@` URL-encoded, as in a query string.
+_EMAIL = re.compile(r"[A-Za-z0-9._%+-]+(?:@|%40)[A-Za-z0-9.-]+")
 _UPLOAD_ID = re.compile(r"upload_id=[^&\s\"']+")
 _TOKEN_LIKE = re.compile(r"(ya29\.[\w-]+|Bearer\s+\S+|AIza[0-9A-Za-z_-]{20,})")
-# An email address. A bare `@` is allowed: query parameters are named `@name` in SQL.
-EMAIL_LIKE = re.compile(r"[\w.+%-]+@[\w-]+(\.[\w-]+)+")
+# An email address, also URL-encoded (`%40`). A bare `@` is allowed: query parameters are named
+# `@name` in SQL.
+EMAIL_LIKE = re.compile(r"[\w.+%-]+(?:@|%40)[\w-]+(\.[\w-]+)+")
 # Kept with their original case, so a "Location" header is not mistaken for a "location" field.
 _KEEP_HEADERS = ("content-type", "location", "range")
 

@@ -24,8 +24,9 @@ SAMPLES = pathlib.Path(__file__).resolve().parent / "redaction_samples"
 TOKEN_LIKE = re.compile(
     r"ya29\.|Bearer |AIza[0-9A-Za-z_-]{20,}|\"access_token\"|\"refresh_token\"|\"private_key\""
 )
-# An email address; a bare `@` is allowed (query parameters are `@name` in SQL).
-EMAIL_LIKE = re.compile(r"[\w.+%-]+@[\w-]+(\.[\w-]+)+")
+# An email address, also URL-encoded (`%40`); a bare `@` is allowed (query parameters are `@name`
+# in SQL).
+EMAIL_LIKE = re.compile(r"[\w.+%-]+(?:@|%40)[\w-]+(\.[\w-]+)+")
 # Keys whose values must be placeholders such as <project> or <time>.
 PLACEHOLDER_KEYS = {
     "projectId",
@@ -41,7 +42,8 @@ PLACEHOLDER_KEYS = {
     "user_email",
     "queryId",
 }
-PLACEHOLDER = re.compile(r"^<[^<>]+>$")
+# A placeholder, optionally with a fixed suffix the recorder adds (`<dataset>_noexp`).
+PLACEHOLDER = re.compile(r"^<[^<>]+>(_[a-z]+)?$")
 RESOURCE_KINDS = {"bigquery#dataset", "bigquery#table", "bigquery#job"}
 UPLOAD_ID_OK = re.compile(r"upload_id=(?!<upload-id>)")
 
@@ -121,6 +123,7 @@ def test_clean_sample_passes():
     [
         '{"user": "someone@example.com"}',
         '{"member": "user:a.b+c@mail.example.org"}',
+        '{"url": "https://example.com/?user=someone%40example.com"}',
         '{"authorization": "Bearer abc.def"}',
         '{"token": "ya29.a0AfH6SMB"}',
         '{"key": "AIzaSyD-1234567890abcdefghijk"}',
@@ -135,6 +138,7 @@ def test_token_like_and_email_text_is_reported(bad):
 
 def test_a_query_parameter_reference_is_not_an_email():
     assert problems(json.dumps({"query": "SELECT @x AS v, @st.y AS y"})) == []
+    assert problems(json.dumps({"url": "https://example.com/?q=%40x"})) == []
 
 
 def test_non_placeholder_project_id_is_reported():

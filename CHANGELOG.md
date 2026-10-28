@@ -50,6 +50,18 @@ and this project does not yet follow semantic versioning.
   streamed rows are left out of `numRows` and `__TABLES__.row_count`; the streaming-buffer and NOT NULL
   errors use BigQuery's wording; ARRAY columns are not nullable in `INFORMATION_SCHEMA.COLUMNS`;
   partitioned tables list `require_partition_filter`.
+- Reconciled with the Milestone 2 recording:
+  - a persistent function must be called with its dataset; the bare name is `Function not found`;
+  - `No matching signature` uses BigQuery's multi-line message and location;
+  - `Variable 'x' redeclaration`, `Undeclared variable` and `Query parameter 'x' not found` are
+    located where BigQuery reports them;
+  - a temporary function plus one query is that query's statement type, not `SCRIPT`;
+  - script jobs report `numChildJobs` and their schema; copy jobs report `statistics.copy`;
+    `CREATE FUNCTION` jobs report `ddlTargetRoutine`; `routines.get` returns the body as written;
+  - dry runs have no job id, report the destination table, and fail as HTTP errors;
+  - NDJSON loads give BigQuery's errors for an unknown field and a non-integer string in a one-row
+    file, and load a string into a JSON column as a JSON string.
+- The fixture redaction guards also reject URL-encoded email addresses (`%40`).
 - `BOOL_AND` and `BOOL_OR` are not BigQuery functions and now fail with `Function not found`.
 - The `region-<location>` INFORMATION_SCHEMA form is refused until it can be recorded, and
   TABLE_OPTIONS is refused in a dataset with a default table expiration.

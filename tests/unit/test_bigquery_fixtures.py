@@ -97,7 +97,12 @@ OMITTED_KEYS = {
     "completionRatio": "progress is not emulated",
 }
 # Keys present on both sides whose values are measurements, not semantics.
-VALUE_FREE_KEYS = {"totalBytesProcessed", "totalBytesBilled", "inputFileBytes"}
+VALUE_FREE_KEYS = {
+    "totalBytesProcessed",
+    "totalBytesBilled",
+    "inputFileBytes",
+    "copiedLogicalBytes",
+}
 
 _JOBS_RUN_IN_REQUEST = (
     "jobs finish inside the request that creates them (ADR 0004): DONE, not RUNNING"
@@ -107,11 +112,16 @@ DIFFERENCES: list[tuple[str, str, str]] = [
     ("jobs_insert_*", r"^body\.status", _JOBS_RUN_IN_REQUEST),
     (
         "jobs_insert_*",
-        r"^body\.statistics\.(endTime|query|totalBytesProcessed)",
+        r"^body\.statistics\.(endTime|query|totalBytesProcessed|copy|numChildJobs)",
         _JOBS_RUN_IN_REQUEST,
     ),
-    ("load_*_upload", r"^body\.status", _JOBS_RUN_IN_REQUEST),
-    ("load_*_upload", r"^body\.statistics\.(endTime|load)", _JOBS_RUN_IN_REQUEST),
+    ("*_upload", r"^body\.status", _JOBS_RUN_IN_REQUEST),
+    ("*_upload", r"^body\.statistics\.(endTime|load)", _JOBS_RUN_IN_REQUEST),
+    (
+        "jobs_insert_script",
+        r"^body\.configuration\.query\.destinationTable$",
+        "a script's destination is set when it finishes; " + _JOBS_RUN_IN_REQUEST,
+    ),
     (
         "tables_get",
         r"^body\.(creationTime|expirationTime|lastModifiedTime)$",
@@ -174,42 +184,18 @@ DIFFERENCES: list[tuple[str, str, str]] = [
         "object times are not tracked",
     ),
     (
-        "j*_[ai]*",
-        r"^body\.(id|jobReference\.jobId|configuration\.query\.destinationTable\.tableId)$",
-        "temporary, until the next recording: the refused TABLE_OPTIONS call came before these in "
-        "the Milestone 1 recording, so their job and table placeholders are numbered one higher",
+        "jobs_insert_dry_run_ddl",
+        r"^body\.configuration\.query\.destinationTable$",
+        "a dry run plans DDL without reporting its target table",
     ),
-    ("load_*_initiate", r"^headers\.Content-Type$", "content type of an empty body"),
+    ("*_initiate", r"^headers\.Content-Type$", "content type of an empty body"),
     ("tables_delete", r"^headers\.Content-Type$", "content type of an empty body"),
 ]
 
 
 # Calls the recorder makes that the committed fixtures predate (Phase 4, Step A). The replay
 # makes them, so Crucible must answer; they are compared once the user records them.
-NOT_RECORDED_YET: list[str] = [
-    # TABLE_OPTIONS in a dataset without a default table expiration (record_table_options).
-    "*_no_expiration",
-    # dryRun (record_api.record_dry_runs), to be recorded.
-    "jobs_insert_dry_run_*",
-    "jobs_query_dry_run",
-    # queryParameters (record_api.record_query_parameters), to be recorded.
-    "jobs_query_parameters_*",
-    "jobs_insert_parameters",
-    "get_query_results_parameters",
-    # Script and copy jobs (record_api.record_scripts_and_copies), to be recorded.
-    "*_script",
-    "*_copy_*",
-    # SQL functions (record_api.record_udfs), to be recorded.
-    "*_temp_function",
-    "*_function",
-    "jobs_query_function_signature_error",
-    # NEWLINE_DELIMITED_JSON loads (record_api.record_ndjson_loads), to be recorded.
-    "ndjson_types_*",
-    "ndjson_nested_*",
-    "ndjson_bad_value_*",
-    "ndjson_unknown_field_*",
-    "ndjson_ignore_unknown_*",
-]
+NOT_RECORDED_YET: list[str] = []
 
 
 STORAGE_ORDER_PAGES = {"tabledata_list", "tabledata_list_int64_timestamp"}
@@ -393,8 +379,60 @@ def _listed(name: str, path: str) -> tuple[str, str, str] | None:
     return None
 
 
+# Job and anonymous-table placeholders are numbered in order of first appearance. A call that
+# Crucible answers without a job (a refused query) shifts every later number, so the replay's
+# numbers are matched to the recording's by position: each must pair with one recorded number.
+_NUMBERED = re.compile(r"<(?:job|anon-table|anon-dataset)-\d+>")
+
+
+def _pair_placeholders(expected: Any, actual: Any, pairs: dict[str, str], taken: set[str]) -> None:
+    if isinstance(expected, dict) and isinstance(actual, dict):
+        for key in expected.keys() & actual.keys():  # pyright: ignore[reportUnknownVariableType]
+            _pair_placeholders(expected[key], actual[key], pairs, taken)
+    elif isinstance(expected, list) and isinstance(actual, list):
+        pairs_of_items = zip(expected, actual, strict=False)  # pyright: ignore[reportUnknownVariableType]
+        for e, a in pairs_of_items:  # pyright: ignore[reportUnknownVariableType]
+            _pair_placeholders(e, a, pairs, taken)
+    elif isinstance(expected, str) and isinstance(actual, str):
+        wanted, got = _NUMBERED.findall(expected), _NUMBERED.findall(actual)
+        if len(wanted) == len(got):
+            for w, g in zip(wanted, got, strict=True):
+                if g not in pairs and w not in taken:
+                    pairs[g] = w
+                    taken.add(w)
+
+
+def _renumber(value: Any, pairs: dict[str, str]) -> Any:
+    if isinstance(value, dict):
+        return {k: _renumber(v, pairs) for k, v in value.items()}  # pyright: ignore[reportUnknownVariableType]
+    if isinstance(value, list):
+        return [_renumber(v, pairs) for v in value]  # pyright: ignore[reportUnknownVariableType]
+    if isinstance(value, str):
+        return _NUMBERED.sub(lambda m: pairs.get(m.group(0), m.group(0)), value)
+    return value
+
+
+def test_placeholders_pair_by_position():
+    pairs: dict[str, str] = {}
+    _pair_placeholders(
+        [{"id": "<job-2>"}, {"id": "<job-3>"}, {"x": "<job-3>"}],
+        [{"id": "<job-1>"}, {"id": "<job-2>"}, {"x": "<job-1>"}],
+        pairs,
+        set(),
+    )
+    assert pairs == {"<job-1>": "<job-2>", "<job-2>": "<job-3>"}
+    # <job-1> already stands for <job-2>, so the third call's mismatch is still reported.
+    assert _renumber({"x": "<job-1>"}, pairs) == {"x": "<job-2>"}
+
+
 def test_every_fixture_matches_or_the_difference_is_listed(replayed):
     recorded = _recorded()
+    pairs: dict[str, str] = {}
+    taken: set[str] = set()
+    for name, expected in recorded.items():
+        if name in replayed:
+            _pair_placeholders(expected, replayed[name], pairs, taken)
+    replayed = {name: _renumber(value, pairs) for name, value in replayed.items()}
     unexplained: list[str] = []
     used: set[tuple[str, str, str]] = set()
     for name, expected in recorded.items():
