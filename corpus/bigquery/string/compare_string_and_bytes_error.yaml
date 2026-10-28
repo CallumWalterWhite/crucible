@@ -1,0 +1,11 @@
+description: Comparing a STRING with BYTES is an error; BigQuery never converts one to the other.
+  Crucible refuses it until the message is recorded. See https://cloud.google.com/bigquery/docs/reference/standard-sql/operators#comparison_operators.
+tags:
+- string
+- bytes
+- known-divergence
+query: SELECT 'A' = b'A' AS v
+expected:
+  error:
+    kind: invalid_query
+    message_contains: No matching signature

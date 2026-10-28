@@ -1,0 +1,26 @@
+description: STRING to BYTES and back over a column keeps every value, and BYTE_LENGTH counts UTF-8
+  bytes. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions#cast_as_bytes.
+tags:
+- cast
+- bytes
+query: SELECT s, BYTE_LENGTH(CAST(s AS BYTES)) AS n, CAST(CAST(s AS BYTES) AS STRING) AS back FROM UNNEST(['é日本',
+  '\\xff', '']) AS s
+ordered: false
+expected:
+  columns:
+  - name: s
+    type: STRING
+  - name: n
+    type: INT64
+  - name: back
+    type: STRING
+  rows:
+  - - ''
+    - 0
+    - ''
+  - - \xff
+    - 4
+    - \xff
+  - - é日本
+    - 8
+    - é日本

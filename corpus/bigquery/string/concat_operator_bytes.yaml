@@ -1,0 +1,12 @@
+description: The || operator on BYTES gives BYTES. See https://cloud.google.com/bigquery/docs/reference/standard-sql/operators#concatenation_operator.
+tags:
+- string
+- bytes
+query: SELECT b'a' || b'\xff' AS v
+ordered: false
+expected:
+  columns:
+  - name: v
+    type: BYTES
+  rows:
+  - - Yf8=

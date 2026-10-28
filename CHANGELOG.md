@@ -26,6 +26,18 @@ and this project does not yet follow semantic versioning.
 
 - PARTITION BY and CLUSTER BY check column types as BigQuery does: a STRING partitioning column or a
   FLOAT64 clustering column was accepted.
+- CAST and SAFE_CAST between STRING and BYTES encode and decode UTF-8, as BigQuery does. They
+  followed DuckDB's escaped text form: `CAST('\\x41' AS BYTES)` gave one byte, `CAST(b'\xc3\xa9' AS
+  STRING)` gave the text `\xC3\xA9`, and `CAST('é' AS BYTES)` failed. Invalid UTF-8 to STRING is
+  refused until BigQuery's error is recorded (SAFE_CAST gives NULL).
+- `BYTES || BYTES` is BYTES; it was STRING in escaped text form.
+- A STRING and a BYTES operand of one function or operator (CONCAT, `||`, comparisons, IN,
+  COALESCE, IF, CASE, ...) and a variable DEFAULT or SET of the other type are refused; DuckDB
+  silently cast one to the other, where BigQuery raises an error.
+- LOWER, UPPER, REVERSE, REPLACE, STARTS_WITH, TRIM, LTRIM, RTRIM and STRING() of BYTES are refused:
+  they ran on DuckDB's escaped text form and could give wrong bytes.
+- TO_JSON_STRING of a bare BYTES, TIMESTAMP or TIME value gives a JSON string; it raised a DuckDB
+  error.
 
 ## [0.1.0a3] - 2026-10-28
 

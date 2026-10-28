@@ -1,0 +1,23 @@
+description: CAST(BYTES AS STRING) decodes UTF-8; bytes that spell a backslash escape stay text. See
+  https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions#cast_as_string.
+tags:
+- cast
+- bytes
+query: SELECT CAST(b'\xc3\xa9' AS STRING) AS e_acute, CAST(b'\\x41' AS STRING) AS escape_text, SAFE_CAST(b'\xe6\x97\xa5'
+  AS STRING) AS safe_valid, CAST(CAST(NULL AS BYTES) AS STRING) AS n
+ordered: false
+expected:
+  columns:
+  - name: e_acute
+    type: STRING
+  - name: escape_text
+    type: STRING
+  - name: safe_valid
+    type: STRING
+  - name: n
+    type: STRING
+  rows:
+  - - é
+    - \x41
+    - 日
+    - null

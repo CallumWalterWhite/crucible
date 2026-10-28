@@ -19,6 +19,7 @@ from typing import Any
 from sqlglot import exp
 
 from crucible.dialects.bigquery import errors
+from crucible.dialects.bigquery.transforms import binary
 from crucible.engine import (
     CommandPlan,
     CrucibleError,
@@ -157,5 +158,7 @@ def _typed(value: exp.Expr, kind: object) -> exp.Expr:
     """The value, cast to the variable's declared type when it has one."""
     out = value.copy()
     if isinstance(kind, exp.DataType):
-        return exp.alias_(exp.Cast(this=out, to=kind.copy()), "v")
+        cast = exp.Cast(this=out, to=kind.copy())
+        cast.meta[binary.COERCION] = True
+        return exp.alias_(cast, "v")
     return exp.alias_(out, "v")

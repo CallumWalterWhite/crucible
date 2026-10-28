@@ -7,6 +7,7 @@ explicit unsupported error (ADR 0009) for a value Crucible cannot handle exactly
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 
 from sqlglot import exp
@@ -14,6 +15,8 @@ from sqlglot import exp
 from crucible.engine.errors import RUNTIME_ERROR_PREFIX, UNSUPPORTED_ERROR_PREFIX
 
 T = exp.DType
+# Calls whose value differs between two evaluations, so a check must not evaluate them twice.
+VOLATILE = re.compile(r"\b(rand|generate_uuid)\s*\(", re.IGNORECASE)
 
 
 def typed(node: exp.Expr, data_type: exp.DataType | str) -> exp.Expr:

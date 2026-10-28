@@ -65,6 +65,15 @@ _REWRITTEN = {
     exp.DType.TIME,
 }
 _MAX_EXACT_DOUBLE = 2**53
+# Leaves _leaf writes as VARCHAR text, not JSON.
+_TEXT_LEAVES = {
+    exp.DType.BLOB,
+    exp.DType.BINARY,
+    exp.DType.VARBINARY,
+    exp.DType.TIMESTAMP,
+    exp.DType.TIMESTAMPTZ,
+    exp.DType.TIME,
+}
 
 
 def _encodable(node: exp.JSONFormat) -> None:
@@ -81,6 +90,8 @@ def _encodable(node: exp.JSONFormat) -> None:
     if not isinstance(value, exp.Expr) or value.type is None:
         raise CrucibleUnsupportedError("TO_JSON_STRING of a value of unknown type")
     encoded = _encode(value.copy(), value.type) if _needs_rewrite(value.type) else value.copy()
+    if value.type.this in _TEXT_LEAVES:
+        encoded = _call("to_json", encoded)  # a bare leaf's text is a JSON string, not JSON
     if node.args.get("to_json"):
         null: exp.Expr = _unsupported("TO_JSON of NULL")
     else:
