@@ -19,6 +19,8 @@ and this project does not yet follow semantic versioning.
 - Parquet load jobs (`sourceFormat=PARQUET`, `load_table_from_file`) with an explicit schema, by
   resumable or multipart upload (ADR 0015, now accepted): INT64, FLOAT64, BOOL, DATE, TIMESTAMP and
   STRING, NULLs and REQUIRED fields; a failed load appends nothing. pyarrow joins the `server` extra.
+- `FARM_FINGERPRINT`: FarmHash Fingerprint64 as BigQuery's signed INT64, for STRING (UTF-8 bytes)
+  and BYTES, in pure Python. It was refused before.
 
 ### Fixed
 

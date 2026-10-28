@@ -145,9 +145,27 @@ def test_one_special_row_refuses_the_whole_column(bq):
 
 
 # --- FARM_FINGERPRINT ----------------------------------------------------------------------------
-def test_farm_fingerprint_is_unsupported_at_plan_time(bq):
-    with pytest.raises(CrucibleUnsupportedError, match="FARM_FINGERPRINT"):
-        bq("SELECT FARM_FINGERPRINT('a') AS v")
+def test_farm_fingerprint_matches_bigquery_for_recorded_input(bq):
+    # Recorded: hash/farm_fingerprint. The empty input is FarmHash's k2 constant, signed.
+    assert values(bq("SELECT FARM_FINGERPRINT('a'), FARM_FINGERPRINT('')")) == [
+        [-5528939962900187677, -7286425919675154353]
+    ]
+
+
+def test_farm_fingerprint_of_a_string_is_that_of_its_utf8_bytes(bq):
+    [[s, b, n]] = values(
+        bq(
+            "SELECT FARM_FINGERPRINT('é'), FARM_FINGERPRINT(b'\\xc3\\xa9'), "
+            "FARM_FINGERPRINT(CAST(NULL AS STRING))"
+        )
+    )
+    assert s == b
+    assert n is None
+
+
+def test_farm_fingerprint_of_another_type_is_unsupported(bq):
+    with pytest.raises(CrucibleUnsupportedError, match="FARM_FINGERPRINT of a INT64"):
+        bq("SELECT FARM_FINGERPRINT(1)")
 
 
 def test_lower_uses_full_case_mapping_for_dotted_capital_i(bq):

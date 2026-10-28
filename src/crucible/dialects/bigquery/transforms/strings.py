@@ -1,4 +1,4 @@
-"""String functions: FORMAT, UPPER/LOWER/INITCAP case mapping, FARM_FINGERPRINT. Slice 2.
+"""String functions: FORMAT, UPPER/LOWER/INITCAP case mapping, FARM_FINGERPRINT (farmhash.py).
 
 FORMAT follows the BigQuery reference (string_functions, "FORMAT"), checked on 2025-era docs:
 - a NULL argument makes the result NULL ("the function generally produces a NULL value if a NULL
@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 
 from sqlglot import exp
 
-from crucible.dialects.bigquery import types
+from crucible.dialects.bigquery import farmhash, types
 from crucible.dialects.bigquery.transforms.common import check, raise_unsupported, text, typed
 from crucible.engine import CrucibleError, CrucibleUnsupportedError, ErrorKind
 
@@ -51,6 +51,19 @@ class _Spec:
     written: str  # the specifier as written, for messages
 
 
+def _farm_fingerprint(node: exp.FarmFingerprint) -> exp.Expr:
+    """Crucible's Python FarmHash (farmhash.py) over a STRING's UTF-8 bytes, or over BYTES."""
+    [arg] = node.expressions
+    kind = types.type_name(arg.type) if arg.type is not None else None
+    if kind == "STRING":
+        arg = exp.Anonymous(this="encode", expressions=[arg])  # UTF-8 bytes
+    elif kind != "BYTES":
+        raise CrucibleUnsupportedError(f"FARM_FINGERPRINT of a {kind or 'value of unknown type'}")
+    call = exp.Anonymous(this=farmhash.FUNCTION, expressions=[arg])
+    call.type = exp.DataType.build("INT64", dialect="bigquery")
+    return call
+
+
 def transform(tree: exp.Expr, ctx: TransformContext) -> exp.Expr:
     # Innermost first, so a call inside another rewrite's operand is rewritten too.
     for node in reversed(
@@ -59,8 +72,7 @@ def transform(tree: exp.Expr, ctx: TransformContext) -> exp.Expr:
         if isinstance(node, exp.Format):
             node.replace(_format(node))
         elif isinstance(node, exp.FarmFingerprint):
-            # No DuckDB equivalent: refused at plan time, not an unsupported run-time value.
-            raise CrucibleUnsupportedError("FARM_FINGERPRINT")
+            node.replace(_farm_fingerprint(node))
         elif isinstance(node, exp.Upper):
             node.replace(_case_mapping(node, "UPPER"))
         elif isinstance(node, exp.Lower):

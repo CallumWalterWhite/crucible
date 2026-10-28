@@ -1,0 +1,21 @@
+description: FARM_FINGERPRINT of 17, 32, 33 and 64 bytes (the 17-32 and 33-64 byte code paths). See https://cloud.google.com/bigquery/docs/reference/standard-sql/hash_functions#farm_fingerprint.
+tags:
+- hash
+query: SELECT FARM_FINGERPRINT(REPEAT('x', 17)) AS l17, FARM_FINGERPRINT(REPEAT('ab', 16)) AS l32, FARM_FINGERPRINT(CONCAT(REPEAT('ab',
+  16), 'c')) AS l33, FARM_FINGERPRINT(REPEAT('abcd', 16)) AS l64
+ordered: false
+expected:
+  columns:
+  - name: l17
+    type: INT64
+  - name: l32
+    type: INT64
+  - name: l33
+    type: INT64
+  - name: l64
+    type: INT64
+  rows:
+  - - -7140662122295251035
+    - -3001692991469698444
+    - -4006467195365386106
+    - 6869103078685999451
