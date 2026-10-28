@@ -378,7 +378,7 @@ dev = [
 requires-dist = [
     { name = "duckdb", specifier = "==1.5.6" },
     { name = "google-cloud-bigquery", marker = "extra == 'record-bigquery'", specifier = ">=3.27" },
-    { name = "numpy", specifier = "==2.4.6" },
+    { name = "numpy", specifier = ">=2,<3" },
     { name = "pytz", specifier = ">=2025.2" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "snowflake-connector-python", marker = "extra == 'record-snowflake'", specifier = ">=3.12" },
