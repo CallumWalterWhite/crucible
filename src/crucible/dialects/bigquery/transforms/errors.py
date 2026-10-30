@@ -154,8 +154,13 @@ def _cast_string_to_numeric(node: exp.Cast) -> exp.Expr:
     bad: exp.Expr = exp.Null() if safe else raise_runtime("Invalid NUMERIC value: ", value.copy())
     plain = exp.RegexpLike(this=value.copy(), expression=exp.Literal.string(NUMERIC_TEXT))
     spaced = exp.RegexpLike(this=_trimmed(value), expression=exp.Literal.string(NUMERIC_TEXT))
-    magnitude = exp.Abs(this=duck_cast(value.copy(), "DOUBLE"))
-    too_big = exp.GTE(this=magnitude, expression=exp.Literal.number(NUMERIC_LIMIT))
+    # DuckDB's own DECIMAL(38,9) cast fails exactly when the rounded value has 30 integer
+    # digits; a DOUBLE would round the largest NUMERIC up to 1e29.
+    stored = exp.TryCast(
+        this=value.copy(), to=exp.DataType.build("DECIMAL(38, 9)", dialect="duckdb")
+    )
+    stored.meta["crucible_storage"] = True
+    too_big = exp.Is(this=stored, expression=exp.Null())
     node.meta["crucible_checked"] = True
     return check(
         exp.Not(this=exp.Paren(this=plain)),
@@ -185,7 +190,7 @@ def _numeric_literal(node: exp.Cast) -> None:
         or not number.is_finite()
         or not isinstance(exponent, int)
         or exponent < -9
-        or abs(number) >= NUMERIC_LIMIT
+        or number.copy_abs() >= NUMERIC_LIMIT  # abs() would round to 28 digits
     ):
         raise CrucibleError(ErrorKind.INVALID_QUERY, f'Invalid NUMERIC literal: "{text}"')
 

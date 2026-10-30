@@ -6,6 +6,13 @@ FORMAT follows the BigQuery reference (string_functions, "FORMAT"), checked on 2
 - a NULL format string makes the result NULL and ignores the other arguments;
 - a wrong number of arguments, or a specifier that does not fit its argument, is an error.
 
+NUMERIC as text: CAST and SAFE_CAST to STRING, and a NUMERIC argument of CONCAT or `||` (which
+cast their arguments to STRING), write it as TO_JSON_STRING does, without trailing zeros
+('4.1', not DuckDB's '4.100000000'). BigQuery has no implicit NUMERIC to STRING conversion
+elsewhere, so a NUMERIC argument of another string function, or a NUMERIC value for a STRING
+variable, is refused: DuckDB would convert it silently, where BigQuery raises an error that is
+not recorded.
+
 Case mapping: BigQuery uses full Unicode case mapping (UPPER('ß') is 'SS', recorded); DuckDB uses
 the simple mapping ('ẞ'). A character whose Python mapping is longer than one character cannot be
 mapped exactly, so such input raises CrucibleUnsupportedError instead of a best guess.
@@ -21,7 +28,15 @@ from typing import TYPE_CHECKING
 from sqlglot import exp
 
 from crucible.dialects.bigquery import farmhash, types
-from crucible.dialects.bigquery.transforms.common import check, raise_unsupported, text, typed
+from crucible.dialects.bigquery.transforms import binary
+from crucible.dialects.bigquery.transforms.common import (
+    T,
+    check,
+    numeric_text,
+    raise_unsupported,
+    text,
+    typed,
+)
 from crucible.engine import CrucibleError, CrucibleUnsupportedError, ErrorKind
 
 if TYPE_CHECKING:
@@ -64,7 +79,73 @@ def _farm_fingerprint(node: exp.FarmFingerprint) -> exp.Expr:
     return call
 
 
+# String functions whose NUMERIC argument DuckDB would turn into text.
+_TEXT_ONLY = (
+    exp.Length,
+    exp.Like,
+    exp.Upper,
+    exp.Lower,
+    exp.Initcap,
+    exp.Substring,
+    exp.Replace,
+    exp.Trim,
+    exp.Pad,
+    exp.StrPosition,
+    exp.Reverse,
+    exp.StartsWith,
+    exp.EndsWith,
+    exp.Split,
+    exp.RegexpLike,
+    exp.RegexpExtract,
+    exp.RegexpExtractAll,
+    exp.RegexpReplace,
+    exp.RegexpInstr,
+)
+
+
+def _numeric(node: object) -> bool:
+    return isinstance(node, exp.Expr) and node.type is not None and node.type.this == T.DECIMAL
+
+
+def _numeric_text(tree: exp.Expr) -> exp.Expr:
+    """NUMERIC to STRING (see the module docstring)."""
+    for node in reversed(list(tree.walk())):
+        name = node.meta.get("bigquery_name") or node.key.upper()
+        if (
+            isinstance(node, exp.Cast)
+            and _numeric(node.this)
+            and node.to.this in (T.TEXT, T.VARCHAR)
+        ):
+            if node.meta.get("crucible_storage"):
+                continue
+            if node.meta.get(binary.COERCION):
+                raise CrucibleUnsupportedError("assigning a NUMERIC value to a STRING variable")
+            if node.args.get("format"):
+                raise CrucibleUnsupportedError("CAST of NUMERIC to STRING with FORMAT")
+            new = numeric_text(node.this.copy())  # cannot fail, so SAFE_CAST is the same
+            node.replace(new)
+            if node is tree:
+                tree = new
+        elif isinstance(node, exp.Concat | exp.DPipe):
+            for operand in list(node.iter_expressions()):
+                if _numeric(operand):
+                    operand.replace(numeric_text(operand.copy()))
+        elif isinstance(node, _TEXT_ONLY) and any(_numeric(o) for o in node.iter_expressions()):
+            raise CrucibleUnsupportedError(f"{name} of a NUMERIC value")
+        elif isinstance(node, exp.GroupConcat) and _numeric(node):
+            raise CrucibleUnsupportedError("STRING_AGG of a NUMERIC value")
+        elif isinstance(node, exp.ArrayToString):
+            kind = node.this.type
+            elements: list[exp.DataType] = (
+                kind.expressions if kind and kind.is_type(T.ARRAY) else []
+            )
+            if elements and elements[0].this == T.DECIMAL:
+                raise CrucibleUnsupportedError("ARRAY_TO_STRING of an ARRAY<NUMERIC>")
+    return tree
+
+
 def transform(tree: exp.Expr, ctx: TransformContext) -> exp.Expr:
+    tree = _numeric_text(tree)
     # Innermost first, so a call inside another rewrite's operand is rewritten too.
     for node in reversed(
         list(tree.find_all(exp.Format, exp.Upper, exp.Lower, exp.Initcap, exp.FarmFingerprint))

@@ -1,0 +1,32 @@
+description: CAST(NUMERIC AS STRING) writes no trailing zeros and no trailing point, for a fraction,
+  a whole number, a negative, the smallest step and the largest NUMERIC. See https://cloud.google.com/bigquery/docs/reference/standard-sql/conversion_functions#cast_as_string.
+tags:
+- cast
+- numeric
+query: SELECT CAST(NUMERIC '4.10' AS STRING) AS trailing_zeros, CAST(NUMERIC '4' AS STRING) AS whole,
+  CAST(NUMERIC '-4.10' AS STRING) AS negative, CAST(NUMERIC '0.000000001' AS STRING) AS smallest_step,
+  CAST(NUMERIC '99999999999999999999999999999.999999999' AS STRING) AS largest, SAFE_CAST(NUMERIC
+  '400' AS STRING) AS safe_whole
+ordered: false
+expected:
+  columns:
+  - name: trailing_zeros
+    type: STRING
+  - name: whole
+    type: STRING
+  - name: negative
+    type: STRING
+  - name: smallest_step
+    type: STRING
+  - name: largest
+    type: STRING
+  - name: safe_whole
+    type: STRING
+  rows:
+  - - '4.1'
+    - '4'
+    - '-4.1'
+    - '0.000000001'
+    - '99999999999999999999999999999.999999999'
+    - '400'
+verified: false

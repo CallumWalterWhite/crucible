@@ -9,6 +9,17 @@ and this project does not yet follow semantic versioning.
 
 ### Fixed
 
+- CAST and SAFE_CAST of NUMERIC to STRING, and a NUMERIC argument of CONCAT or `||`, write no
+  trailing zeros, as BigQuery does: `CAST(NUMERIC '4.10' AS STRING)` gave `'4.100000000'`. A
+  NUMERIC argument of another string function (LENGTH, UPPER, LIKE, STRING_AGG,
+  ARRAY_TO_STRING, ...) and a NUMERIC value for a STRING variable are refused; DuckDB converted
+  them silently.
+- NUMERIC values with more than 28 significant digits were rounded in query results (Python's
+  default decimal precision): `NUMERIC '12345678901234567890.123456789'` came back as
+  `12345678901234567890.12345679`. The largest NUMERIC was also refused as a literal, as a
+  string cast to NUMERIC, and in insertAll.
+- `TO_JSON_STRING(ROUND(NUMERIC '40.4'))` gave `4`: zeros were trimmed from DuckDB's scale-0
+  text of the rounded value.
 - REVERSE, ENDS_WITH, STARTS_WITH, BIT_COUNT and STRING_AGG with a delimiter work on BYTES
   byte for byte. REVERSE and STARTS_WITH were refused; the others raised DuckDB errors.
 - `BIT_COUNT` of a negative INT64 literal counts 64 bits: `BIT_COUNT(-1)` gave 32.

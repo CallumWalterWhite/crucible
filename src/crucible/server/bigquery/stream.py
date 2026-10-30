@@ -147,7 +147,7 @@ def _numeric(value: Any, location: str) -> Any:
         value = str(value)
     if isinstance(value, str) and _DECIMAL.fullmatch(value):
         number = Decimal(value)
-        if abs(number) < Decimal(10) ** 29:
+        if number.copy_abs() < 10**29:  # abs() would round to 28 digits
             return number
     return _UNCONFIRMED
 
