@@ -189,7 +189,17 @@ _ML = (exp.Predict, exp.MLForecast, exp.MLTranslate, exp.GenerateEmbedding, exp.
 
 
 def _refuse_unmodelled(tree: exp.Expr) -> None:
-    """Refuse functions Crucible does not emulate before DuckDB runs its own namesake (RANGE)."""
+    """Refuse functions Crucible does not emulate before DuckDB runs its own namesake (RANGE).
+
+    A function call in a table position is refused whatever SQLGlot calls it: DuckDB's readers
+    (read_parquet, read_csv) and generators (generate_series) are table functions, and SQLGlot
+    models some of them, so the Anonymous check below would let them through to DuckDB. BigQuery's
+    only table expression Crucible runs is UNNEST, which SQLGlot parses as its own node."""
+    for table in tree.find_all(exp.Table):
+        call = table.this
+        if isinstance(call, exp.Func):
+            name = call.name if isinstance(call, exp.Anonymous) else call.sql_name()
+            raise CrucibleUnsupportedError(f"table function {name.upper()}")
     for node in tree.find_all(exp.Anonymous, exp.SHA2Digest, *_ML):
         if isinstance(node, exp.Anonymous) and node.name.upper() not in _HANDLED_ANONYMOUS:
             raise CrucibleUnsupportedError(f"function {node.name.upper()}")
