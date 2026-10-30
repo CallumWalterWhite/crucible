@@ -9,6 +9,8 @@ and this project does not yet follow semantic versioning.
 
 ### Fixed
 
+- A function call in FROM is refused unless it is UNNEST: `read_parquet` and `read_csv` reached
+  DuckDB, where only the file-access lockdown stopped them, and `generate_series` ran.
 - CAST and SAFE_CAST of NUMERIC to STRING, and a NUMERIC argument of CONCAT or `||`, write no
   trailing zeros, as BigQuery does: `CAST(NUMERIC '4.10' AS STRING)` gave `'4.100000000'`. A
   NUMERIC argument of another string function (LENGTH, UPPER, LIKE, STRING_AGG,
