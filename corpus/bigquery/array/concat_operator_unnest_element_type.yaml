@@ -1,0 +1,17 @@
+description: UNNEST over an array built with || keeps the element type, so ARRAY(SELECT ...) over it
+  is ARRAY<INT64> and TO_JSON_STRING writes numbers. See https://cloud.google.com/bigquery/docs/reference/standard-sql/array_functions#array_concat.
+tags:
+- array
+query: SELECT TO_JSON_STRING(ARRAY(SELECT x FROM UNNEST([1, 2] || [3]) AS x)) AS j, (SELECT SUM(x)
+  FROM UNNEST([1] || [2] || [3]) AS x) AS s
+ordered: false
+expected:
+  columns:
+  - name: j
+    type: STRING
+  - name: s
+    type: INT64
+  rows:
+  - - '[1,2,3]'
+    - 6
+verified: false

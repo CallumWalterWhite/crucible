@@ -159,3 +159,20 @@ def test_concat_operator_rejects_literal_null(bq):
         bq("SELECT 'a' || NULL AS v")
     assert info.value.kind is ErrorKind.INVALID_QUERY
     assert values(bq("SELECT 'a' || CAST(NULL AS STRING) AS v")) == [[None]]
+
+
+@pytest.mark.parametrize(
+    "array", ["[1, 2] || [3]", "[1] || [2] || [3]", "ARRAY_CONCAT([1, 2], [3])"]
+)
+def test_unnest_of_a_concatenated_array_keeps_the_element_type(bq, array):
+    sql = f"SELECT TO_JSON_STRING(ARRAY(SELECT x FROM UNNEST({array}) AS x)) AS j"
+    assert values(bq(sql)) == [["[1,2,3]"]]
+
+
+def test_array_concat_and_the_operator_are_null_when_an_input_is_null(bq):
+    sql = (
+        "SELECT ARRAY_CONCAT([1], CAST(NULL AS ARRAY<INT64>)) IS NULL,"
+        " ([1] || CAST(NULL AS ARRAY<INT64>)) IS NULL, ARRAY_CONCAT([1], NULL) IS NULL,"
+        " ARRAY_CONCAT([1], [2], [3])"
+    )
+    assert values(bq(sql)) == [[True, True, True, [1, 2, 3]]]

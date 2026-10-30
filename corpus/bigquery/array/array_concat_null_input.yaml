@@ -1,0 +1,19 @@
+description: ARRAY_CONCAT and || return NULL when any input array is NULL. See https://cloud.google.com/bigquery/docs/reference/standard-sql/array_functions#array_concat.
+tags:
+- array
+query: SELECT ARRAY_CONCAT([1], CAST(NULL AS ARRAY<INT64>)) IS NULL AS concat_null, ([1] || CAST(NULL
+  AS ARRAY<INT64>)) IS NULL AS operator_null, ARRAY_LENGTH(ARRAY_CONCAT([1], [2], [3])) AS three
+ordered: false
+expected:
+  columns:
+  - name: concat_null
+    type: BOOL
+  - name: operator_null
+    type: BOOL
+  - name: three
+    type: INT64
+  rows:
+  - - true
+    - true
+    - 3
+verified: false

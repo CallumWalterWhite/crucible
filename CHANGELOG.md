@@ -20,6 +20,11 @@ and this project does not yet follow semantic versioning.
   string cast to NUMERIC, and in insertAll.
 - `TO_JSON_STRING(ROUND(NUMERIC '40.4'))` gave `4`: zeros were trimmed from DuckDB's scale-0
   text of the rounded value.
+- `ARRAY_CONCAT` returns NULL when an input array is NULL, as BigQuery documents;
+  `ARRAY_CONCAT([1], NULL)` gave `[1]`.
+- UNNEST and `ARRAY(SELECT ...)` over an array built with `||` keep its element type:
+  `TO_JSON_STRING(ARRAY(SELECT x FROM UNNEST([1, 2] || [3]) AS x))` was refused as "TO_JSON_STRING
+  of a UNKNOWN value", and `SELECT x FROM UNNEST([1, 2] || [3] || [4])` failed.
 - REVERSE, ENDS_WITH, STARTS_WITH, BIT_COUNT and STRING_AGG with a delimiter work on BYTES
   byte for byte. REVERSE and STARTS_WITH were refused; the others raised DuckDB errors.
 - `BIT_COUNT` of a negative INT64 literal counts 64 bits: `BIT_COUNT(-1)` gave 32.
