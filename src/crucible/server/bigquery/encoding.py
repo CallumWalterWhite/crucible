@@ -180,8 +180,7 @@ def encode_value(
     if name == "FLOAT64":
         return java_double(float(value))
     if name == "NUMERIC":
-        number = Decimal(value)
-        return "0" if number == 0 else format(number.normalize(), "f")
+        return types.numeric_string(value)
     if name == "BOOL":
         return "true" if value else "false"
     if name == "STRING":

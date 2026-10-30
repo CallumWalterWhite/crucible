@@ -36,6 +36,17 @@ def duck_cast(value: exp.Expr, duckdb_type: str) -> exp.Cast:
     return cast
 
 
+def numeric_text(value: exp.Expr) -> exp.Expr:
+    """A NUMERIC as BigQuery writes it: no trailing zeros, no trailing point ('4.1', '4', '-0.5';
+    recorded: json/to_json_string_numeric*). DuckDB writes a DECIMAL with its own scale, which
+    can be 0 (ROUND gives DECIMAL(38,0)), so the value is first rescaled to NUMERIC's 9 places."""
+    written = duck_cast(duck_cast(value, "DECIMAL(38,9)"), "VARCHAR")
+    trimmed = exp.Anonymous(this="rtrim", expressions=[written, exp.Literal.string("0")])
+    return typed(
+        exp.Anonymous(this="rtrim", expressions=[trimmed, exp.Literal.string(".")]), "STRING"
+    )
+
+
 def text(*parts: exp.Expr | str) -> exp.Expr:
     """A VARCHAR concatenation of literal strings and expressions (cast to VARCHAR)."""
     pieces: list[exp.Expr] = [

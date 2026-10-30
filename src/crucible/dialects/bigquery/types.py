@@ -11,7 +11,7 @@ import base64
 import json
 import math
 from datetime import UTC, date, datetime, time
-from decimal import Decimal
+from decimal import Context, Decimal
 from typing import Any
 
 from sqlglot import exp
@@ -237,6 +237,16 @@ def canonical_value(value: Any, warehouse_type: str) -> Any:
     return _canonical(value, parse(warehouse_type))
 
 
+# Enough digits for every NUMERIC and BIGNUMERIC: Decimal's default context keeps only 28.
+_EXACT = Context(prec=80)
+
+
+def numeric_string(value: object) -> str:
+    """A NUMERIC as BigQuery writes it in results: no trailing zeros or point, never rounded."""
+    number = Decimal(str(value))
+    return "0" if number == 0 else format(number.normalize(_EXACT), "f")
+
+
 def _canonical(value: Any, data_type: exp.DataType) -> Any:
     if value is None:
         return None
@@ -256,8 +266,7 @@ def _canonical(value: Any, data_type: exp.DataType) -> Any:
             return "Infinity" if number > 0 else "-Infinity"
         return number
     if kind == T.DECIMAL:
-        number = Decimal(value)
-        return "0" if number == 0 else format(number.normalize(), "f")
+        return numeric_string(value)
     if kind == T.BOOLEAN:
         return bool(value)
     if kind in (T.TEXT, T.VARCHAR):

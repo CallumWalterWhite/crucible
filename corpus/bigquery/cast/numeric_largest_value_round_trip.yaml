@@ -1,0 +1,21 @@
+description: The largest and smallest NUMERIC values are returned with all 38 digits, and a 38-digit
+  string casts to NUMERIC without rounding. See https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#decimal_types.
+tags:
+- cast
+- numeric
+query: SELECT NUMERIC '99999999999999999999999999999.999999999' AS largest, NUMERIC '-99999999999999999999999999999.999999999'
+  AS smallest, CAST('12345678901234567890.123456789' AS NUMERIC) AS digits_38
+ordered: false
+expected:
+  columns:
+  - name: largest
+    type: NUMERIC
+  - name: smallest
+    type: NUMERIC
+  - name: digits_38
+    type: NUMERIC
+  rows:
+  - - '99999999999999999999999999999.999999999'
+    - '-99999999999999999999999999999.999999999'
+    - '12345678901234567890.123456789'
+verified: false

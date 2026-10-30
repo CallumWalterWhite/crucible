@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 
 from sqlglot import exp
 
-from crucible.dialects.bigquery.transforms.common import text, typed
+from crucible.dialects.bigquery.transforms.common import numeric_text, text, typed
 from crucible.engine import CrucibleUnsupportedError
 from crucible.engine.errors import UNSUPPORTED_ERROR_PREFIX
 
@@ -182,7 +182,7 @@ def _leaf(value: exp.Expr, kind: exp.DType) -> exp.Expr:
     if kind in (exp.DType.BLOB, exp.DType.BINARY, exp.DType.VARBINARY):
         return _call("base64", value)
     if kind == exp.DType.DECIMAL:
-        trimmed = _call("rtrim", _call("rtrim", _cast(value.copy(), "VARCHAR"), "0"), ".")
+        trimmed = numeric_text(value.copy())
         whole = exp.Not(this=_call("contains", trimmed.copy(), "."))
         exact = exp.Between(
             this=value.copy(),

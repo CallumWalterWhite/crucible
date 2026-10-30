@@ -1,0 +1,21 @@
+description: A NUMERIC cast to STRING compares equal to its shortest text, and CONCAT and || cast a
+  NUMERIC argument the same way. See https://cloud.google.com/bigquery/docs/reference/standard-sql/string_functions#concat.
+tags:
+- cast
+- numeric
+query: SELECT CAST(NUMERIC '4.10' AS STRING) = '4.1' AS equal, CONCAT('n=', NUMERIC '4.10') AS concat,
+  'n=' || NUMERIC '40' AS operator
+ordered: false
+expected:
+  columns:
+  - name: equal
+    type: BOOL
+  - name: concat
+    type: STRING
+  - name: operator
+    type: STRING
+  rows:
+  - - true
+    - n=4.1
+    - n=40
+verified: false
