@@ -154,7 +154,7 @@ The client and dbt suites (`tests/clients`, `tests/dbt`) need a running server; 
 
 | Feature | Status | Evidence | Notes |
 |---|---|---|---|
-| ARRAY_CONCAT and array `||` | Verified | [`array/array_concat`](../corpus/bigquery/array/array_concat.yaml)<br>[`backbone/array_concat_operator_type`](../corpus/bigquery/backbone/array_concat_operator_type.yaml)<br>[`test_array_concat_operator_keeps_array_type`](../tests/unit/test_bigquery_backbone.py) | |
+| ARRAY_CONCAT and array `||` | Verified | [`array/array_concat`](../corpus/bigquery/array/array_concat.yaml)<br>[`backbone/array_concat_operator_type`](../corpus/bigquery/backbone/array_concat_operator_type.yaml)<br>[`test_array_concat_operator_keeps_array_type`](../tests/unit/test_bigquery_backbone.py)<br>[`array/concat_operator_unnest_element_type`](../corpus/bigquery/array/concat_operator_unnest_element_type.yaml)<br>[`array/array_concat_null_input`](../corpus/bigquery/array/array_concat_null_input.yaml) | NULL when any input array is NULL; UNNEST and ARRAY(SELECT ...) over `a || b` keep the element type. The NULL and UNNEST cases are unverified. |
 | ARRAY_LENGTH, including NULL input | Verified | [`array/array_length`](../corpus/bigquery/array/array_length.yaml)<br>[`array/array_length_null`](../corpus/bigquery/array/array_length_null.yaml)<br>[`errors/null_array_length_is_null`](../corpus/bigquery/errors/null_array_length_is_null.yaml) | |
 | ARRAY_TO_STRING, with NULL element and NULL-text argument | Verified | [`array/array_to_string`](../corpus/bigquery/array/array_to_string.yaml)<br>[`array/array_to_string_null_text`](../corpus/bigquery/array/array_to_string_null_text.yaml) | |
 | GENERATE_ARRAY | Verified | [`array/generate_array`](../corpus/bigquery/array/generate_array.yaml) | |

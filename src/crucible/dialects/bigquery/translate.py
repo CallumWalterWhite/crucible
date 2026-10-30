@@ -163,6 +163,8 @@ def prepare(query: exp.Expr, ctx: ExecContext) -> Prepared:
         raise _qualify_error(exc) from exc
     _restore_struct_field_names(struct_names)
     query = annotate_types(query, schema=schema, dialect="bigquery")
+    if _array_pipes_to_concat(query):
+        query = annotate_types(query, schema=schema, dialect="bigquery")
     fix_annotation(query)
     udfs.check(query)
 
@@ -238,6 +240,23 @@ def _output_types(selects: list[exp.Select]) -> list[exp.DataType]:
     return result
 
 
+def _array_pipes_to_concat(tree: exp.Expr) -> bool:
+    """`a || b` on arrays is ARRAY_CONCAT(a, b) (BigQuery reference, ARRAY_CONCAT), but SQLGlot
+    30.22 types every `||` STRING, so an UNNEST or ARRAY(SELECT ...) over it loses its element
+    type. Rewritten once the operands are typed; the caller annotates again. Innermost first, so
+    `a || b || c` becomes one nested call. Upstream: SQLGlot's typing/bigquery.py has no `||` rule
+    (issue not yet filed)."""
+    changed = False
+    for node in reversed(list(tree.find_all(exp.DPipe))):
+        if all(o.is_type(exp.DType.ARRAY) for o in (node.left, node.right)):
+            concat = exp.ArrayConcat(this=node.left, expressions=[node.right])
+            concat.meta.update(node.meta)  # the output-name tag (_tag_names)
+            concat.type = node.left.type  # so an enclosing `||` sees an array operand
+            node.replace(concat)
+            changed = True
+    return changed
+
+
 def fix_annotation(tree: exp.Expr) -> None:
     """BigQuery typing rules SQLGlot 30.22 gets wrong. A wrong type is worse than UNKNOWN: the
     projection CAST would convert the value (ADR 0014). Each rule has a unit test."""
@@ -255,14 +274,9 @@ def fix_annotation(tree: exp.Expr) -> None:
     for column in tree.find_all(exp.Column):
         if (column.table, column.name) in offsets:
             column.type = exp.DataType.build("BIGINT")
-    # `a || b` on arrays is ARRAY_CONCAT and returns the array type, and on BYTES returns BYTES;
-    # SQLGlot types both STRING. Innermost first, so a chain `a || b || c` sees its left operand
-    # already re-typed.
-    for node in reversed(list(tree.find_all(exp.DPipe))):
-        for operand in (node.left, node.right):
-            if operand.type is not None and operand.type.this == exp.DataType.Type.ARRAY:
-                node.type = operand.type.copy()
-                break
+    # `a || b` on BYTES returns BYTES; SQLGlot types it STRING. (On arrays it is ARRAY_CONCAT by
+    # now: _array_pipes_to_concat.)
+    for node in tree.find_all(exp.DPipe):
         binary = (exp.DType.BINARY, exp.DType.VARBINARY, exp.DType.BLOB)
         if all(o.is_type(*binary) for o in (node.left, node.right)):
             node.type = exp.DataType.build("BYTES", dialect="bigquery")
