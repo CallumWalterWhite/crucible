@@ -7,6 +7,8 @@ and this project does not yet follow semantic versioning.
 
 ## [Unreleased]
 
+## [0.1.0a5] - 2026-10-30
+
 ### Fixed
 
 - A function call in FROM is refused unless it is UNNEST: `read_parquet` and `read_csv` reached
