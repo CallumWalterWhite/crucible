@@ -20,7 +20,7 @@ classifiers = [
 dependencies = [
     # Exact pins: translation output and DuckDB semantics change between releases (ADR 0008).
     "sqlglot==30.23.0",
-    "duckdb==1.5.6",
+    "duckdb==2.0.0",
     "pyyaml>=6.0.2",
     # DuckDB needs it to return TIMESTAMP WITH TIME ZONE values to Python.
     "pytz>=2025.2",
